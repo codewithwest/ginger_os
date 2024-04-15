@@ -7,9 +7,7 @@
 ### Chapter 2. Preparing the Host System
 - version-check.sh
 ### 2.4. Creating a New Partition
-#### // Todo
-### 2.5. Creating a File System on the Partition
-
+-  folder ./preparing_host_chapter_2-3-4
 ### 2.7. Mounting the New Partition
 - mounting_new_partitions.sh
 ### 2.6. Setting The $LFS Variable
