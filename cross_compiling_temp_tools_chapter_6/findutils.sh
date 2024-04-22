@@ -1,14 +1,11 @@
+LFS=/mnt/lfs;
 # Extract package 
 cd $LFS/sources;
-tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep findutils | grep tar);
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/findutils" | tar);
+# tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep findutils | grep tar);
+tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/findutils" | grep tar);
 sleep 2;
 # change into the extracted package
 cd $(find "$LFS/sources" -type d | grep -m1 "$LFS/sources/findutils")
-# create a build dir
-mkdir -v build;
-sleep 2;
-cd build;
 # Prepare package for compilation:
 ./configure --prefix=/usr                   \
             --localstatedir=/var/lib/locate \

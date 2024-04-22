@@ -1,0 +1,60 @@
+OK:    Coreutils 8.32   >= 8.1
+OK:    Bash      5.1.16 >= 3.2
+OK:    Binutils  2.38   >= 2.13.1
+ERROR: Cannot find bison (Bison)
+OK:    Diffutils 3.8    >= 2.8.1
+OK:    Findutils 4.8.0  >= 4.2.31
+ERROR: Cannot find gawk (Gawk)
+OK:    GCC       12.3.0 >= 5.2
+OK:    GCC (C++) 11.4.0 >= 5.2
+OK:    Grep      3.7    >= 2.5.1a
+OK:    Gzip      1.10   >= 1.3.12
+OK:    M4        1.4.18 >= 1.4.10
+OK:    Make      4.3    >= 4.0
+OK:    Patch     2.7.6  >= 2.5.4
+OK:    Perl      5.34.0 >= 5.8.8
+OK:    Python    3.10.12 >= 3.4
+OK:    Sed       4.8    >= 4.1.5
+OK:    Tar       1.34   >= 1.22
+ERROR: Cannot find texi2any (Texinfo)
+OK:    Xz        5.2.5  >= 5.0.0
+OK:    Linux Kernel 6.5.0 >= 4.19
+OK:    Linux Kernel supports UNIX 98 PTY
+Aliases:
+ERROR: awk  is NOT GNU
+ERROR: yacc is NOT Bison
+ERROR: sh   is NOT Bash
+Compiler check:
+OK:    g++ works
+OK: nproc reports 4 logical cores are available
+
+
+============================OK:    Coreutils 8.32   >= 8.1
+OK:    Bash      5.1.16 >= 3.2
+OK:    Binutils  2.38   >= 2.13.1
+ERROR: Cannot find bison (Bison)
+OK:    Diffutils 3.8    >= 2.8.1
+OK:    Findutils 4.8.0  >= 4.2.31
+ERROR: Cannot find gawk (Gawk)
+OK:    GCC       12.3.0 >= 5.2
+OK:    GCC (C++) 11.4.0 >= 5.2
+OK:    Grep      3.7    >= 2.5.1a
+OK:    Gzip      1.10   >= 1.3.12
+OK:    M4        1.4.18 >= 1.4.10
+OK:    Make      4.3    >= 4.0
+OK:    Patch     2.7.6  >= 2.5.4
+OK:    Perl      5.34.0 >= 5.8.8
+OK:    Python    3.10.12 >= 3.4
+OK:    Sed       4.8    >= 4.1.5
+OK:    Tar       1.34   >= 1.22
+ERROR: Cannot find texi2any (Texinfo)
+OK:    Xz        5.2.5  >= 5.0.0
+OK:    Linux Kernel 6.5.0 >= 4.19
+OK:    Linux Kernel supports UNIX 98 PTY
+Aliases:
+ERROR: awk  is NOT GNU
+ERROR: yacc is NOT Bison
+ERROR: sh   is NOT Bash
+Compiler check:
+OK:    g++ works
+OK: nproc reports 4 logical cores are available

@@ -1,17 +1,18 @@
+LFS=/mnt/lfs;
 # Extract package 
 cd $LFS/sources;
-tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep gcc | grep tar);
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/gcc" | tar);
+# tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep gcc | grep tar);
+tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/gcc" | grep tar);
 sleep 2;
 # change into the extracted package
 cd $(find "$LFS/sources" -type d | grep -m1 "$LFS/sources/gcc")
 
 # get the rest of the packages
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/mpfr" | tar) \ 
+tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/mpfr" | grep tar) \
     --one-top-level=mpfr --strip-components 1
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/gmp" | tar) \
+tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/gmp" | grep tar) \
     --one-top-level=gmp --strip-components 1
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/mpc" | tar) \
+tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/mpc" | grep tar) \
     --one-top-level=mpc --strip-components 1
 # On x86_64 hosts, set the default directory name for 64-bit libraries to “lib”:
 case $(uname -m) in

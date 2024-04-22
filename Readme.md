@@ -17,7 +17,7 @@
 ### 4.3. Adding the LFS User
 - adding_lfs_user.sh
 ### 4.4. Setting Up the Environment
-- setting_up_env.sh
+- setting_up_lfs_env.sh
 ## Part III. Building the LFS Cross Toolchain and Temporary Tools
 ### Chapter 5. Compiling a Cross-Toolchain
 ### 5.2. Binutils-2.42 - Pass 1
@@ -30,7 +30,6 @@
 `glibc.sh`
 ### 5.6. Libstdc++ from GCC-13.2.0
 `libstdc.sh`
-
 ### Chapter 6. Cross Compiling Temporary Tools
 ### 6.2. M4-1.4.19
 `m4.sh`

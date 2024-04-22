@@ -1,14 +1,11 @@
+LFS=/mnt/lfs;
 # Extract package 
 cd $LFS/sources;
-tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep m4 | grep tar);
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/m4" | tar);
+# tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep m4 | grep tar);
+tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/m4" | grep tar);
 sleep 2;
 # change into the extracted package
 cd $(find "$LFS/sources" -type d | grep -m1 "$LFS/sources/m4");
-# create a build dir
-mkdir -v build;
-sleep 2;
-cd build;
 # Prepare package for compilation:
 ./configure --prefix=/usr   \
             --host=$LFS_TGT \

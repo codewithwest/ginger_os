@@ -1,7 +1,8 @@
+LFS=/mnt/lfs;
 # Extract package 
 cd $LFS/sources;
-tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep make | grep tar);
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/make" | tar);
+# tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep make | grep tar);
+tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/make" | grep tar);
 sleep 2;
 # change into the extracted package
 cd $(find "$LFS/sources" -type d | grep -m1 "$LFS/sources/make");

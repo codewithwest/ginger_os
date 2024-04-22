@@ -1,30 +1,92 @@
+#!/bin/bash
+echo "################################################################################";
+echo "#--------------------------Setting LFS variable--------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
+LFS=/mnt/lfs;
+sleep 5;
 # Extract package 
+echo "################################################################################";
+echo "#-------------------------Change into sources dir------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
 cd $LFS/sources;
-tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep coreutils | grep tar );
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/coreutils" | tar);
+pwd;
+sleep 5;
+# tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep coreutils | grep tar );
+echo "################################################################################";
+echo "#-------------------------Extracting coreutils package-------------------------#";
+echo "################################################################################";
+echo;echo;echo;
+tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/coreutils" | grep tar);
+echo "################################################################################";
+echo "#-------------------Extracting coreutils archive complete----------------------#";
+echo "################################################################################";
+echo;echo;echo;
 sleep 2;
-# change into the extracted package
+echo "################################################################################";
+echo "#--------------------------Change into binutils dir----------------------------#";
+echo "################################################################################";
+echo;echo;echo;
 cd $(find "$LFS/sources" -type d | grep -m1 "$LFS/sources/coreutils");
-# Prepare package for compilation:
+pwd;
+sleep 2;
+echo "################################################################################";
+echo "#------------------------------Configure tool----------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
+sleep 2;
 ./configure --prefix=/usr                     \
             --host=$LFS_TGT                   \
             --build=$(build-aux/config.guess) \
             --enable-install-program=hostname \
             --enable-no-install-program=kill,uptime;
-# make package
-time make;
+echo "################################################################################";
+echo "#-------------------------Configure tool completed-----------------------------#";
+echo "################################################################################";
+echo;echo;echo;
 sleep 2;
-# install package
+echo "################################################################################";
+echo "#------------------------------------Make tool---------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
+time make;
+echo "################################################################################";
+echo "#---------------------------Make tool complete---------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
+sleep 2;
+echo "################################################################################";
+echo "#---------------------------------Install tool---------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
 make DESTDIR=$LFS install;
+echo "################################################################################";
+echo "#------------------------------Install tool complete---------------------------#";
+echo "################################################################################";
+echo;echo;echo;
 sleep 2;
 # Move programs to their final expected locations. Although this is not necessary in 
 # this temporary environment, we must do so because some programs hardcode executable locations:
-
+echo "################################################################################";
+echo "#--------------Move programs to their final expected locations.----------------#"; 
+echo "#------we must do so because some programs hardcode executable locations-------#";
+echo "################################################################################";
+echo;echo;echo;
 mv -v $LFS/usr/bin/chroot              $LFS/usr/sbin;
 mkdir -pv $LFS/usr/share/man/man8;
 mv -v $LFS/usr/share/man/man1/chroot.1 $LFS/usr/share/man/man8/chroot.8;
 sed -i 's/"1"/"8"/'                    $LFS/usr/share/man/man8/chroot.8;
-# clean up
+sleep 5;
+echo "################################################################################";
+echo "#----------------------------------Clean Up -----------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
+sleep 2;
 cd $LFS/sources;
 sleep 2;
-rm -rf $(find "$LFS/sources" -type d | grep -m1 "$LFS/sources/coreutils")
+rm -rf $(find "$LFS/sources" -type d | grep -m1 "$LFS/sources/coreutils");
+echo "################################################################################";
+echo "#--------------------------Clean Up Complete-----------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
