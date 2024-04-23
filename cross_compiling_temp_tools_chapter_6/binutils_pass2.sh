@@ -31,7 +31,7 @@ echo "#--------------------------Change into binutils dir-----------------------
 echo "################################################################################";
 echo;echo;echo;
 cd $(find "$LFS/sources" -type d | grep -m1 "$LFS/sources/binutils");
-pwd
+pwd;
 sleep 2;
 # create a build dir
 echo "################################################################################";
