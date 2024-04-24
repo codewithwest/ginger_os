@@ -1,15 +1,20 @@
 LFS=/mnt/lfs;
 # create debug_dir
-mkdir -pv $LFS/sources/debug_logs/;
+mkdir -pv $LFS/sources/debug_logs/chapter_5/;
 echo "################################################################################";
-echo "#---------Part III. Building the LFS Cross Toolchain and Temporary Tools-------#";
+echo "#---------Chapter 5. Building the LFS Cross Toolchain and Temporary Tools------#";
+echo "################################################################################";
+echo;echo;echo;
+sleep 5;
+echo "################################################################################";
+echo "#-----------------Part V. Compiling Cross Toolchain Complete-------------------#";
 echo "################################################################################";
 echo;echo;echo;
 sleep 5;
 echo "################################################################################";
 echo "#-------------------------Binutils-2.42 - Pass 1-------------------------------#";
 echo "################################################################################";
-bash ./compiling_cross_toolchain_chapter_5/binutils.sh >> $LFS/sources/debug_logs/binutils_p1.log
+bash ./compiling_cross_toolchain_chapter_5/binutils.sh >> $LFS/sources/debug_logs/chapter_5/binutils_p1.log
 echo "################################################################################";
 echo "#---------------------Binutils-2.42 - Pass 1 Completed-------------------------#";
 echo "################################################################################";
@@ -18,7 +23,7 @@ sleep 5;
 echo "################################################################################";
 echo "#---------------------------GCC-13.2.0 - Pass 1--------------------------------#";
 echo "################################################################################";
-bash ./compiling_cross_toolchain_chapter_5/gcc_pass1.sh >> $LFS/sources/debug_logs/gcc_p1.log
+bash ./compiling_cross_toolchain_chapter_5/gcc_pass1.sh >> $LFS/sources/debug_logs/chapter_5/gcc_p1.log
 echo "################################################################################";
 echo "#-----------------------GCC-13.2.0 - Pass 1 Completed--------------------------#";
 echo "################################################################################";
@@ -27,7 +32,7 @@ sleep 5;
 echo "################################################################################";
 echo "#------------------------Linux-6.7.4 API Headers-------------------------------#";
 echo "################################################################################";
-bash ./compiling_cross_toolchain_chapter_5/linux_h.sh >> $LFS/sources/debug_logs/linux_1.log
+bash ./compiling_cross_toolchain_chapter_5/linux_h.sh >> $LFS/sources/debug_logs/chapter_5/linux_1.log
 echo "################################################################################";
 echo "#--------------------Linux-6.7.4 API Headers Completed-------------------------#";
 echo "################################################################################";
@@ -36,7 +41,7 @@ sleep 5;
 echo "################################################################################";
 echo "#------------------------------Glibc-2.39--------------------------------------#";
 echo "################################################################################";
-bash ./compiling_cross_toolchain_chapter_5/glibc.sh >>  $LFS/sources/debug_logs/glibc.log
+bash ./compiling_cross_toolchain_chapter_5/glibc.sh >>  $LFS/sources/debug_logs/chapter_5/glibc.log
 echo "################################################################################";
 echo "#---------------------------Glibc-2.39 Completed-------------------------------#";
 echo "################################################################################";
@@ -45,7 +50,7 @@ sleep 5;
 echo "################################################################################";
 echo "#-----------------------BLibstdc++ from GCC-13.2.0-----------------------------#";
 echo "################################################################################";
-bash ./compiling_cross_toolchain_chapter_5/libstdc.sh >> $LFS/sources/debug_logs/libstdc.log
+bash ./compiling_cross_toolchain_chapter_5/libstdc.sh >> $LFS/sources/debug_logs/chapter_5/libstdc.log
 echo "################################################################################";
 echo "#-------------------Libstdc++ from GCC-13.2.0 Completed------------------------#";
 echo "################################################################################";
@@ -55,13 +60,19 @@ sleep 5;
 echo "################################################################################";
 echo "#----------------------------run_sanity_check----------------------------------#";
 echo "################################################################################";
-bash ./compiling_cross_toolchain_chapter_5/run_sanity_check.sh >> $LFS/sources/debug_logs/run_sanity_check.log
+bash ./compiling_cross_toolchain_chapter_5/run_sanity_check.sh >> $LFS/sources/debug_logs/chapter_5/run_sanity_check.log
 echo "################################################################################";
 echo "#------------------------------run_sanity_check--------------------------------#";
 echo "################################################################################";
 echo;echo;echo;
 sleep 5;
 echo "################################################################################";
-echo "#---Part III. Building the LFS Cross Toolchain and Temporary Tools Complete----#";
+echo "#-----------------Part V. Compiling Cross Toolchain Complete-------------------#";
 echo "################################################################################";
-
+echo;echo;echo;
+sleep 5;
+# echo "################################################################################";
+# echo "#---------Chapter 5. Building the LFS Cross Toolchain and Temporary Tools Completed------#";
+# echo "################################################################################";
+# echo;echo;echo;
+# sleep 5;
