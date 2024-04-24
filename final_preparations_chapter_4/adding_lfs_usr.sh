@@ -1,4 +1,10 @@
+#!/bin/bash
+echo "################################################################################";
+echo "#--------------------------Setting LFS variable--------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
 LFS=/mnt/lfs;
+sleep 5;
 # Create the required directory layout by issuing the following commands as root:
 echo "################################################################################";
 echo "#------------------Create the required directory layout------------------------#";

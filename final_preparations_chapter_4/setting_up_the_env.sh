@@ -1,4 +1,10 @@
+#!/bin/bash
+echo "################################################################################";
+echo "#--------------------------Setting LFS variable--------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
 LFS=/mnt/lfs;
+sleep 5;
 # 4.4. Setting Up the Environment
 cat > ~/.bash_profile << "EOF"
 exec env -i HOME=$HOME TERM=$TERM PS1='\u:\w\$ ' /bin/bash
