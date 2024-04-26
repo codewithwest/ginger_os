@@ -10,10 +10,8 @@ echo "#-------------------------Change into sources dir-------------------------
 echo "################################################################################";
 echo;echo;echo;
 cd $LFS/sources;
-# tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep linux | grep tar )
 pwd;
 sleep 5;
-# tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep gcc | grep tar);
 echo "################################################################################";
 echo "#----------------------------Extract linux package-----------------------------#";
 echo "################################################################################";
