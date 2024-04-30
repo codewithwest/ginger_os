@@ -18,7 +18,7 @@ echo "##########################################################################
 echo "#-------------------------Extracting diffutils package--------------------------#";
 echo "################################################################################";
 echo;echo;echo;
-tar -xvf $(find "$LFS/sources" -type f | grep binutils-m1 "$LFS/sources/diffutils" | grep tar);
+tar -xvf $(find "$LFS/sources" -type f | grep diffutils -m1 "$LFS/sources/diffutils" | grep tar);
 echo "################################################################################";
 echo "#--------------------Extracting diffutils archive complete----------------------#";
 echo "################################################################################";

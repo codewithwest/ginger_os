@@ -27,6 +27,7 @@ echo n # Add a new partition
 echo  # Partition number
 echo  # First sector (Accept default: 1)
 echo +250M # Last sector (Accept default: varies)
+echo y
 echo w # Write changes
 ) | sudo fdisk /dev/sda;
 sleep 2;
@@ -42,10 +43,10 @@ sleep 5;
 # create efi partition
 # echo o # Create a new empty DOS partition table
 echo n # Add a new partition
-echo  
 echo   # Partition number
 echo   # First sector (Accept default: 1)
 echo +250M # Last sector (Accept default: varies)
+echo y
 echo t # format file system to fat32;
 echo 
 echo 1
