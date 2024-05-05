@@ -28,7 +28,7 @@ sleep 5;
 echo "################################################################################";
 echo "#--------------------------4.4. Setting Up the Environment---------------------#";
 echo "################################################################################";
-bash ./final_preparations_chapter_4/setting_up_the_env.sh >> $LFS/sources/debug_logs/chapter_4/setting_up_the_env.log
+su -c bash ./final_preparations_chapter_4/setting_up_the_env.sh lfs >> $LFS/sources/debug_logs/chapter_4/setting_up_the_env.log
 echo "################################################################################";
 echo "#--------------------4. Setting Up the Environment Completed-------------------#";
 echo "################################################################################";
