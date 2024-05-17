@@ -129,13 +129,8 @@ echo;echo;echo;
 # Next, start a shell running as user lfs. 
 # This can be done by logging in as lfs on a virtual console, or with the following substitute/switch user command:
 echo "################################################################################";
-echo "#------------------------------Change to lfs user------------------------------#";
-echo "################################################################################";
-echo;echo;echo;
-sleep 5;
-# su - lfs;
-echo "################################################################################";
-echo "#------------------------------In lfs user env---------------------------------#";
+echo "#----------ALERT!!! PLEASE RUN su - lfs to continue with installation----------#";
+echo "#-----------------------------and re run the script----------------------------#";
 echo "################################################################################";
 echo;echo;echo;
 sleep 5;

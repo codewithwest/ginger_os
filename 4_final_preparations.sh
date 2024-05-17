@@ -20,7 +20,11 @@ sleep 3;
 echo "################################################################################";
 echo "#-------4.2. Creating a Limited Directory Layout in the LFS Filesystem---------#";
 echo "################################################################################";
-bash ./final_preparations_chapter_4/adding_lfs_usr.sh >> $LFS/sources/debug_logs/chapter_4/adding_lfs_usr.log
+if [ $(whoami) == "root" ]; then
+  bash ./final_preparations_chapter_4/adding_lfs_usr.sh >> $LFS/sources/debug_logs/chapter_4/adding_lfs_usr.log
+else
+echo “---------You need to be root to add new lfs user---------”
+fi
 echo "################################################################################";
 echo "#-----Creating a Limited Directory Layout in the LFS Filesystem Completed------#";
 echo "################################################################################";
@@ -36,7 +40,11 @@ echo;echo;echo;
 sleep 5; 
 mkdir -pv $LFS/sources/debug_logs  # Create new debug_logs folder
 sleep 2;
+if [ $(whoami) == "lfs" ]; then
 bash ./final_preparations_chapter_4/setting_up_the_env.sh >> $LFS/sources/debug_logs/chapter_4/setting_up_the_env.log
+else
+echo “----------You need to be lfs to update environment settings-------”
+fi
 echo "################################################################################";
 echo "#------------------------------Creation completed------------------------------#";
 echo "################################################################################";
@@ -45,9 +53,4 @@ sleep 2;
 echo "################################################################################";
 echo "#--------------------4. Setting Up the Environment Completed-------------------#";
 echo "################################################################################";
-sleep 5;
-echo "################################################################################";
-echo "#--------------------------Packages and Patches Completed----------------------#";
-echo "################################################################################";
-echo;echo;echo;
 sleep 5;
