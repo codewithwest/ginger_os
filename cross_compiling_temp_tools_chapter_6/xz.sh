@@ -19,7 +19,7 @@ echo "#----------------------------Extracting xz package------------------------
 echo "################################################################################";
 echo;echo;echo;
 # tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep xz | grep tar);
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/xz" | grep tar);
+tar -xvf $(find "$LFS/sources" -type f | grep "$LFS/sources/xz" | grep ".tar");
 echo "################################################################################";
 echo "#--------------------Extracting xz archive complete----------------------------#";
 echo "################################################################################";

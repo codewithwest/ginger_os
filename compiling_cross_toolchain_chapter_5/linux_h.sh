@@ -16,7 +16,7 @@ echo "##########################################################################
 echo "#----------------------------Extract linux package-----------------------------#";
 echo "################################################################################";
 echo;echo;echo;
-tar -xvf $(find "$LFS/sources" -type f | grep -m3 "$LFS/sources/linux" | grep tar)
+tar -xvf $(find "$LFS/sources" -type f | grep "$LFS/sources/linux" | grep ".tar")
 sleep 5;
 echo "################################################################################";
 echo "#--------------------Extracting linux package complete-------------------------#";

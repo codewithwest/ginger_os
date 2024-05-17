@@ -14,7 +14,7 @@ cd $LFS/sources;
 pwd;
 sleep 5;
 # tar -xvf $LFS/sources/$(cd $LFS/sources/ &&  cat wget-list | grep findutils | grep tar);
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/findutils" | grep tar);
+tar -xvf $(find "$LFS/sources" -type f | grep "$LFS/sources/findutils" | grep ".tar");
 echo "################################################################################";
 echo "#--------------------Extracting findutils archive complete---------------------#";
 echo "################################################################################";

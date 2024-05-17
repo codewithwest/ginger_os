@@ -117,6 +117,18 @@ sleep 5;
 # Next, start a shell running as user lfs. 
 # This can be done by logging in as lfs on a virtual console, or with the following substitute/switch user command:
 echo "################################################################################";
+echo "#-----------------------Move debug log to main user----------------------------#";
+echo "################################################################################";
+echo;echo;echo;
+sleep 5;
+mv $LFS/sources/debug_logs/ ~/
+echo "################################################################################";
+echo "#------------------------------Move completed----------------------------------#";
+echo "################################################################################";
+echo;echo;echo;
+# Next, start a shell running as user lfs. 
+# This can be done by logging in as lfs on a virtual console, or with the following substitute/switch user command:
+echo "################################################################################";
 echo "#------------------------------Change to lfs user------------------------------#";
 echo "################################################################################";
 echo;echo;echo;

@@ -18,7 +18,7 @@ echo "##########################################################################
 echo "#----------------------------Extract gcc package-------------------------------#";
 echo "################################################################################";
 echo;echo;echo;
-tar -xvf $(find "$LFS/sources" -type f | grep -m1 "$LFS/sources/gcc" | grep tar);
+tar -xvf $(find "$LFS/sources" -type f | grep "$LFS/sources/gcc" | grep ".tar");
 sleep 5;
 echo "################################################################################";
 echo "#--------------------Extracting gcc package complete---------------------------#";

@@ -17,7 +17,7 @@ echo "##########################################################################
 echo "#-------------------------Extracting glibc package-----------------------------#";
 echo "################################################################################";
 echo;echo;echo;
-tar -xvf $(find "$LFS/sources" -type f | grep -m3 "$LFS/sources/glibc" | grep tar)
+tar -xvf $(find "$LFS/sources" -type f | grep "$LFS/sources/glibc" | grep ".tar")
 sleep 5;
 echo "################################################################################";
 echo "#--------------------Extracting binutils archive complete----------------------#";

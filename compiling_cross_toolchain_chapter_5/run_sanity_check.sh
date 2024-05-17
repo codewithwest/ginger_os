@@ -5,6 +5,7 @@ echo "##########################################################################
 echo;echo;echo;
 LFS=/mnt/lfs;
 sleep 2;
+cd $LFS/sources;
 # At this point, it is imperative to stop and ensure that the basic functions (compiling and linking) of 
 # the new toolchain are working as expected. To perform a sanity check, run the following commands:
 echo "################################################################################";
