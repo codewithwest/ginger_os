@@ -3,12 +3,17 @@ echo "#--------------------------Setting LFS variable---------------------------
 echo "################################################################################";
 echo;echo;echo;
 LFS=/mnt/lfs;
+echo "################################################################################";
+echo "#----------------------Run this as Base OS root!!!!!!!!!!----------------------#";
+echo "################################################################################";
+echo;echo;echo;
 sleep 5;
 echo "################################################################################";
 echo "#-----------------------7.2. Changing Ownership--------------------------------#";
 echo "################################################################################";
 echo;echo;echo;
 chown -R root:root $LFS/{usr,lib,var,etc,bin,sbin,tools}
+sleep 2;
 case $(uname -m) in
   x86_64) chown -R root:root $LFS/lib64 ;;
 esac
@@ -31,7 +36,7 @@ echo;echo;echo;
 mount -v --bind /dev $LFS/dev;
 sleep 5;
 echo "################################################################################";
-echo "#-------------------7.3.1. Mounting and Populating /dev complete------------------------#";
+echo "#-----------------7.3.1. Mounting and Populating /dev complete-----------------#";
 echo "################################################################################";
 echo;echo;echo;
 sleep 5;
@@ -40,8 +45,11 @@ echo "#------------------7.3.2. Mounting Virtual Kernel File Systems------------
 echo "################################################################################";
 echo;echo;echo;
 mount -vt devpts devpts -o gid=5,mode=0620 $LFS/dev/pts;
+sleep 1;
 mount -vt proc proc $LFS/proc;
+sleep 1;
 mount -vt sysfs sysfs $LFS/sys;
+sleep 1;
 mount -vt tmpfs tmpfs $LFS/run;
 # In other host systems /dev/shm is a mount point for a tmpfs. 
 # In that case the mount of /dev above will only create 
@@ -81,6 +89,5 @@ echo "#-----------------7.4. Entering the Chroot Environment complete-----------
 echo "################################################################################";
 echo;echo;echo;
 
-
-echo "You should be in lfs user root..."
+# "You should be in lfs user root..."
 
