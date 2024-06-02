@@ -25,6 +25,7 @@ if [ $(whoami) == "root" ]; then
 else
 echo “---------You need to be root to add new lfs user---------”
 fi
+mv -rf $LFS/sources/debug_logs /home/
 echo "################################################################################";
 echo "#-----Creating a Limited Directory Layout in the LFS Filesystem Completed------#";
 echo "################################################################################";
