@@ -12,11 +12,10 @@ echo "##########################################################################
 echo "#-----------------------7.2. Changing Ownership--------------------------------#";
 echo "################################################################################";
 echo;echo;echo;
-chown -R root:root $LFS/{usr,lib,var,etc,bin,sbin,tools}
-sleep 2;
+chown --from lfs -R root:root $LFS/{usr,lib,var,etc,bin,sbin,tools}
 case $(uname -m) in
-  x86_64) chown -R root:root $LFS/lib64 ;;
-esac
+  x86_64) chown --from lfs -R root:root $LFS/lib64 ;;
+esac;
 sleep 5;
 echo "################################################################################";
 echo "#--------------------7.2. Changing Ownership Complete--------------------------#";

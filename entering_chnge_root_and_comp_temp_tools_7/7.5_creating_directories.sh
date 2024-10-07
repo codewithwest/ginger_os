@@ -12,34 +12,37 @@ sleep 1;
 # Create the required set of subdirectories below the root-level 
 # by issuing the following commands:
 
-mkdir -pv /etc/{opt,sysconfig}
+mkdir -pv /etc/{opt,sysconfig};
 sleep 1;
-mkdir -pv /lib/firmware
+mkdir -pv /lib/firmware;
 sleep 1;
-mkdir -pv /media/{floppy,cdrom}
+mkdir -pv /media/{floppy,cdrom};
 sleep 1;
-mkdir -pv /usr/{,local/}{include,src}
+mkdir -pv /usr/{,local/}{include,src};
 sleep 1;
-mkdir -pv /usr/local/{bin,lib,sbin}
+mkdir -pv /usr/lib/locale;
 sleep 1;
-mkdir -pv /usr/{,local/}share/{color,dict,doc,info,locale,man}
+mkdir -pv /usr/local/{bin,lib,sbin};
 sleep 1;
-mkdir -pv /usr/{,local/}share/{misc,terminfo,zoneinfo}
+mkdir -pv /usr/{,local/}share/{color,dict,doc,info,locale,man};
 sleep 1;
-mkdir -pv /usr/{,local/}share/man/man{1..8}
+mkdir -pv /usr/{,local/}share/{misc,terminfo,zoneinfo};
 sleep 1;
-mkdir -pv /var/{cache,local,log,mail,opt,spool}
+mkdir -pv /usr/{,local/}share/man/man{1..8};
 sleep 1;
-mkdir -pv /var/lib/{color,misc,locate}
+mkdir -pv /var/{cache,local,log,mail,opt,spool};
 sleep 1;
-ln -sfv /run /var/run
+mkdir -pv /var/lib/{color,misc,locate};
 sleep 1;
-ln -sfv /run/lock /var/lock
+
+ln -sfv /run /var/run;
 sleep 1;
-install -dv -m 0750 /root
+ln -sfv /run/lock /var/lock;
 sleep 1;
-install -dv -m 1777 /tmp /var/tmp
+
+install -dv -m 0750 /root;
 sleep 1;
+install -dv -m 1777 /tmp /var/tmp;
 echo "################################################################################";
 echo "#-----------------------Creating Directories complete--------------------------#";
 echo "################################################################################";
@@ -55,7 +58,7 @@ echo;echo;echo;
 # To satisfy utilities that expect to find /etc/mtab, create the following symbolic link:
 
 ln -sv /proc/self/mounts /etc/mtab;
-
+sleep 1;
 # Create a basic /etc/hosts file to be referenced in some test suites, 
 # and in one of Perl's configuration files as well:
 
@@ -63,6 +66,9 @@ cat > /etc/hosts << EOF
 127.0.0.1  localhost $(hostname)
 ::1        localhost
 EOF
+
+sleep 1;
+
 
 # In order for user root to be able to login and for the name “root” to be recognized, 
 # there must be relevant entries in the /etc/passwd and /etc/group files.

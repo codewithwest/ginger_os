@@ -53,10 +53,10 @@ echo "#-----------------build the “tic” program on the build host-----------
 echo "################################################################################";
 echo;echo;echo;
 sleep 2;
-pushd build;
-  ../configure;
-  make -C include;
-  make -C progs tic;
+pushd build
+  ../configure
+  make -C include
+  make -C progs tic
 popd;
 echo "################################################################################";
 echo "#------------------------------Configure tool----------------------------------#";
@@ -73,8 +73,7 @@ sleep 2;
             --with-cxx-shared            \
             --without-debug              \
             --without-ada                \
-            --disable-stripping          \
-            --enable-widec;
+            --disable-stripping;
 echo "################################################################################";
 echo "#-------------------------Configure tool completed-----------------------------#";
 echo "################################################################################";

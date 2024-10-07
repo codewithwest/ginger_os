@@ -24,6 +24,11 @@ echo "#--------------------Extracting binutils archive complete-----------------
 echo "################################################################################";
 echo;echo;echo;
 sleep 2;
+# Binutils building system relies on an shipped libtool copy to link against internal static 
+# libraries, but the libiberty and zlib copies shipped in the package do not use libtool. 
+# This inconsistency may cause produced binaries mistakenly linked against libraries from 
+# the host distro. Work around this issue:
+sed '6009s/$add_dir//' -i ltmain.sh
 # change into the extracted package
 echo "################################################################################";
 echo "#--------------------------Change into binutils dir----------------------------#";
@@ -63,6 +68,7 @@ sleep 2;
     --enable-gprofng=no        \
     --disable-werror           \
     --enable-64-bit-bfd        \
+    --enable-new-dtags         \
     --enable-default-hash-style=gnu;
 echo "################################################################################";
 echo "#-------------------------Configure tool completed-----------------------------#";

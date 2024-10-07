@@ -62,7 +62,8 @@ sleep 2;
              --disable-nls       \
              --enable-gprofng=no \
              --disable-werror    \
-             --enable-default-hash-style=gnu;
+             --enable-new-dtags  \
+             --enable-default-hash-style=gnu
 # make package
 echo "################################################################################";
 echo "#-------------------------Configure tool completed-----------------------------#";

@@ -39,7 +39,7 @@ umount $LFS/{sys,proc,run,dev}
 
 # Create the backup archive by running the following command:
 cd $LFS
-tar -cJpf $HOME/lfs-temp-tools-12.1-systemd.tar.xz .
+tar -cJpf $HOME/lfs-temp-tools-12.2-systemd.tar.xz .
 
 echo "################################################################################";
 echo "#---------------------------------Backup Complete------------------------------#";

@@ -20,7 +20,7 @@ cd $LFS;
 sleep 2;
 rm -rf ./*;
 sleep 2;
-tar -xpf $HOME/lfs-temp-tools-12.1-systemd.tar.xz;
+tar -xpf $HOME/lfs-temp-tools-12.2-systemd.tar.xz;
 sleep 2;
 
 echo "################################################################################";
