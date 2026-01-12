@@ -31,7 +31,7 @@ if ! id lfs >/dev/null 2>&1; then
     # Using absolute paths as some minimal systems have restricted PATHs even for sudo
     /usr/sbin/groupadd lfs
     /usr/sbin/useradd -s /bin/bash -g lfs -m -k /dev/null lfs
-    echo "lfs:lfs" | chpasswd
+    echo "lfs:lfs" | /usr/sbin/chpasswd
 fi
 
 chown -v lfs "$LFS/tools"
