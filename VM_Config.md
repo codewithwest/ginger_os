@@ -1,16 +1,31 @@
-# GingerOS – Build Environment Guide (Infrastructure Layer)
+## 1. Step 0: Creating the Build VM (The Host)
+Before building GingerOS, you need a safe sandbox. Use these settings to create your Ubuntu VM:
 
-This document provides the setup instructions for the host environment where GingerOS is built. This is the "Infrastructure Layer" that supports our automated build scripts.
+### Using QEMU (Command Line)
+If you are on a Linux host, run this to create and launch your build environment:
+```bash
+# 1. Create a 50GB virtual disk for the Ubuntu Host
+qemu-img create -f qcow2 ubuntu_host.qcow2 50G
 
-## 1. Physical/Virtual Host Requirement
-GingerOS is designed to be built inside a **Virtual Machine (VM)** to protect your main operating system.
+# 2. Launch the installer (Replace with your Ubuntu ISO path)
+qemu-system-x86_64 \
+    -enable-kvm -m 8G -smp 4 \
+    -drive file=ubuntu_host.qcow2,format=qcow2 \
+    -cdrom ubuntu-24.04.3-live-server-amd64.iso \
+    -boot d -nic user,hostfwd=tcp::2223-:22git sta
+```
 
-*   **Virtualization**: QEMU/KVM (Recommended), VirtualBox, or VMware.
-*   **Host OS**: Ubuntu 24.04 LTS (Recommended) or any modern Linux.
-*   **Resources**: 4+ Cores, 8GB+ RAM, 50GB+ Disk.
+### Using VirtualBox / VMware
+- **OS**: Ubuntu 24.04 64-bit
+- **RAM**: 8192 MB (Minimum 4096 MB)
+- **CPU**: 4 Cores
+- **Disk**: 60 GB (Dynamically allocated)
+- **Network**: NAT
 
-## 2. Infrastructure Setup (One-Time)
-Run these commands on your host system:
+---
+
+## 2. Infrastructure Setup (Inside the Ubuntu VM)
+Once Ubuntu is installed and you have SSH'd in (or opened the terminal), run:
 
 ```bash
 # Install QEMU and utilities
