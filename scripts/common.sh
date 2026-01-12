@@ -11,26 +11,31 @@ source "${SCRIPT_DIR}/../config/env.sh"
 STATUS_DIR="$LFS/var/lib/ginger"
 mkdir -p "$STATUS_DIR"
 
-# Validate critical environment
-if [ -z "${LFS:-}" ] || [ -z "${LFS_TGT:-}" ]; then
-    log "ERROR" "LFS or LFS_TGT environment variables are not set! Check config/env.sh"
-    exit 1
-fi
-
 log() {
     local TYPE=$1
     local MSG=$2
-    local COLOR=$NC
+    local COLOR=${NC:-}
     
     case $TYPE in
-        "INFO")    COLOR=$GREEN ;;
-        "WARN")    COLOR=$YELLOW ;;
-        "ERROR")   COLOR=$RED ;;
-        "PROCESS") COLOR=$NC ;;
+        "INFO")    COLOR=${GREEN:-} ;;
+        "WARN")    COLOR=${YELLOW:-} ;;
+        "ERROR")   COLOR=${RED:-} ;;
+        "PROCESS") COLOR=${NC:-} ;;
     esac
     
-    echo -e "${COLOR}[$(date +'%Y-%m-%d %H:%M:%S')] [$TYPE] $MSG${NC}"
+    echo -e "${COLOR}[$(date +'%Y-%m-%d %H:%M:%S')] [$TYPE] $MSG\033[0m"
 }
+
+# Source environment - finding it relative to the script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../config/env.sh"
+
+# Validate critical environment
+# Inside chroot, LFS should be empty/root, and LFS_TGT is not strictly required for native builds
+if [ -z "${LFS+x}" ]; then
+    log "ERROR" "LFS environment variable is not defined! Check config/env.sh"
+    exit 1
+fi
 
 check_built() {
     local PKG_NAME=$1
