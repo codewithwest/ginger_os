@@ -39,21 +39,16 @@ This phase is fully automated and runs as the unprivileged `lfs` user.
     *Orchestrates chapters 5 and 6 of the LFS book. Progress is stored in `logs/` and `.built` markers.*
 
 ## Phase 3: Building the Final System
-This phase runs inside the **chroot** environment to ensure absolute isolation.
+This phase runs inside the **chroot** environment. It is now fully automated via a single orchestrator.
 
-1.  **Enter Chroot**:
+1.  **Enter and Execute Chroot Build**:
     ```bash
     # Exit 'lfs' shell first
-    sudo ./chroot.sh
+    exit
+    # Run the automated Phase 3 orchestrator
+    sudo ./chroot.sh "/scripts/build-phase3.sh"
     ```
-2.  **Execute System Build**:
-    Run scripts in order using the numerical prefix.
-    ```bash
-    for f in /scripts/phase3-system/[0-8]*.sh; do
-        bash "$f"
-    done
-    ```
-    *This builds the final Linux system (Chapter 8).*
+    *This automatically builds all final system packages in order (Chapter 8).*
 
 ## Phase 4: Making it Bootable
 While still in chroot:
@@ -66,7 +61,7 @@ While still in chroot:
 2.  **Exit & Unmount**:
     ```bash
     exit
-    sudo umount -R $LFS
+    sudo ./teardown.sh
     ```
 3.  **Boot the System**:
     ```bash
@@ -79,9 +74,9 @@ While still in chroot:
 
 ### 1. Resuming After Failure
 If a script fails, don't worry. 
-- Fix the issue (e.g., download a missing file or install a host dependency).
-- Run `./build.sh` (or the specific script) again. 
-- The build will skip already completed packages by checking `/mnt/lfs/var/lib/ginger/`.
+- Fix the issue (e.g., download a missing file).
+- Run the build command again (`./build.sh` or the chroot command).
+- The system will skip already completed packages.
 
 ### 2. Retrying a Specific Package
 If you need to force a rebuild of a single package:
@@ -91,9 +86,9 @@ rm /mnt/lfs/var/lib/ginger/gcc-pass1.built
 # Then run the build again
 ```
 
-### 3. Cleaning Up
-If you want to start the **entire build** from scratch:
+### 3. Safety Teardown
+If the host becomes unstable or you need to unmount the disk safely:
 ```bash
-sudo rm -rf /mnt/lfs/var/lib/ginger/*.built
+sudo ./teardown.sh
 ```
-*Note: This does not delete compiled files, just the markers that skip them.*
+*This ensures all virtual file systems are unlinked before the host is shut down or the disk moved.*

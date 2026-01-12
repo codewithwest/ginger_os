@@ -14,6 +14,7 @@ GingerOS is a fully reproducible, automated build system for Linux From Scratch 
     cd /opt/ginger_os
     ./scripts/download.sh
     ```
+    *Note: GingerOS uses "Smart Extract"—it will automatically find the correct versioned tarball in your sources folder.*
 3.  **Disk Preparation**:
     ```bash
     sudo ./scripts/prepare-image.sh
@@ -31,8 +32,11 @@ GingerOS is a fully reproducible, automated build system for Linux From Scratch 
 6.  **Build Final System (Inside Chroot)**:
     ```bash
     exit                              # Back to root
-    sudo ./chroot.sh                  # Enter isolated environment
-    # Run Phase 3 scripts...
+    sudo ./chroot.sh "/scripts/build-phase3.sh"
+    ```
+7.  **Safe Cleanup**:
+    ```bash
+    sudo ./teardown.sh                # Safely unmount virtual systems
     ```
 
 ## 📖 Essential Documentation
@@ -52,7 +56,8 @@ For the full detailed walkthrough, refer to:
 
 ## 🛡 Design Philosophy
 - **Idempotency**: Every script checks for `.built` flags. If a build fails, just fix and restart—it skips what it has already done.
-- **Safety**: Builds happen inside a virtual loopback disk image to keep the host clean.
+- **Smart Extract**: No more hardcoded version numbers in scripts. The system dynamically matches tarballs (supports `.tar.*` and `.tgz`).
+- **Safety**: Builds happen inside a virtual loopback disk image. `teardown.sh` ensures clean unmounting of kernel file systems.
 - **Logging**: Detailed per-package output makes troubleshooting simple.
 
 ---

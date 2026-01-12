@@ -33,7 +33,14 @@ for script in scripts/phase2-tools/*.sh; do
     fi
 done
 
-# 5. Chroot and Phase 3 - Building Final System
-log "INFO" "Phase 2 complete."
-log "INFO" "Proceed to setup chroot with sudo ./chroot.sh"
-# Further automation inside chroot would follow.
+# 5. Phase 2 Complete - Transition to Chroot
+log "INFO" "========================================"
+log "INFO" "PHASE 2 (TEMPORARY TOOLS) COMPLETE!"
+log "INFO" "========================================"
+log "INFO" "The next phase (Phase 3) requires entering the chroot environment."
+log "INFO" "Since this requires root privileges, please run the following:"
+log ""
+log "INFO" "  sudo ./chroot.sh \"/scripts/build-phase3.sh\""
+log ""
+log "INFO" "Alternatively, for an interactive shell, run: sudo ./chroot.sh"
+log "INFO" "========================================"

@@ -103,26 +103,33 @@ cd /opt/ginger_os
 *Executes Phase 1 (Toolchain) and Phase 2 (Temp Tools) automatically.*
 
 ### Step E: The Chroot Phase
-Exit the `lfs` shell and run:
+Exit the `lfs` shell and run the automated Phase 3 orchestrated build:
 ```bash
-sudo ./chroot.sh
-# Then inside chroot:
-for script in /scripts/phase3-system/*.sh; do bash "$script"; done
+exit
+sudo ./chroot.sh "/scripts/build-phase3.sh"
 ```
+*Alternatively, for an interactive shell, just run `sudo ./chroot.sh`.*
 
-## 7. Recovery & Resuming a Build
+## 7. Recovery & Safety
 
-GingerOS is built with **Idempotency**. Every package script creates a marker once it finishes.
+GingerOS is built with **Idempotency** and **Host Safety**. 
 
 ### How to Resume:
-If the build fails (e.g., at GCC), simply fix the error and **run the script again**. 
-The system will check `/mnt/lfs/var/lib/ginger/` for `.built` files and skip everything that was already successful.
+If the build fails, fix the error and **run the build command again**. 
+The system will check `/mnt/lfs/var/lib/ginger/` for `.built` files and skip finished packages.
 
 ### How to Force a Rebuild:
-If you want to re-run a specific package (e.g., to change a config):
-1.  Navigate to the status directory: `cd /mnt/lfs/var/lib/ginger/`
+To re-run a specific package:
+1.  Navigate to status markers: `cd /mnt/lfs/var/lib/ginger/`
 2.  Remove the marker: `rm [package_name].built`
-3.  Run the script again.
+3.  Restart the build.
+
+### Safe Exit:
+If you need to reboot the host or move files, ALWAYS run:
+```bash
+sudo ./teardown.sh
+```
+*This safely unmounts all kernel virtual file systems from the disk image.*
 
 ---
 *Refer to `WORKFLOW.md` for detailed per-script explanations.*
