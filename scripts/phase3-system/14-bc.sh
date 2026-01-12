@@ -4,7 +4,7 @@ source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="bc"
 check_built "$PKG_NAME" && exit 0
 extract "bc"
-./configure --prefix=/usr --with-readline
+CC='gcc -std=c99' ./configure --prefix=/usr -G -O3 -r
 make $MAKEFLAGS
 make install
 cd .. && rm -rf "bc-"*
