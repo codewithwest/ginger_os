@@ -5,23 +5,23 @@ This document defines the official sequence for building the GingerOS (LFS 12.4)
 ## Phase 0: Host Setup
 Perform these steps on a clean Ubuntu/Debian host (preferably in a VM).
 
-1.  **Clone & Configure**:
-    Ensure the `ginger_os` directory is in the home directory of your administrative user.
-2.  **Run System Setup**:
-    ```bash
-    sudo ./scripts/setup-host.sh
-    ```
-    *Creates the `lfs` user and prepares `$LFS` (/mnt/lfs) directory structure.*
-3.  **Prepare the Virtual Disk**:
-    ```bash
-    sudo ./scripts/prepare-image.sh
-    ```
-    *Creates `ginger_os.img`, sets up loop devices, and mounts the filesystem.*
-4.  **Download Sources**:
+3. **Source Acquisition**:
     ```bash
     ./scripts/download.sh
     ```
-    *Downloads all project dependencies to `/sources`.*
+    *Fetches all LFS 12.4 packages and verifies MD5 sums.*
+
+4. **Disk Preparation**:
+    ```bash
+    sudo ./scripts/prepare-image.sh
+    ```
+    *Creates the 20GB system disk and mounts it at /mnt/lfs.*
+
+5. **Host Setup**:
+    ```bash
+    sudo ./scripts/setup-host.sh
+    ```
+    *Creates the 'lfs' user and copies sources onto the mounted disk.*
 
 ## Phase 1 & 2: The Toolchain Construction
 This phase is fully automated and runs as the unprivileged `lfs` user.

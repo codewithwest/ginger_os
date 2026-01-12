@@ -5,18 +5,24 @@ GingerOS is a fully reproducible, automated build system for Linux From Scratch 
 ## 🚀 Quick Start (Automated Pipeline)
 
 1.  **Prepare Host**: Spin up an Ubuntu VM and clone this repository.
-2.  **Infrastructure**:
+2.  **Source Acquisition**:
     ```bash
-    sudo ./scripts/setup-host.sh      # Creates 'lfs' user and directories
-    sudo ./scripts/prepare-image.sh   # Creates the 20GB system disk image
     ./scripts/download.sh             # Fetches all LFS 12.4 sources
     ```
-3.  **Build Toolchain (As 'lfs' User)**:
+3.  **Disk Preparation**:
+    ```bash
+    sudo ./scripts/prepare-image.sh   # Creates the 20GB system disk image
+    ```
+4.  **Host Setup**:
+    ```bash
+    sudo ./scripts/setup-host.sh      # Creates 'lfs' user and directories
+    ```
+5.  **Build Toolchain (As 'lfs' User)**:
     ```bash
     sudo su - lfs
     ./build.sh                        # Orchestrates Phase 1 & 2
     ```
-4.  **Build Final System (Inside Chroot)**:
+6.  **Build Final System (Inside Chroot)**:
     ```bash
     exit                              # Back to root
     sudo ./chroot.sh                  # Enter isolated environment

@@ -33,7 +33,36 @@ sudo apt update
 sudo apt install -y qemu-system-x86 qemu-utils libvirt-daemon-system virt-manager
 ```
 
-## 3. The GingerOS Automated Workflow
+## 5. Safety & Snapshots (The "Save Game" Feature)
+Building LFS is a trial-and-error process. Snapshots allow you to "save your game" before a major build phase.
+
+### Creating a Snapshot (VM must be OFF)
+Once you have Ubuntu installed and your dependencies ready, create a "Base" snapshot:
+```bash
+# qemu-img snapshot -c <name> <file>
+qemu-img snapshot -c base_system ubuntu_host.qcow2
+```
+
+### Listing Snapshots
+```bash
+qemu-img snapshot -l ubuntu_host.qcow2
+```
+
+### Restoring a Snapshot (REVERT)
+If a build fails and you want to go back to your "Base" state:
+```bash
+# qemu-img snapshot -a <name> <file>
+qemu-img snapshot -a base_system ubuntu_host.qcow2
+```
+
+### Deleting a Snapshot
+```bash
+qemu-img snapshot -d base_system ubuntu_host.qcow2
+```
+
+---
+
+## 6. The GingerOS Automated Workflow
 Once your VM is running, do NOT perform manual LFS steps. Use the scripted workflow:
 
 ### Step A: Script Initialization (As Root)

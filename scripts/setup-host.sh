@@ -16,8 +16,13 @@ mkdir -pv "$LFS/sources"
 mkdir -pv "$LFS/tools"
 mkdir -pv "$LFS/usr/include"
 
-# Copy sources to $LFS/sources so the lfs user can access them
-cp -r "$GINGER_SOURCES/"* "$LFS/sources/"
+# Copy sources to $LFS/sources if they exist
+if [ -d "$GINGER_SOURCES" ] && [ "$(ls -A "$GINGER_SOURCES")" ]; then
+    log "INFO" "Copying existing sources to $LFS/sources..."
+    cp -r "$GINGER_SOURCES/"* "$LFS/sources/"
+else
+    log "WARN" "No sources found in $GINGER_SOURCES. Run download.sh later."
+fi
 chmod -v a+wt "$LFS/sources"
 
 # Create lfs user
