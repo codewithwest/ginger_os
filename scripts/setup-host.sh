@@ -28,8 +28,9 @@ chmod -v a+wt "$LFS/sources"
 # Create lfs user
 if ! id lfs >/dev/null 2>&1; then
     log "INFO" "Creating 'lfs' user..."
-    groupadd lfs
-    useradd -s /bin/bash -g lfs -m -k /dev/null lfs
+    # Using absolute paths as some minimal systems have restricted PATHs even for sudo
+    /usr/sbin/groupadd lfs
+    /usr/sbin/useradd -s /bin/bash -g lfs -m -k /dev/null lfs
     echo "lfs:lfs" | chpasswd
 fi
 
