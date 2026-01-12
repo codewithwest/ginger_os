@@ -8,13 +8,14 @@ IMAGE_PATH="${GINGER_ROOT}/ginger_os.img"
 
 log "INFO" "Creating 20GB sparse disk image..."
 # Use truncate instead of dd to create a sparse file (takes almost 0 space until used)
+[ -f "$IMAGE_PATH" ] && rm "$IMAGE_PATH"
 truncate -s 20G "$IMAGE_PATH"
 
 log "INFO" "Partitioning image..."
 # Create a single primary bootable partition
-parted -s "$IMAGE_PATH" mklabel msdos
-parted -s "$IMAGE_PATH" mkpart primary ext4 1MiB 100%
-parted -s "$IMAGE_PATH" set 1 boot on
+sudo parted -s "$IMAGE_PATH" mklabel msdos
+sudo parted -s "$IMAGE_PATH" mkpart primary ext4 1MiB 100%
+sudo parted -s "$IMAGE_PATH" set 1 boot on
 
 log "INFO" "Setting up loopback device..."
 # Find next available loop device
