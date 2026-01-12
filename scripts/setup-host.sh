@@ -16,8 +16,22 @@ if [ "$(stat -c %d /)" == "$(stat -c %d "$LFS")" ]; then
 fi
 
 mkdir -pv "$LFS/sources"
+mkdir -pv "$LFS/var/lib/ginger"
+
+# LFS 12.4 Merged-usr structure
+mkdir -pv "$LFS/usr/bin"
+mkdir -pv "$LFS/usr/lib"
+mkdir -pv "$LFS/usr/sbin"
+
+for i in bin lib sbin; do
+    [ -L "$LFS/$i" ] || ln -snv usr/$i "$LFS/$i"
+done
+
+case $(uname -m) in
+  x86_64) mkdir -pv "$LFS/lib64" ;;
+esac
+
 mkdir -pv "$LFS/tools"
-mkdir -pv "$LFS/usr/include"
 
 # Copy sources to $LFS/sources if they exist
 if [ -d "$GINGER_SOURCES" ] && [ "$(ls -A "$GINGER_SOURCES")" ]; then

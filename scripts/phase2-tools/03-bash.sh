@@ -1,19 +1,13 @@
 #!/bin/bash
-# LFS 12.2 - 6.4. Bash-5.2.32
-# The primary shell.
-
+# LFS 12.4 - 6.4. Bash-5.3
 source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
 PKG_NAME="bash-temp"
-PKG_VERSION="$BASH_VERSION"
-ARCHIVE="bash-$BASH_VERSION.tar.gz"
-DIR_NAME="bash-$BASH_VERSION"
-
 check_built "$PKG_NAME" && exit 0
 
-extract "$ARCHIVE" "$DIR_NAME"
+extract "bash"
 
-log "PROCESS" "Compiling Bash..."
+log "PROCESS" "Compiling Bash (Temporary Tools)..."
 
 ./configure --prefix=/usr                      \
             --build=$(sh support/config.guess) \
@@ -22,9 +16,11 @@ log "PROCESS" "Compiling Bash..."
 
 make $MAKEFLAGS
 make DESTDIR=$LFS install
-ln -sv bash $LFS/bin/sh
+
+# LFS 12.4: Create the sh symlink
+ln -sfv bash $LFS/bin/sh
 
 cd ..
-rm -rf "$DIR_NAME"
+rm -rf "bash-"*
 
 mark_built "$PKG_NAME"
