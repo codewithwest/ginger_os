@@ -16,6 +16,8 @@ fi
 log "Unmounting virtual kernel file systems from $LFS..."
 
 # Unmount in reverse order
+mountpoint -q $LFS/config  && umount -v $LFS/config
+mountpoint -q $LFS/scripts && umount -v $LFS/scripts
 mountpoint -q $LFS/dev/shm && umount -v $LFS/dev/shm
 mountpoint -q $LFS/dev/pts && umount -v $LFS/dev/pts
 mountpoint -q $LFS/run     && umount -v $LFS/run

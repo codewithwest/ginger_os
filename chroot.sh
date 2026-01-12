@@ -21,6 +21,12 @@ else
   mountpoint -q $LFS/dev/shm || mount -vt tmpfs shm $LFS/dev/shm
 fi
 
+# Ensure scripts and config are accessible inside chroot
+log "INFO" "Mounting project scripts and config into chroot..."
+mkdir -p "$LFS/scripts" "$LFS/config"
+mountpoint -q "$LFS/scripts" || mount --bind "$(dirname "$(readlink -f "$0")")/scripts" "$LFS/scripts"
+mountpoint -q "$LFS/config"  || mount --bind "$(dirname "$(readlink -f "$0")")/config"  "$LFS/config"
+
 log "INFO" "Entering chroot..."
 
 # Find the absolute path to chroot to avoid "command not found" issues

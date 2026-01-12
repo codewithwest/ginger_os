@@ -85,6 +85,11 @@ export IANA_ETC_VERSION="20250807"
 # Target directory for the LFS system
 export LFS="/mnt/lfs"
 
+# Chroot Detection: If we are inside the new system, LFS should be /
+if [ -f /usr/bin/bash ] && [ ! -d /mnt/lfs ]; then
+    export LFS=""
+fi
+
 # Target architecture triplet
 export LFS_TGT="x86_64-lfs-linux-gnu"
 

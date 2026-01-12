@@ -28,7 +28,10 @@ for i in bin lib sbin; do
 done
 
 case $(uname -m) in
-  x86_64) mkdir -pv "$LFS/lib64" ;;
+  x86_64) 
+    mkdir -pv "$LFS/lib64"
+    [ -L "$LFS/lib64/ld-linux-x86-64.so.2" ] || ln -sfv ../lib/ld-linux-x86-64.so.2 "$LFS/lib64/ld-linux-x86-64.so.2"
+    ;;
 esac
 
 mkdir -pv "$LFS/tools"
