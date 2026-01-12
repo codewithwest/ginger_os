@@ -6,8 +6,9 @@ source "$(dirname "$(readlink -f "$0")")/common.sh"
 
 IMAGE_PATH="${GINGER_ROOT}/ginger_os.img"
 
-log "INFO" "Creating 20GB disk image..."
-dd if=/dev/zero of="$IMAGE_PATH" bs=1G count=20
+log "INFO" "Creating 20GB sparse disk image..."
+# Use truncate instead of dd to create a sparse file (takes almost 0 space until used)
+truncate -s 20G "$IMAGE_PATH"
 
 log "INFO" "Partitioning image..."
 # Create a single primary bootable partition
