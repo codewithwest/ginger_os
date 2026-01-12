@@ -3,6 +3,7 @@
 # MUST BE RUN AS ROOT
 
 source "$(dirname "$(readlink -f "$0")")/../config/env.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 
 log "INFO" "Ensuring $LFS exists and has correct permissions..."
 mkdir -p "$LFS"

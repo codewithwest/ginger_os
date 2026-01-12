@@ -4,7 +4,7 @@ export BINUTILS_VERSION="2.45"
 export GCC_VERSION="15.2.0"
 export GLIBC_VERSION="2.42"
 export LINUX_VERSION="6.16.1"
-export MPFR_VERSION="4.2.1"
+export MPFR_VERSION="4.2.2"
 export GMP_VERSION="6.3.0"
 export MPC_VERSION="1.3.1"
 
@@ -21,7 +21,7 @@ export PATH="$LFS/tools/bin:/usr/bin:/usr/local/bin"
 export MAKEFLAGS="-j$(nproc)"
 
 # Workspace directories
-export GINGER_ROOT="/home/jonas/Documents/west/ginger_os"
+export GINGER_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export GINGER_SCRIPTS="$GINGER_ROOT/scripts"
 export GINGER_SOURCES="$GINGER_ROOT/sources"
 export GINGER_LOGS="$GINGER_ROOT/logs"

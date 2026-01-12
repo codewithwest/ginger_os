@@ -1,56 +1,47 @@
-# GingerOS - Scripted LFS Build System
+# GingerOS - Scripted LFS 12.4 Build System
 
-This repository contains a fully reproducible, scripted approach to building a Linux From Scratch (LFS) 12.4 system.
+GingerOS is a fully reproducible, automated build system for Linux From Scratch (LFS) version 12.4. It converts the manual instructions of the LFS book into a suite of idempotent shell scripts designed to run in a safe, isolated VM environment.
 
-## Directory Structure
+## 🚀 Quick Start (Automated Pipeline)
 
-- `config/`: Global configuration and environment variables.
-- `scripts/`: Implementation of the build phases.
-  - `phase1-tools/`: Cross-compiler toolchain.
-  - `phase2-tools/`: Temporary tools built using the cross-compiler.
-  - `phase3-system/`: The final system build (to be run inside chroot).
-  - `phase4-boot/`: Kernel and bootloader configuration.
-- `sources/`: Tarballs for all LFS packages.
-- `logs/`: Compilation logs for every package.
-- `build/`: Temporary extraction and compilation directory.
+1.  **Prepare Host**: Spin up an Ubuntu VM and clone this repository.
+2.  **Infrastructure**:
+    ```bash
+    sudo ./scripts/setup-host.sh      # Creates 'lfs' user and directories
+    sudo ./scripts/prepare-image.sh   # Creates the 20GB system disk image
+    ./scripts/download.sh             # Fetches all LFS 12.4 sources
+    ```
+3.  **Build Toolchain (As 'lfs' User)**:
+    ```bash
+    sudo su - lfs
+    ./build.sh                        # Orchestrates Phase 1 & 2
+    ```
+4.  **Build Final System (Inside Chroot)**:
+    ```bash
+    exit                              # Back to root
+    sudo ./chroot.sh                  # Enter isolated environment
+    # Run Phase 3 scripts...
+    ```
 
-## Usage
+## 📖 Essential Documentation
+For the full detailed walkthrough, refer to:
+- **[VM_Config.md](./VM_Config.md)**: How to set up your build machine (The "Infrastructure").
+- **[WORKFLOW.md](./WORKFLOW.md)**: The step-by-step master sequence for the build scripts.
 
-1. **Download Sources**
-   ```bash
-   ./scripts/download.sh
-   ```
+## 🏗 Project Architecture
+- `config/`: Global environment variables and package versions.
+- `scripts/`: Modular build scripts for every chapter.
+  - `phase1-tools/`: The cross-toolchain.
+  - `phase2-tools/`: Temporary tools.
+  - `phase3-system/`: The native system software.
+  - `phase4-boot/`: Linux Kernel and GRUB bootloader.
+- `logs/`: Individual compilation logs for every package.
+- `sources/`: All downloaded tarballs (md5 verified).
 
-2. **Prepare Disk Image**
-   ```bash
-   ./scripts/prepare-image.sh
-   ```
+## 🛡 Design Philosophy
+- **Idempotency**: Every script checks for `.built` flags. If a build fails, just fix and restart—it skips what it has already done.
+- **Safety**: Builds happen inside a virtual loopback disk image to keep the host clean.
+- **Logging**: Detailed per-package output makes troubleshooting simple.
 
-3. **Setup Host**
-   ```bash
-   sudo ./scripts/setup-host.sh
-   ```
-
-4. **Phase 1 & 2 Build**
-   Run the main orchestrator (usually as the `lfs` user):
-   ```bash
-   ./build.sh
-   ```
-
-5. **Enter Chroot**
-   Phase 3 must be run inside the chroot environment.
-   ```bash
-   sudo ./chroot.sh
-   ```
-
-6. **Run in QEMU**
-   ```bash
-   ./qemu-run.sh
-   ```
-
-## Design Philosophy
-
-- **Idempotency**: Scripts check for `.built` flags in `$LFS/var/lib/ginger` to skip already completed steps.
-- **Independence**: Each package has its own script, making debugging and modification easier.
-- **Standardization**: Uses standard LFS variables (`LFS`, `LFS_TGT`, `MAKEFLAGS`).
-- **Safety**: Mount states and permissions are checked before critical operations.
+---
+Built with pride for the LFS 12.4 ecosystem.
