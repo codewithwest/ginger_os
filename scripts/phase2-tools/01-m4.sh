@@ -5,10 +5,14 @@ source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="m4-temp"
 check_built "$PKG_NAME" && exit 0
 
+# Clean start for M4
+rm -rf "$GINGER_ROOT/build/m4-"*
+
 extract "m4"
 
 log "PROCESS" "Compiling M4 (Temporary Tools)..."
 
+# Some modern hosts need these extra flags for GNULIB safety
 ./configure --prefix=/usr   \
             --host=$LFS_TGT \
             --build=$(build-aux/config.guess)

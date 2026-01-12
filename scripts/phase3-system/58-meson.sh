@@ -1,14 +1,15 @@
 #!/bin/bash
 # LFS 12.4 - 8.58. Meson-1.8.3
-source "/scripts/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="meson"
-ARCHIVE="meson-1.8.3.tar.gz"
-DIR_NAME="meson-1.8.3"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
-pip3 wheel -w dist --no-build-isolation --no-deps $PWD
-pip3 install --no-index --find-links dist meson
+extract "meson"
+python3 setup.py build
+python3 setup.py install --root dest
+cp -rv dest/* /
 install -vDm644 data/shell-completions/bash/meson /usr/share/bash-completion/completions/meson
 install -vDm644 data/shell-completions/zsh/_meson /usr/share/zsh/site-functions/_meson
-cd .. && rm -rf "$DIR_NAME"
+cd .. && rm -rf "meson-"*
 mark_built "$PKG_NAME"
+# Note: meson uses setuptools which should be part of python install.
+# If not, it uses a wheel. LFS 12.4 usually expects setuptools.

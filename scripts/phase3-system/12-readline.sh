@@ -1,17 +1,15 @@
 #!/bin/bash
 # LFS 12.4 - 8.12. Readline-8.3
-source "/scripts/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="readline"
-ARCHIVE="readline-8.3.tar.gz"
-DIR_NAME="readline-8.3"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
-sed -i '/RPATH/s/^/#/' support/shlib-install
+extract "readline"
+sed -i '/@[[:space:]]*$(SHLIB_LIBS)/s/@//' shlib/Makefile.in
 ./configure --prefix=/usr    \
             --disable-static \
             --with-curses    \
             --docdir=/usr/share/doc/readline-8.3
 make SHLIB_LIBS="-lncursesw" $MAKEFLAGS
 make SHLIB_LIBS="-lncursesw" install
-cd .. && rm -rf "$DIR_NAME"
+cd .. && rm -rf "readline-"*
 mark_built "$PKG_NAME"

@@ -1,30 +1,31 @@
 #!/bin/bash
 # LFS 12.4 - 8.30. Ncurses-6.5
-source "/scripts/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="ncurses"
-ARCHIVE="ncurses-6.5-20250809.tar.gz"
-DIR_NAME="ncurses-6.5-20250809"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
+extract "ncurses"
+
 ./configure --prefix=/usr           \
             --mandir=/usr/share/man \
             --with-shared           \
             --without-debug         \
             --without-ada           \
-            --with-terminfo-dirs="/etc/terminfo:/usr/share/terminfo" \
             --enable-widec          \
-            --with-pkg-config-libdir=/usr/lib/pkgconfig
+            --with-is_term_type
+
 make $MAKEFLAGS
-make DESTDIR=$LFS install # Note: DESTDIR used if run before chroot, but here we are in chroot
-make install
-ln -svw libncursesw.so /usr/lib/libncurses.so
+make DESTDIR=$PWD/dest install
+install -vm755 dest/usr/lib/libncursesw.so.6.5 /usr/lib
+rm -v  dest/usr/lib/libncursesw.so.6.5
+sed -e 's/^#bold/bold/' -i dest/usr/lib/pkgconfig/ncursesw.pc
+cp -av dest/* /
+
 for lib in ncurses form panel menu ; do
-    rm -vf                    /usr/lib/lib${lib}.so
-    echo "INPUT(-l${lib}w)" > /usr/lib/lib${lib}.so
-    ln -sfv ${lib}w.pc        /usr/lib/pkgconfig/${lib}.pc
+    ln -sfv lib${lib}w.so /usr/lib/lib${lib}.so
+    ln -sfv lib${lib}w.a /usr/lib/lib${lib}.a
+    ln -sfv ${lib}w.pc    /usr/lib/pkgconfig/${lib}.pc
 done
-rm -vf                     /usr/lib/libcursesw.so
-echo "INPUT(-lncursesw)" > /usr/lib/libcursesw.so
-ln -sfv libncurses.so      /usr/lib/libcurses.so
-cd .. && rm -rf "$DIR_NAME"
+ln -sfv libncursesw.so /usr/lib/libcurses.so
+
+cd .. && rm -rf "ncurses-"*
 mark_built "$PKG_NAME"

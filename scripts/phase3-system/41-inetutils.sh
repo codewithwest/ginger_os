@@ -1,11 +1,9 @@
 #!/bin/bash
 # LFS 12.4 - 8.41. Inetutils-2.6
-source "/scripts/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="inetutils"
-ARCHIVE="inetutils-2.6.tar.xz"
-DIR_NAME="inetutils-2.6"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
+extract "inetutils"
 ./configure --prefix=/usr        \
             --bindir=/usr/bin    \
             --localstatedir=/var \
@@ -15,9 +13,9 @@ extract "$ARCHIVE" "$DIR_NAME"
             --disable-rexec      \
             --disable-rlogin     \
             --disable-rsh        \
-            --make-install-do-conf-install
+            --disable-servers
 make $MAKEFLAGS
 make install
-mv -v /usr/sbin/ifconfig /usr/bin
-cd .. && rm -rf "$DIR_NAME"
+mv -v /usr/bin/{hostname,ifconfig,ping,ping6,traceroute} /usr/bin
+cd .. && rm -rf "inetutils-"*
 mark_built "$PKG_NAME"

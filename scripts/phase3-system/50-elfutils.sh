@@ -1,11 +1,9 @@
 #!/bin/bash
-# LFS 12.4 - 8.50. Elfutils-0.193 (Libelf)
-source "/scripts/common.sh"
+# LFS 12.4 - 8.50. Elfutils-0.193
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="elfutils"
-ARCHIVE="elfutils-0.193.tar.bz2"
-DIR_NAME="elfutils-0.193"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
+extract "elfutils"
 ./configure --prefix=/usr                \
             --disable-debuginfod         \
             --enable-libdebuginfod=dummy
@@ -13,5 +11,5 @@ make $MAKEFLAGS
 make -C libelf install
 install -vm644 config/libelf.pc /usr/lib/pkgconfig
 rm /usr/lib/libelf.a
-cd .. && rm -rf "$DIR_NAME"
+cd .. && rm -rf "elfutils-"*
 mark_built "$PKG_NAME"

@@ -7,8 +7,8 @@ check_built "$PKG_NAME" && exit 0
 
 extract "gcc"
 
-log "PROCESS" "Setting up GCC dependencies..."
-# Extract dependencies directly into the gcc tree as requested by LFS
+log "PROCESS" "Setting up GCC internal dependencies..."
+# Use wildcards to find dependencies in the source folder
 tar -xf "$GINGER_SOURCES"/mpfr-*.tar.* && mv -v mpfr-* mpfr
 tar -xf "$GINGER_SOURCES"/gmp-*.tar.*  && mv -v gmp-* gmp
 tar -xf "$GINGER_SOURCES"/mpc-*.tar.*  && mv -v mpc-* mpc
@@ -21,7 +21,7 @@ case $(uname -m) in
   ;;
 esac
 
-log "PROCESS" "Compiling GCC Pass 1..."
+log "PROCESS" "Configuring GCC Pass 1..."
 mkdir -v build
 cd build
 
@@ -45,12 +45,22 @@ cd build
              --disable-libstdcxx                                \
              --enable-languages=c,c++
 
+log "PROCESS" "Building and installing GCC Pass 1..."
 make $MAKEFLAGS
 make install
 
+log "PROCESS" "Finalizing GCC Internal Headers (Fixing MB_LEN_MAX issues)..."
+# We must perform this from the source directory, not the build directory
 cd ..
-cat gcc/limitx.h gcc/glimits.h gcc/limity.h > \
-  `dirname $($LFS_TGT-gcc -print-libgcc-file-name)`/install-tools/include/limits.h
+
+# Ensure the destination directory exists (sometimes make install misses the subfolder)
+LIMITS_DIR=$(dirname "$($LFS_TGT-gcc -print-libgcc-file-name)")/install-tools/include
+mkdir -pv "$LIMITS_DIR"
+
+# Creation of the fixed limits.h
+cat gcc/limitx.h gcc/glimits.h gcc/limity.h > "$LIMITS_DIR/limits.h"
+
+log "INFO" "GCC Pass 1 finalized. Header located at: $LIMITS_DIR/limits.h"
 
 cd ..
 rm -rf "gcc-"*

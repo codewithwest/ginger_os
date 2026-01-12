@@ -1,12 +1,11 @@
 #!/bin/bash
-# LFS 12.4 - 8.53. Flit-Core-3.12.0
-source "/scripts/common.sh"
+# LFS 12.4 - 8.53. Flit-core-3.11.0
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="flit-core"
-ARCHIVE="flit_core-3.12.0.tar.gz"
-DIR_NAME="flit_core-3.12.0"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
-pip3 wheel -w dist --no-build-isolation --no-deps $PWD
+extract "flit_core"
+pip3 wheel --no-index --no-cache-dir --no-user --find-links dist .
 pip3 install --no-index --no-user --find-links dist flit_core
-cd .. && rm -rf "$DIR_NAME"
+cd .. && rm -rf "flit_core-"*
 mark_built "$PKG_NAME"
+# Note: Use of pip3 in chroot requires python to be installed first.

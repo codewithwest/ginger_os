@@ -1,13 +1,11 @@
 #!/bin/bash
 # LFS 12.4 - 8.71. Patch-2.8
-source "/scripts/common.sh"
-PKG_NAME="patch-final"
-ARCHIVE="patch-2.8.tar.xz"
-DIR_NAME="patch-2.8"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
+PKG_NAME="patch"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
+extract "patch"
 ./configure --prefix=/usr
 make $MAKEFLAGS
 make install
-cd .. && rm -rf "$DIR_NAME"
+cd .. && rm -rf "patch-"*
 mark_built "$PKG_NAME"

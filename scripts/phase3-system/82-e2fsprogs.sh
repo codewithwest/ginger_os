@@ -1,11 +1,9 @@
 #!/bin/bash
-# LFS 12.4 - 8.82. E2fsprogs-1.47.3
-source "/scripts/common.sh"
+# LFS 12.4 - 8.82. E2fsprogs-1.47.2
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="e2fsprogs"
-ARCHIVE="e2fsprogs-1.47.3.tar.gz"
-DIR_NAME="e2fsprogs-1.47.3"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
+extract "e2fsprogs"
 mkdir -v build
 cd build
 ../configure --prefix=/usr           \
@@ -20,5 +18,6 @@ make install
 rm -fv /usr/lib/{libcom_err,libe2p,libext2fs,libss}.a
 gunzip -v /usr/share/info/libext2fs.info.gz
 install-info --dir-file=/usr/share/info/dir /usr/share/info/libext2fs.info
-cd ../.. && rm -rf "$DIR_NAME"
+cd ../.. && rm -rf "e2fsprogs-"*
 mark_built "$PKG_NAME"
+# Note: Root required for some e2fsprogs steps.

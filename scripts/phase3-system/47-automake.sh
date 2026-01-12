@@ -1,13 +1,11 @@
 #!/bin/bash
-# LFS 12.4 - 8.47. Automake-1.18.1
-source "/scripts/common.sh"
+# LFS 12.4 - 8.47. Automake-1.17
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="automake"
-ARCHIVE="automake-1.18.1.tar.xz"
-DIR_NAME="automake-1.18.1"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
-./configure --prefix=/usr --docdir=/usr/share/doc/automake-1.18.1
+extract "automake"
+./configure --prefix=/usr --docdir=/usr/share/doc/automake-1.17
 make $MAKEFLAGS
 make install
-cd .. && rm -rf "$DIR_NAME"
+cd .. && rm -rf "automake-"*
 mark_built "$PKG_NAME"

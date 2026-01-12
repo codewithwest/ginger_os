@@ -1,11 +1,9 @@
 #!/bin/bash
 # LFS 12.4 - 8.81. Util-linux-2.41.1
-source "/scripts/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="util-linux"
-ARCHIVE="util-linux-2.41.1.tar.xz"
-DIR_NAME="util-linux-2.41.1"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
+extract "util-linux"
 ./configure --bindir=/usr/bin    \
             --libdir=/usr/lib    \
             --runstatedir=/run   \
@@ -22,5 +20,5 @@ extract "$ARCHIVE" "$DIR_NAME"
             --docdir=/usr/share/doc/util-linux-2.41.1
 make $MAKEFLAGS
 make install
-cd .. && rm -rf "$DIR_NAME"
+cd .. && rm -rf "util-linux-"*
 mark_built "$PKG_NAME"

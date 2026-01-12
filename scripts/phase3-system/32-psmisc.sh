@@ -1,13 +1,11 @@
 #!/bin/bash
-# LFS 12.4 - 8.32. Psmisc-23.7
-source "/scripts/common.sh"
+# LFS 12.4 - 8.32. Psmisc-23.8
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="psmisc"
-ARCHIVE="psmisc-23.7.tar.xz"
-DIR_NAME="psmisc-23.7"
 check_built "$PKG_NAME" && exit 0
-extract "$ARCHIVE" "$DIR_NAME"
+extract "psmisc"
 ./configure --prefix=/usr
 make $MAKEFLAGS
 make install
-cd .. && rm -rf "$DIR_NAME"
+cd .. && rm -rf "psmisc-"*
 mark_built "$PKG_NAME"
