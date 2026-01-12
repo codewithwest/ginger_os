@@ -4,7 +4,7 @@
 source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
 
 # 1. Download sources
-bash scripts/download.sh
+# bash scripts/download.sh
 
 # 2. Host Setup (Must be run as root initially)
 if [ "$USER" != "root" ]; then
@@ -15,7 +15,10 @@ fi
 log "INFO" "Starting Phase 1: Cross Toolchain..."
 for script in scripts/phase1-tools/*.sh; do
     log "INFO" "Running $script..."
-    bash "$script" 2>&1 | tee -a "$GINGER_LOGS/$(basename $script).log"
+    if ! bash "$script" 2>&1 | tee "$GINGER_LOGS/$(basename $script .sh).log"; then
+        log "ERROR" "Build failed during $script. Check $GINGER_LOGS/$(basename $script .sh).log"
+        exit 1
+    fi
 done
 
 # 4. Phase 2 - Temporary Tools

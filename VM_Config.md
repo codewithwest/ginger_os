@@ -65,11 +65,18 @@ qemu-img snapshot -d base_system ubuntu_host.qcow2
 ## 6. The GingerOS Automated Workflow
 Once your VM is running, do NOT perform manual LFS steps. Use the scripted workflow:
 
-### Step A: Script Initialization (As Root)
-Move the `ginger_os` project folder to `/opt` and run:
+### Step A: Script Initialization (The /opt standard)
+To avoid permission issues, we host the project in `/opt`. Run these as your admin user:
 ```bash
-sudo mv ginger_os /opt/
-sudo chown -R lfs:lfs /opt/ginger_os
+# 1. Clone the repository
+sudo git clone https://github.com/codewithwest/ginger_os.git /opt/ginger_os
+
+# 2. Configure ownership for both 'ginger' and 'lfs'
+sudo chown -R $USER:lfs /opt/ginger_os
+sudo chmod -R 775 /opt/ginger_os
+git config --global --add safe.directory /opt/ginger_os
+
+# 3. Initialize host
 cd /opt/ginger_os
 sudo ./scripts/setup-host.sh
 ```
@@ -103,10 +110,19 @@ sudo ./chroot.sh
 for script in /scripts/phase3-system/*.sh; do bash "$script"; done
 ```
 
-## 4. Why This Configuration?
-*   **Isolation**: Every build happens in a loopback image or dedicated disk, ensuring no files touch your host's `/usr` or `/etc`.
-*   **Reproducibility**: Environment variables are managed by `config/env.sh`, not manual Bash profiles.
-*   **Safety**: Root is only used for mounting and user creation; the build itself runs as an unprivileged user.
+## 7. Recovery & Resuming a Build
+
+GingerOS is built with **Idempotency**. Every package script creates a marker once it finishes.
+
+### How to Resume:
+If the build fails (e.g., at GCC), simply fix the error and **run the script again**. 
+The system will check `/mnt/lfs/var/lib/ginger/` for `.built` files and skip everything that was already successful.
+
+### How to Force a Rebuild:
+If you want to re-run a specific package (e.g., to change a config):
+1.  Navigate to the status directory: `cd /mnt/lfs/var/lib/ginger/`
+2.  Remove the marker: `rm [package_name].built`
+3.  Run the script again.
 
 ---
 *Refer to `WORKFLOW.md` for detailed per-script explanations.*

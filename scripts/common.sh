@@ -11,6 +11,12 @@ source "${SCRIPT_DIR}/../config/env.sh"
 STATUS_DIR="$LFS/var/lib/ginger"
 mkdir -p "$STATUS_DIR"
 
+# Validate critical environment
+if [ -z "${LFS:-}" ] || [ -z "${LFS_TGT:-}" ]; then
+    log "ERROR" "LFS or LFS_TGT environment variables are not set! Check config/env.sh"
+    exit 1
+fi
+
 log() {
     local TYPE=$1
     local MSG=$2

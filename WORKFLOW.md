@@ -74,6 +74,26 @@ While still in chroot:
     ```
 
 ---
-**Troubleshooting**:
-- Check `logs/package-name.log` for any errors.
-- Delete `$LFS/var/lib/ginger/package.built` if you need to re-run a specific step.
+---
+## 🏁 Recovery & Troubleshooting
+
+### 1. Resuming After Failure
+If a script fails, don't worry. 
+- Fix the issue (e.g., download a missing file or install a host dependency).
+- Run `./build.sh` (or the specific script) again. 
+- The build will skip already completed packages by checking `/mnt/lfs/var/lib/ginger/`.
+
+### 2. Retrying a Specific Package
+If you need to force a rebuild of a single package:
+```bash
+# As root or ginger
+rm /mnt/lfs/var/lib/ginger/gcc-pass1.built
+# Then run the build again
+```
+
+### 3. Cleaning Up
+If you want to start the **entire build** from scratch:
+```bash
+sudo rm -rf /mnt/lfs/var/lib/ginger/*.built
+```
+*Note: This does not delete compiled files, just the markers that skip them.*
