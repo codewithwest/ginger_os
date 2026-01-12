@@ -29,7 +29,7 @@ make $MAKEFLAGS
 
 
 # Fix ldd path
-stouch /etc/ld.so.conf
+touch /etc/ld.so.conf
 
 sed '/test-installation/s@$(PERL)@echo not running@' -i ../Makefile
 
