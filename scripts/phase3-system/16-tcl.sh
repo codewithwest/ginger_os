@@ -46,9 +46,9 @@ ln -sfv tclsh8.6 /usr/bin/tclsh
 mv /usr/share/man/man3/{Thread,Tcl_Thread}.3
 
 cd ..
-tar -xf ../tcl8.6.16-html.tar.gz --strip-components=1
-mkdir -v -p /usr/share/doc/tcl-8.6.16
-cp -v -r  ./html/* /usr/share/doc/tcl-8.6.16
+# tar -xf ../tcl8.6.16-html.tar.gz --strip-components=1
+# mkdir -v -p /usr/share/doc/tcl-8.6.16
+# cp -v -r  ./html/* /usr/share/doc/tcl-8.6.16
 
 
 cd ../.. && rm -rf "tcl"*
