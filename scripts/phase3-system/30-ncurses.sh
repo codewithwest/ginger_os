@@ -24,10 +24,13 @@ make DESTDIR=$PWD/dest install
 install -vm755 dest/usr/lib/libncursesw.so.6.5 /usr/lib
 rm -v  dest/usr/lib/libncursesw.so.6.5
 
-# Fix pkg-config file
-sed -e 's/^#if.*XOPEN.*$/#if 1/' \
-    -i dest/usr/include/curses.h
-cp -av dest/* /
+# Fix curses.h to always use wide-character ABI
+if [ -f dest/usr/include/curses.h ]; then
+    sed -e 's/^#if.*XOPEN.*$/#if 1/' -i dest/usr/include/curses.h
+fi
+
+# Copy files to root - use -rv to be more resilient to metadata preservation errors
+cp -rv dest/* /
 
 # 3. Handle Wide-Character Compatibility Symlinks
 # Many applications expect non-wide character libraries.
