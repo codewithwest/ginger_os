@@ -5,9 +5,9 @@
 source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
 PKG_NAME="ncurses-temp"
-PKG_VERSION="6.5-20250809"
-ARCHIVE="ncurses-6.5-20250809.tar.gz"
-DIR_NAME="ncurses-6.5-20250809"
+PKG_VERSION="$NCURSES_VERSION"
+ARCHIVE="ncurses-$NCURSES_VERSION.tar.gz"
+DIR_NAME="ncurses-$NCURSES_VERSION"
 
 check_built "$PKG_NAME" && exit 0
 

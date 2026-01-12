@@ -5,9 +5,9 @@
 source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
 PKG_NAME="bash-temp"
-PKG_VERSION="5.3"
-ARCHIVE="bash-5.3.tar.gz"
-DIR_NAME="bash-5.3"
+PKG_VERSION="$BASH_VERSION"
+ARCHIVE="bash-$BASH_VERSION.tar.gz"
+DIR_NAME="bash-$BASH_VERSION"
 
 check_built "$PKG_NAME" && exit 0
 

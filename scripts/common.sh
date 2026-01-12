@@ -48,18 +48,48 @@ mark_built() {
 }
 
 extract() {
-    local ARCHIVE=$1
-    local DIR_NAME=$2
+    local PKG_PATTERN=$1
     
-    log "PROCESS" "Extracting $ARCHIVE..."
+    # Find the matching archive in GINGER_SOURCES
+    # This logic mimics the user's find/grep approach but is more robust.
+    # It looks for files starting with the package name followed by a version number.
+    local ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}-?[0-9]" | grep ".tar" | head -n 1)
+    
+    # Fallback for packages without a standard hyphen-version (like 'tcl')
+    if [ -z "$ARCHIVE_NAME" ]; then
+        ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}" | grep ".tar" | head -n 1)
+    fi
+
+    if [ -z "$ARCHIVE_NAME" ]; then
+        log "ERROR" "No archive found matching pattern '$PKG_PATTERN' in $GINGER_SOURCES"
+        exit 1
+    fi
+
+    # Determine the directory name (strip .tar.*)
+    local DIR_NAME=$(echo "$ARCHIVE_NAME" | sed -E 's/\.(tar\.(gz|bz2|xz)|tgz)$//')
+    
+    # Handle specific source-suffix cases like tcl's "-src"
+    DIR_NAME=${DIR_NAME/-src/}
+
+    log "PROCESS" "Extracting $ARCHIVE_NAME..."
     mkdir -p "$GINGER_ROOT/build"
     cd "$GINGER_ROOT/build"
     
-    # Clean up previous build directory if it exists
+    # Clean up previous build directory
     rm -rf "$DIR_NAME"
     
-    tar -xf "$GINGER_SOURCES/$ARCHIVE"
-    cd "$DIR_NAME"
+    # Extract
+    tar -xf "$GINGER_SOURCES/$ARCHIVE_NAME"
+    
+    # Some archives extract to a directory slightly different than the filename
+    # but 99% match. We'll try to find the directory if cd fails.
+    if [ -d "$DIR_NAME" ]; then
+        cd "$DIR_NAME"
+    else
+        # Find the most recently created directory
+        local NEW_DIR=$(ls -td */ | head -n 1 | cut -d'/' -f1)
+        cd "$NEW_DIR"
+    fi
 }
 
 # Error handler

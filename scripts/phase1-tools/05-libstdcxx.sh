@@ -1,22 +1,15 @@
 #!/bin/bash
-# LFS 12.2 - 5.6. Libstdc++ from GCC-14.2.0
-# The standard C++ library, built separately using the cross-compiler.
-
+# LFS 12.4 - 5.6. Libstdc++ from GCC-15.2.0
 source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
-PKG_NAME="libstdcxx-pass1"
-PKG_VERSION="$GCC_VERSION"
-ARCHIVE="gcc-$GCC_VERSION.tar.xz"
-DIR_NAME="gcc-$GCC_VERSION"
-
+PKG_NAME="libstdcxx"
 check_built "$PKG_NAME" && exit 0
 
-extract "$ARCHIVE" "$DIR_NAME"
-
-mkdir -v build
-cd build
+extract "gcc"
 
 log "PROCESS" "Compiling Libstdc++..."
+mkdir -v build
+cd build
 
 ../libstdc++-v3/configure           \
     --host=$LFS_TGT                 \
@@ -25,15 +18,15 @@ log "PROCESS" "Compiling Libstdc++..."
     --disable-multilib              \
     --disable-nls                   \
     --disable-libstdcxx-pch         \
-    --with-gxx-include-dir=/tools/$LFS_TGT/include/c++/$GCC_VERSION
+    --with-gxx-include-dir=/tools/$LFS_TGT/include/c++/15.2.0
 
 make $MAKEFLAGS
 make DESTDIR=$LFS install
 
-# Remove libtool files that interfere with cross-compilation
-rm -v $LFS/usr/lib/lib{stdc++,stdc++fs,supc++}.la
+# Remove interfering libtool files
+rm -v $LFS/usr/lib/libstdc++.la
 
 cd ../..
-rm -rf "$DIR_NAME"
+rm -rf "gcc-"*
 
 mark_built "$PKG_NAME"

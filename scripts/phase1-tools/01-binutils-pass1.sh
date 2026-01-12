@@ -1,21 +1,14 @@
 #!/bin/bash
-# LFS 12.2 - 5.2. Binutils-2.43.1 - Pass 1
-# Binutils is the first package because GCC and Glibc perform various tests 
-# on the assembler and linker to determine which features to enable.
-
+# LFS 12.4 - 5.2. Binutils-2.45 - Pass 1
 source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
 PKG_NAME="binutils-pass1"
-PKG_VERSION="$BINUTILS_VERSION"
-ARCHIVE="binutils-$BINUTILS_VERSION.tar.xz"
-DIR_NAME="binutils-$BINUTILS_VERSION"
-
 check_built "$PKG_NAME" && exit 0
 
-extract "$ARCHIVE" "$DIR_NAME"
+# Smart extract finds the best match for 'binutils' automatically
+extract "binutils"
 
 log "PROCESS" "Compiling Binutils Pass 1..."
-
 mkdir -v build
 cd build
 
@@ -30,6 +23,6 @@ make $MAKEFLAGS
 make install
 
 cd ../..
-rm -rf "$DIR_NAME"
+rm -rf "binutils-"*
 
 mark_built "$PKG_NAME"
