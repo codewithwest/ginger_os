@@ -30,12 +30,19 @@ popd
             --without-debug              \
             --without-ada                \
             --disable-stripping          \
-            --enable-widec
+            AWK=gawk
 
 make $MAKEFLAGS
 make DESTDIR=$LFS TIC_PATH=$(pwd)/build/progs/tic install
 ln -sv libncursesw.so $LFS/usr/lib/libncurses.so
-sed -e 's/^#bold/bold/' -i $LFS/usr/lib/pkgconfig/ncursesw.pc
+
+# The file might not exist in some snapshots or logic paths
+if [ -f "$LFS/usr/lib/pkgconfig/ncursesw.pc" ]; then
+    sed -e 's/^#if.*XOPEN.*$/#if 1/' \
+        -i $LFS/usr/include/curses.h
+else
+    log "WARN" "ncursesw.pc not found in /usr/lib/pkgconfig, skipping bold fix."
+fi
 
 cd ..
 rm -rf "ncurses"*
