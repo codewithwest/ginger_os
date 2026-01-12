@@ -9,7 +9,7 @@ qemu-img create -f qcow2 ubuntu_host.qcow2 50G
 
 # 2. Launch the installer (Replace with your Ubuntu ISO path)
 qemu-system-x86_64 \
-    -enable-kvm -m 8G -smp 4 \
+    -enable-kvm -m 8G -smp 16 \
     -drive file=ubuntu_host.qcow2,format=qcow2 \
     -cdrom ubuntu-24.04.3-live-server-amd64.iso \
     -boot d -nic user,hostfwd=tcp::2223-:22git sta

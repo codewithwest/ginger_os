@@ -11,11 +11,13 @@ if [ "$USER" != "root" ]; then
     log "WARN" "Host setup requires root. Please run 'sudo ./scripts/setup-host.sh' manually if not done."
 fi
 
+set -o pipefail
+
 # 3. Phase 1 - Cross Toolchain
 log "INFO" "Starting Phase 1: Cross Toolchain..."
 for script in scripts/phase1-tools/*.sh; do
     log "INFO" "Running $script..."
-    if ! bash "$script" 2>&1 | tee "$GINGER_LOGS/$(basename $script .sh).log"; then
+    if ! time bash "$script" 2>&1 | tee "$GINGER_LOGS/$(basename $script .sh).log"; then
         log "ERROR" "Build failed during $script. Check $GINGER_LOGS/$(basename $script .sh).log"
         exit 1
     fi
@@ -25,7 +27,10 @@ done
 log "INFO" "Starting Phase 2: Temporary Tools..."
 for script in scripts/phase2-tools/*.sh; do
     log "INFO" "Running $script..."
-    bash "$script" 2>&1 | tee -a "$GINGER_LOGS/$(basename $script).log"
+    if ! time bash "$script" 2>&1 | tee "$GINGER_LOGS/$(basename $script .sh).log"; then
+        log "ERROR" "Build failed during $script. Check $GINGER_LOGS/$(basename $script .sh).log"
+        exit 1
+    fi
 done
 
 # 5. Chroot and Phase 3 - Building Final System

@@ -7,6 +7,9 @@ source "$(dirname "$(readlink -f "$0")")/common.sh"
 
 log "INFO" "Ensuring $LFS exists and has correct permissions..."
 mkdir -p "$LFS"
+# Ensure the lfs user owns the entire mount point
+chown -R lfs:lfs "$LFS"
+
 # Note: Ideally $LFS is a mount point. We don't want to fill up the host root.
 if [ "$(stat -c %d /)" == "$(stat -c %d "$LFS")" ]; then
     log "WARN" "$LFS is on the root partition. It is highly recommended to use a separate partition."
