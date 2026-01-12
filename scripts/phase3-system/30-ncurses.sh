@@ -25,7 +25,8 @@ install -vm755 dest/usr/lib/libncursesw.so.6.5 /usr/lib
 rm -v  dest/usr/lib/libncursesw.so.6.5
 
 # Fix pkg-config file
-sed -e 's/^#bold/bold/' -i dest/usr/lib/pkgconfig/ncursesw.pc
+sed -e 's/^#if.*XOPEN.*$/#if 1/' \
+    -i dest/usr/include/curses.h
 cp -av dest/* /
 
 # 3. Handle Wide-Character Compatibility Symlinks
