@@ -35,7 +35,7 @@ sed -e "s|$SRCDIR/unix/pkgs/itcl4.3.2|/usr/lib/itcl4.3.2|" \
 unset SRCDIR
 
 make install
-chmod 644 /usr/lib/libtclstub8.6.aln -sfv tclsh8.6 /usr/bin/tclsh
+chmod 644 /usr/lib/libtclstub8.6.a
 
 chmod -v u+w /usr/lib/libtcl8.6.so
 
