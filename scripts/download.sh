@@ -1,33 +1,27 @@
 #!/bin/bash
-# GingerOS - Source downloader
+# GingerOS - Source Downloader
 
+source "$(dirname "$(readlink -f "$0")")/../config/env.sh"
 source "$(dirname "$(readlink -f "$0")")/common.sh"
 
-WGET_LIST="https://www.linuxfromscratch.org/lfs/view/stable/wget-list"
-
+# 1. Prepare directory
+log "INFO" "Preparing sources directory..."
+mkdir -pv "$GINGER_SOURCES"
+chmod -v a+wt "$GINGER_SOURCES"
 cd "$GINGER_SOURCES"
 
-log "INFO" "Checking host requirements..."
-bash "$GINGER_SCRIPTS/version-check.sh"
+# 2. Get list and checksums
+log "INFO" "Fetching package lists for LFS 12.4..."
+wget -nc https://www.linuxfromscratch.org/lfs/downloads/stable/wget-list
+wget -nc https://www.linuxfromscratch.org/lfs/downloads/stable/md5sums
 
-log "INFO" "Downloading LFS 12.4 package list..."
-wget -nc "$WGET_LIST"
+# 3. Download packages using the input file
+log "INFO" "Downloading packages (using wget-list)..."
+# We add -4 to ensure IPv4 and -nc to skip existing
+wget -4 --input-file=wget-list --continue --tries=5 --timeout=20
 
-log "INFO" "Primary servers are flaky. Using LFS Anduin Mirror for reliability..."
-# Extract just the filenames from the wget-list
-grep -oP '[^/]+$' wget-list > filenames.txt
+# 4. Verification
+log "INFO" "Verifying checksums..."
+md5sum -c md5sums
 
-# Download everything from Anduin mirror
-MIRROR_URL="https://anduin.linuxfromscratch.org/LFS"
-
-while read -r FILE; do
-    if [ ! -f "$FILE" ]; then
-        log "PROCESS" "Mirroring $FILE..."
-        wget -nc -T 20 -t 5 "$MIRROR_URL/$FILE" || log "WARN" "Failed to download $FILE"
-    fi
-done < filenames.txt
-
-log "INFO" "Verifying packages..."
-wget -nc https://www.linuxfromscratch.org/lfs/view/stable/md5sums
-md5sum -c md5sums --status || log "WARN" "Some checksums failed. Total files: $(ls -1 | wc -l)"
-rm filenames.txt
+log "INFO" "Source acquisition complete."
