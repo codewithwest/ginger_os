@@ -34,7 +34,7 @@ popd
 
 make $MAKEFLAGS
 make DESTDIR=$LFS TIC_PATH=$(pwd)/build/progs/tic install
-ln -sv libncursesw.so $LFS/usr/lib/libncurses.so
+ln -sfv libncursesw.so $LFS/usr/lib/libncurses.so
 
 # The file might not exist in some snapshots or logic paths
 if [ -f "$LFS/usr/lib/pkgconfig/ncursesw.pc" ]; then
