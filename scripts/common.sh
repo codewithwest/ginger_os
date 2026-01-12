@@ -52,12 +52,12 @@ extract() {
     
     # Find the matching archive in GINGER_SOURCES
     # This logic mimics the user's find/grep approach but is more robust.
-    # It looks for files starting with the package name followed by a version number.
-    local ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}-?[0-9]" | grep ".tar" | head -n 1)
+    # Supports .tar.* and .tgz
+    local ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}-?[0-9]" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
     
-    # Fallback for packages without a standard hyphen-version (like 'tcl')
+    # Fallback for packages without a standard hyphen-version (like 'tcl') or simple matches
     if [ -z "$ARCHIVE_NAME" ]; then
-        ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}" | grep ".tar" | head -n 1)
+        ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
     fi
 
     if [ -z "$ARCHIVE_NAME" ]; then
