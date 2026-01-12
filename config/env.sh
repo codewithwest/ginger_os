@@ -94,7 +94,7 @@ fi
 export LFS_TGT="x86_64-lfs-linux-gnu"
 
 # Path configuration
-export PATH="$LFS/tools/bin:/usr/bin:/usr/local/bin"
+export PATH="$LFS/tools/bin:/usr/bin:/usr/sbin:/usr/local/bin"
 
 # Parallel build settings - use all available cores
 export MAKEFLAGS="-j$(nproc)"

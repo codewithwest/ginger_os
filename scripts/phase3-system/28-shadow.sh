@@ -28,6 +28,7 @@ make exec_prefix=/usr install
 make -C man install-man
 
 # Initialize password aging
+hash -r
 pwconv
 grpconv
 mkdir -p /etc/default
