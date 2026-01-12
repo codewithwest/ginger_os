@@ -66,9 +66,11 @@ qemu-img snapshot -d base_system ubuntu_host.qcow2
 Once your VM is running, do NOT perform manual LFS steps. Use the scripted workflow:
 
 ### Step A: Script Initialization (As Root)
-Copy the `ginger_os` project folder into your VM environment and run:
+Move the `ginger_os` project folder to `/opt` and run:
 ```bash
-cd ginger_os
+sudo mv ginger_os /opt/
+sudo chown -R lfs:lfs /opt/ginger_os
+cd /opt/ginger_os
 sudo ./scripts/setup-host.sh
 ```
 *This handles user creation, directory hierarchy ($LFS), and permission hardening.*
@@ -88,7 +90,7 @@ sudo ./scripts/prepare-image.sh
 ### Step D: The Build (As 'lfs' User)
 ```bash
 sudo su - lfs
-cd [path-to-ginger_os]
+cd /opt/ginger_os
 ./build.sh
 ```
 *Executes Phase 1 (Toolchain) and Phase 2 (Temp Tools) automatically.*

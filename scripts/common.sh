@@ -4,8 +4,9 @@
 set -e # Exit on error
 set -u # Error on unset variables
 
-# Source environment
-source "$(dirname "$(readlink -f "$0")")/../config/env.sh"
+# Source environment - finding it relative to the script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../config/env.sh"
 
 STATUS_DIR="$LFS/var/lib/ginger"
 mkdir -p "$STATUS_DIR"

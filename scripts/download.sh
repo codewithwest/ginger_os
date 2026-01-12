@@ -1,8 +1,9 @@
 #!/bin/bash
 # GingerOS - Source Downloader
 
-source "$(dirname "$(readlink -f "$0")")/../config/env.sh"
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../config/env.sh"
+source "${SCRIPT_DIR}/common.sh"
 
 # 1. Prepare directory
 log "INFO" "Preparing sources directory..."
