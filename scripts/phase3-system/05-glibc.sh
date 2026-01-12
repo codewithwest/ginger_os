@@ -15,24 +15,27 @@ cd build
 
 echo "rootsbindir=/usr/sbin" > configparms
 
-../configure --prefix=/usr                            \
-             --disable-profile                        \
-             --enable-add-ons                         \
-             --enable-kernel=4.19                     \
-             --enable-stack-protector=strong          \
-             --enable-stackgroup                      \
-             --disable-nscd                           \
-             libc_cv_slibdir=/usr/lib
+../configure --prefix=/usr                   \
+             --disable-werror                \
+             --disable-nscd                  \
+             libc_cv_slibdir=/usr/lib        \
+             --enable-stack-protector=strong \
+             --enable-kernel=5.4
 
 make $MAKEFLAGS
 
 # Optional: make check
 # (Takes a long time, skipping for automation)
 
-make install
 
 # Fix ldd path
-sed -i 's|/usr/bin/perl|/usr/bin/env perl|' /usr/bin/ldd
+stouch /etc/ld.so.conf
+
+sed '/test-installation/s@$(PERL)@echo not running@' -i ../Makefile
+
+make install
+
+sed '/RTLDLIST=/s@/usr@@g' -i /usr/bin/ldd
 
 # Install configurations
 mkdir -pv /etc/ld.so.conf.d
@@ -41,6 +44,7 @@ cat > /etc/ld.so.conf << "EOF"
 /opt/lib
 include /etc/ld.so.conf.d/*.conf
 EOF
+
 
 cd ../.. && rm -rf "glibc-"*
 mark_built "$PKG_NAME"
