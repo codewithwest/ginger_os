@@ -10,9 +10,10 @@ extract "ncurses"
             --mandir=/usr/share/man \
             --with-shared           \
             --without-debug         \
-            --without-ada           \
-            --enable-widec          \
-            --with-is_term_type
+            --without-normal        \
+            --with-cxx-shared       \
+            --enable-pc-files       \
+            --with-pkg-config-libdir=/usr/lib/pkgconfig
 
 # 2. Build & Install
 make $MAKEFLAGS
@@ -21,16 +22,12 @@ make $MAKEFLAGS
 make DESTDIR=$PWD/dest install
 
 # Install the library to the real system
+make DESTDIR=$PWD/dest install
 install -vm755 dest/usr/lib/libncursesw.so.6.5 /usr/lib
 rm -v  dest/usr/lib/libncursesw.so.6.5
-
-# Fix curses.h to always use wide-character ABI
-if [ -f dest/usr/include/curses.h ]; then
-    sed -e 's/^#if.*XOPEN.*$/#if 1/' -i dest/usr/include/curses.h
-fi
-
-# Copy files to root - use -rv to be more resilient to metadata preservation errors
-cp -rv dest/* /
+sed -e 's/^#if.*XOPEN.*$/#if 1/' \
+    -i dest/usr/include/curses.h
+cp -av dest/* /
 
 # 3. Handle Wide-Character Compatibility Symlinks
 # Many applications expect non-wide character libraries.
@@ -43,11 +40,8 @@ done
 # Old applications looking for -lcurses
 ln -sfv libncursesw.so /usr/lib/libcurses.so
 
-# 4. Install Documentation
-mkdir -pv /usr/share/doc/ncurses-6.5
-cp -v -R doc/* /usr/share/doc/ncurses-6.5
 
-# 5. Optional: Ncurses 5 Compatibility (LSB/Binary compatibility)
+# $. Optional: Ncurses 5 Compatibility (LSB/Binary compatibility)
 # This builds the older ABI version 5 shared libraries for legacy support.
 log "INFO" "Building Ncurses 5 compatibility libraries..."
 make distclean
