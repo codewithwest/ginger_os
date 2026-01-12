@@ -46,6 +46,7 @@ mail:x:34:
 kvm:x:61:
 uuidd:x:80:
 wheel:x:97:
+users:x:999:
 nogroup:x:65533:
 nobody:x:65534:
 EOF

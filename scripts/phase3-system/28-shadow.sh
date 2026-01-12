@@ -31,6 +31,10 @@ make -C man install-man
 hash -r
 pwconv
 grpconv
+
+# Ensure the 'users' group exists before setting it as the default
+grep -q '^users:' /etc/group || groupadd -g 999 users
+
 mkdir -p /etc/default
 useradd -D --gid 999
 
