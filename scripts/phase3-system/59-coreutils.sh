@@ -6,9 +6,9 @@ check_built "$PKG_NAME" && exit 0
 extract "coreutils"
 
 # Patch for internationalization
-patch -Np1 -i ../coreutils-9.7-upstream_fix-1.patch
+patch -Np1 -i /sources/coreutils-9.7-upstream_fix-1.patch
 
-patch -Np1 -i ../coreutils-9.7-i18n-1.patch
+patch -Np1 -i /sources/coreutils-9.7-i18n-1.patch
 
 
 
