@@ -18,10 +18,7 @@ case $(uname -m) in
     ;;
 esac
 
-# FHS patch (if present)
-if [ -f "$GINGER_SOURCES/glibc-2.42-fhs-1.patch" ]; then
-    patch -Np1 -i "$GINGER_SOURCES/glibc-2.42-fhs-1.patch"
-fi
+patch -Np1 -i "$GINGER_SOURCES/glibc-2.42-fhs-1.patch"
 
 mkdir -v build
 cd build
@@ -39,6 +36,9 @@ echo "rootsbindir=/usr/sbin" > configparms
 
 make $MAKEFLAGS
 make DESTDIR=$LFS install
+
+sed '/RTLDLIST=/s@/usr@@g' -i $LFS/usr/bin/ldd
+
 
 # Fix ldd path
 echo 'int main(){}' | $LFS_TGT-gcc -x c - -v -Wl,--verbose &> dummy.log
