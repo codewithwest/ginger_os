@@ -30,7 +30,7 @@ sudo mkfs.ext4 "${LOOP_DEV}p1"
 log "INFO" "Mounting to $LFS..."
 [ -d "$LFS" ] || sudo mkdir -p "$LFS"
 sudo mount "${LOOP_DEV}p1" "$LFS"
-sudo chown -R lfs:lfs "$LFS"
+# sudo chown -R lfs:lfs "$LFS"
 
 log "INFO" "Image ready at $LFS (Loop device: $LOOP_DEV)"
 log "INFO" "Don't forget to unmount and detach after build."
