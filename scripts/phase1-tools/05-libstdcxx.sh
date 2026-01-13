@@ -11,20 +11,20 @@ log "PROCESS" "Compiling Libstdc++..."
 mkdir -v build
 cd build
 
-../libstdc++-v3/configure           \
-    --host=$LFS_TGT                 \
-    --build=$(../config.guess)      \
-    --prefix=/usr                   \
-    --disable-multilib              \
-    --disable-nls                   \
-    --disable-libstdcxx-pch         \
+../libstdc++-v3/configure      \
+    --host=$LFS_TGT            \
+    --build=$(../config.guess) \
+    --prefix=/usr              \
+    --disable-multilib         \
+    --disable-nls              \
+    --disable-libstdcxx-pch    \
     --with-gxx-include-dir=/tools/$LFS_TGT/include/c++/15.2.0
 
 make $MAKEFLAGS
 make DESTDIR=$LFS install
 
 # Remove interfering libtool files
-rm -v $LFS/usr/lib/libstdc++.la
+rm -v $LFS/usr/lib/lib{stdc++{,exp,fs},supc++}.la
 
 cd ../..
 rm -rf "gcc-"*

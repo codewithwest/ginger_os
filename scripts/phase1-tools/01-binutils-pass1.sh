@@ -8,6 +8,8 @@ check_built "$PKG_NAME" && exit 0
 # Smart extract finds the best match for 'binutils' automatically
 extract "binutils"
 
+
+
 log "PROCESS" "Compiling Binutils Pass 1..."
 mkdir -v build
 cd build
@@ -17,8 +19,10 @@ cd build
              --target=$LFS_TGT   \
              --disable-nls       \
              --enable-gprofng=no \
-             --disable-werror
-
+             --disable-werror    \
+             --enable-new-dtags  \
+             --enable-default-hash-style=gnu
+             
 make $MAKEFLAGS
 make install
 
