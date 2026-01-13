@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.36. Bash-5.3
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
 PKG_NAME="bash"
 check_built "$PKG_NAME" && exit 0
 extract "bash"

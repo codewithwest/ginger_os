@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.30. Ncurses-6.5
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
 PKG_NAME="ncurses"
 check_built "$PKG_NAME" && exit 0
 extract "ncurses"

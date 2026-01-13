@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 7.12. Util-linux-2.41.1 (Temporary)
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
 PKG_NAME="util-linux-bridge"
 check_built "$PKG_NAME" && exit 0
 extract "util-linux"
