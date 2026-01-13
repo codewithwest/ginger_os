@@ -29,7 +29,7 @@ meson setup ..                  \
       
 export udev_helpers=$(grep "'name' :" ../src/udev/meson.build | \
                       awk '{print $3}' | tr -d ",'" | grep -v 'udevadm')
-                      
+
 ninja udevadm systemd-hwdb                                           \
       $(ninja -n | grep -Eo '(src/(lib)?udev|rules.d|hwdb.d)/[^ ]*') \
       $(realpath libudev.so --relative-to .)                         \
@@ -58,11 +58,11 @@ install -vm755 $udev_helpers                       /usr/lib/udev
 install -vm644 ../network/99-default.link          /usr/lib/udev/network
 # ... more steps omitted for brevity but extract is fixed.
 
-tar -xvf ../../udev-lfs-20230818.tar.xz
+tar -xvf /sources/udev-lfs-20230818.tar.xz
 make -f udev-lfs-20230818/Makefile.lfs install
 
 
-tar -xf ../../systemd-man-pages-257.8.tar.xz                            \
+tar -xf /sources/systemd-man-pages-257.8.tar.xz                            \
     --no-same-owner --strip-components=1                              \
     -C /usr/share/man --wildcards '*/udev*' '*/libudev*'              \
                                   '*/systemd.link.5'                  \
