@@ -6,9 +6,13 @@ check_built "$PKG_NAME" && exit 0
 extract "glibc"
 
 # FHS patch (if present)
-if [ -f "$GINGER_SOURCES/glibc-2.42-fhs-1.patch" ]; then
-    patch -Np1 -i "$GINGER_SOURCES/glibc-2.42-fhs-1.patch"
-fi
+patch -Np1 -i ../glibc-2.42-fhs-1.patch
+
+sed -e '/unistd.h/i #include <string.h>' \
+    -e '/libc_rwlock_init/c\
+  __libc_rwlock_define_initialized (, reset_lock);\
+  memcpy (&lock, &reset_lock, sizeof (lock));' \
+    -i stdlib/abort.c 
 
 mkdir -v build
 cd build

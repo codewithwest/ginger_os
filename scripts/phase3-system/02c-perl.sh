@@ -5,16 +5,16 @@ PKG_NAME="perl-bridge"
 check_built "$PKG_NAME" && exit 0
 extract "perl"
 
-sh Configure -des                                        \
-             -D prefix=/usr                              \
-             -D vendorprefix=/usr                        \
-             -D useshrplib                               \
-             -D privlib=/usr/lib/perl5/5.41/core_perl     \
-             -D archlib=/usr/lib/perl5/5.41/core_perl     \
-             -D sitelib=/usr/lib/perl5/5.41/site_perl     \
-             -D sitearch=/usr/lib/perl5/5.41/site_perl    \
-             -D vendorlib=/usr/lib/perl5/5.41/vendor_perl \
-             -D vendorarch=/usr/lib/perl5/5.41/vendor_perl
+sh Configure -des                                         \
+             -D prefix=/usr                               \
+             -D vendorprefix=/usr                         \
+             -D useshrplib                                \
+             -D privlib=/usr/lib/perl5/5.42/core_perl     \
+             -D archlib=/usr/lib/perl5/5.42/core_perl     \
+             -D sitelib=/usr/lib/perl5/5.42/site_perl     \
+             -D sitearch=/usr/lib/perl5/5.42/site_perl    \
+             -D vendorlib=/usr/lib/perl5/5.42/vendor_perl \
+             -D vendorarch=/usr/lib/perl5/5.42/vendor_perl
 
 make $MAKEFLAGS
 make install

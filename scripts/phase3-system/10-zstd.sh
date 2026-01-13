@@ -4,8 +4,11 @@ source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="zstd"
 check_built "$PKG_NAME" && exit 0
 extract "zstd"
+
 make $MAKEFLAGS
 make PREFIX=/usr install
+
 rm -v /usr/lib/libzstd.a
+
 cd .. && rm -rf "zstd-"*
 mark_built "$PKG_NAME"

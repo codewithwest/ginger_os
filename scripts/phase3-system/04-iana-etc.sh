@@ -5,6 +5,8 @@ PKG_NAME="iana-etc"
 check_built "$PKG_NAME" && exit 0
 extract "iana-etc"
 log "PROCESS" "Installing Iana-Etc..."
+
 cp -v services protocols /etc
+
 cd .. && rm -rf "iana-etc-"*
 mark_built "$PKG_NAME"

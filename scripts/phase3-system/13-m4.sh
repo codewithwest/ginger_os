@@ -4,8 +4,10 @@ source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="m4"
 check_built "$PKG_NAME" && exit 0
 extract "m4"
+
 ./configure --prefix=/usr
 make $MAKEFLAGS
 make install
+
 cd .. && rm -rf "m4-"*
 mark_built "$PKG_NAME"

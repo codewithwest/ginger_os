@@ -6,14 +6,11 @@ check_built "$PKG_NAME" && exit 0
 extract "binutils"
 
 # Verify 64-bit build
-expect -c "spawn ls" || { log "ERROR" "PTYs not working!"; exit 1; }
-
 mkdir -v build
-cd build
+cd       build
 
 ../configure --prefix=/usr       \
              --sysconfdir=/etc   \
-             --enable-gold       \
              --enable-ld=default \
              --enable-plugins    \
              --enable-shared     \
@@ -25,7 +22,9 @@ cd build
 
 make $MAKEFLAGS tooldir=/usr
 make tooldir=/usr install
-rm -fv /usr/lib/lib{bfd,ctf,ctf-nobfd,gprofng,opcodes,sframe,iberty}.a
+
+rm -rfv /usr/lib/lib{bfd,ctf,ctf-nobfd,gprofng,opcodes,sframe}.a \
+        /usr/share/doc/gprofng/
 
 cd ../.. && rm -rf "binutils-"*
 mark_built "$PKG_NAME"

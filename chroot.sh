@@ -6,6 +6,10 @@
 source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
 
 log "INFO" "Mounting virtual kernel file systems..."
+chown --from lfs -R root:root $LFS/{usr,var,etc,tools}
+case $(uname -m) in
+  x86_64) chown --from lfs -R root:root $LFS/lib64 ;;
+esac
 mkdir -p $LFS/{dev,proc,sys,run}
 
 # Mount with safety checks
@@ -16,9 +20,9 @@ mountpoint -q $LFS/sys || mount -vt sysfs sysfs $LFS/sys
 mountpoint -q $LFS/run || mount -vt tmpfs tmpfs $LFS/run
 
 if [ -h $LFS/dev/shm ]; then
-  mkdir -pv $LFS/$(readlink $LFS/dev/shm)
+  install -v -d -m 1777 $LFS$(realpath /dev/shm)
 else
-  mountpoint -q $LFS/dev/shm || mount -vt tmpfs shm $LFS/dev/shm
+  mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
 fi
 
 # Ensure scripts, config, and sources are accessible inside chroot
@@ -30,8 +34,17 @@ mountpoint -q "$LFS/sources" || mount --bind "$(dirname "$(readlink -f "$0")")/s
 
 log "INFO" "Entering chroot..."
 
+
+
 # Find the absolute path to chroot to avoid "command not found" issues
-CHROOT_BIN=$(command -v chroot || echo "/usr/sbin/chroot")
+chroot "$LFS" /usr/bin/env -i   \
+    HOME=/root                  \
+    TERM="$TERM"                \
+    PS1='(lfs chroot) \u:\w\$ ' \
+    PATH=/usr/bin:/usr/sbin     \
+    MAKEFLAGS="-j$(nproc)"      \
+    TESTSUITEFLAGS="-j$(nproc)" \
+    /bin/bash --login
 
 # Determine if we are running in interactive mode or executing a script
 if [ $# -gt 0 ]; then

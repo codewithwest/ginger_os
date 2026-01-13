@@ -16,7 +16,6 @@ sed -e 's:#ENCRYPT_METHOD DES:ENCRYPT_METHOD YESCRYPT:' \
     -i etc/login.defs
 
 touch /usr/bin/passwd
-
 ./configure --sysconfdir=/etc   \
             --disable-static    \
             --with-{b,yes}crypt \
@@ -24,6 +23,7 @@ touch /usr/bin/passwd
             --with-group-name-max-length=32
 
 make $MAKEFLAGS
+
 make exec_prefix=/usr install
 make -C man install-man
 

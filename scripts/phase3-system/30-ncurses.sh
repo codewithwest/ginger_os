@@ -10,9 +10,8 @@ extract "ncurses"
             --mandir=/usr/share/man \
             --with-shared           \
             --without-debug         \
-            --without-ada           \
-            --enable-widec          \
-            --with-is_term_type     \
+            --without-normal        \
+            --with-cxx-shared       \
             --enable-pc-files       \
             --with-pkg-config-libdir=/usr/lib/pkgconfig
 

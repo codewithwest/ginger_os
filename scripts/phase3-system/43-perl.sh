@@ -20,6 +20,7 @@ sh Configure -des                                         \
              -D pager="/usr/bin/less -isR"                \
              -D useshrplib                                \
              -D usethreads
+             
 make $MAKEFLAGS
 make install
 unset BUILD_ZLIB BUILD_BZIP2

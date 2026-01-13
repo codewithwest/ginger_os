@@ -6,15 +6,16 @@ check_built "$PKG_NAME" && exit 0
 extract "bzip2"
 
 # Apply documentation patch if present
-if [ -f "$GINGER_SOURCES/bzip2-1.0.8-install_docs-1.patch" ]; then
-    patch -Np1 -i "$GINGER_SOURCES/bzip2-1.0.8-install_docs-1.patch"
-fi
+patch -Np1 -i ../bzip2-1.0.8-install_docs-1.patch
 
 sed -i 's@\(ln -s -f \)$(PREFIX)/bin/@\1@' Makefile
+
 sed -i "s@(PREFIX)/man@(PREFIX)/share/man@g" Makefile
+
 
 make -f Makefile-libbz2_so
 make clean
+
 make $MAKEFLAGS
 make PREFIX=/usr install
 
@@ -25,6 +26,8 @@ cp -v bzip2-shared /usr/bin/bzip2
 for i in /usr/bin/{bzcat,bunzip2}; do
   ln -sfv bzip2 $i
 done
+
+rm -fv /usr/lib/libbz2.a
 
 cd .. && rm -rf "bzip2-"*
 mark_built "$PKG_NAME"

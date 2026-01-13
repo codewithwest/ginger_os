@@ -4,12 +4,15 @@ source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="bash"
 check_built "$PKG_NAME" && exit 0
 extract "bash"
+
 ./configure --prefix=/usr             \
             --without-bash-malloc     \
             --with-installed-readline \
             --docdir=/usr/share/doc/bash-5.3
+
 make $MAKEFLAGS
 make install
+
 cd .. && rm -rf "bash-"*
 mark_built "$PKG_NAME"
 # Note: Executing building bash usually requires re-execing bash, 

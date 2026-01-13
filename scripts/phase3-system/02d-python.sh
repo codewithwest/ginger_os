@@ -5,9 +5,10 @@ PKG_NAME="python-bridge"
 check_built "$PKG_NAME" && exit 0
 extract "python"
 
-./configure --prefix=/usr   \
-            --enable-shared \
-            --without-ensurepip
+./configure --prefix=/usr       \
+            --enable-shared     \
+            --without-ensurepip \
+            --without-static-libpython
 
 make $MAKEFLAGS
 make install

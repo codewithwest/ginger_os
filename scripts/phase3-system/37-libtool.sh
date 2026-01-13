@@ -4,9 +4,12 @@ source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="libtool"
 check_built "$PKG_NAME" && exit 0
 extract "libtool"
+
 ./configure --prefix=/usr
 make $MAKEFLAGS
 make install
+
 rm -fv /usr/lib/libltdl.a
+
 cd .. && rm -rf "libtool-"*
 mark_built "$PKG_NAME"
