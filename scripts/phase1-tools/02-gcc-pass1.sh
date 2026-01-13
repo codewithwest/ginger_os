@@ -46,14 +46,7 @@ cd build
     --enable-languages=c,c++
 
 log "PROCESS" "Building and installing GCC Pass 1..."
-# GCC Pass 1 is extremely memory-intensive - limit parallelism to prevent crashes
-# Use at most 4 jobs or half of available cores, whichever is smaller
-SAFE_JOBS=$(( $(nproc) / 2 ))
-[ $SAFE_JOBS -gt 4 ] && SAFE_JOBS=4
-[ $SAFE_JOBS -lt 1 ] && SAFE_JOBS=1
-
-log "INFO" "Using -j$SAFE_JOBS for GCC compilation (memory safety)"
-make -j$SAFE_JOBS
+make $MAKEFLAGS
 make install
 
 log "PROCESS" "Finalizing GCC Internal Headers (Fixing MB_LEN_MAX issues)..."
