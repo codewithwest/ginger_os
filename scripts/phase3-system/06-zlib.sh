@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.6. Zlib-1.3.1
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "/scripts/common.sh"
 PKG_NAME="zlib"
 
 check_built "$PKG_NAME" && exit 0

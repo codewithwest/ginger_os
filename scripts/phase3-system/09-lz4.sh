@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.9. Lz4-1.10.0
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "/scripts/common.sh"
 PKG_NAME="lz4"
 check_built "$PKG_NAME" && exit 0
 extract "lz4"

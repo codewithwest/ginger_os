@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.73. Texinfo-7.2
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "/scripts/common.sh"
 PKG_NAME="texinfo"
 check_built "$PKG_NAME" && exit 0
 extract "texinfo"

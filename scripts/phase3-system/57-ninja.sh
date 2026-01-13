@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.57. Ninja-1.13.1
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "/scripts/common.sh"
 PKG_NAME="ninja"
 check_built "$PKG_NAME" && exit 0
 extract "ninja"

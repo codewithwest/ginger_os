@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.82. E2fsprogs-1.47.2
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "/scripts/common.sh"
 PKG_NAME="e2fsprogs"
 check_built "$PKG_NAME" && exit 0
 extract "e2fsprogs"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.68. Kbd-2.8.0
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "/scripts/common.sh"
 PKG_NAME="kbd"
 check_built "$PKG_NAME" && exit 0
 extract "kbd"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.47. Automake-1.17
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "/scripts/common.sh"
 PKG_NAME="automake"
 check_built "$PKG_NAME" && exit 0
 extract "automake"

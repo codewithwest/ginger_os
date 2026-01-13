@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.59. Coreutils-9.7
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "/scripts/common.sh"
 PKG_NAME="coreutils"
 check_built "$PKG_NAME" && exit 0
 extract "coreutils"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 7.9. Perl-5.41.3 (Temporary)
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "/scripts/common.sh"
 PKG_NAME="perl-bridge"
 check_built "$PKG_NAME" && exit 0
 extract "perl"

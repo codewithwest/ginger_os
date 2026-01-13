@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.18. DejaGNU-1.6.3
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "/scripts/common.sh"
 PKG_NAME="dejagnu"
 check_built "$PKG_NAME" && exit 0
 extract "dejagnu"
