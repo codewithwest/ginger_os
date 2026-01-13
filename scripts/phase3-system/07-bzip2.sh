@@ -6,7 +6,7 @@ check_built "$PKG_NAME" && exit 0
 extract "bzip2"
 
 # Apply documentation patch if present
-patch -Np1 -i ../bzip2-1.0.8-install_docs-1.patch
+patch -Np1 -i /sources/bzip2-1.0.8-install_docs-1.patch
 
 sed -i 's@\(ln -s -f \)$(PREFIX)/bin/@\1@' Makefile
 

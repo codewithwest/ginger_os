@@ -8,7 +8,7 @@ extract "expect"
 python3 -c 'from pty import spawn; spawn(["echo", "ok"])'
 
 # Patch for GCC 15
-patch -Np1 -i ../expect-5.45.4-gcc15-1.patch
+patch -Np1 -i /sources/expect-5.45.4-gcc15-1.patch
 
 ./configure --prefix=/usr           \
             --with-tcl=/usr/lib     \

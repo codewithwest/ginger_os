@@ -6,7 +6,7 @@ check_built "$PKG_NAME" && exit 0
 extract "glibc"
 
 # FHS patch (if present)
-patch -Np1 -i ../glibc-2.42-fhs-1.patch
+patch -Np1 -i /sources/glibc-2.42-fhs-1.patch
 
 sed -e '/unistd.h/i #include <string.h>' \
     -e '/libc_rwlock_init/c\
