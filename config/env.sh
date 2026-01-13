@@ -1,4 +1,5 @@
 #!/bin/bash
+LFS_VERSION="12.4"
 # Core Toolchain
 export BINUTILS_VERSION="2.45"
 export GCC_VERSION="15.2.0"
