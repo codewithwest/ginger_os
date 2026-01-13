@@ -63,8 +63,10 @@ chmod -v a+wt "$LFS/sources"
 mkdir -pv "$LFS/tools"
 chown -v lfs "$LFS/tools"
 
-# GingerOS state directory
+# GingerOS state directory and var structure
 mkdir -pv "$LFS/var/lib/ginger"
+chown -v lfs "$LFS/var"
+chown -v lfs "$LFS/var/lib"
 chown -R lfs "$LFS/var/lib/ginger"
 
 # Merged-usr layout (LFS 12.x)
