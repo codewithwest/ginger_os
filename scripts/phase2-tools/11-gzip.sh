@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 6.11. Gzip-1.14
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
 PKG_NAME="gzip-temp"
 check_built "$PKG_NAME" && exit 0

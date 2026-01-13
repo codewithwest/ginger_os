@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.43. Perl-5.41.3
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="perl"
 check_built "$PKG_NAME" && exit 0
 extract "perl"

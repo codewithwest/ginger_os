@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 10.3. Linux-6.16.1 (Kernel)
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="kernel"
 check_built "$PKG_NAME" && exit 0
 extract "linux"

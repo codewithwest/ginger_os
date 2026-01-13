@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 5.5. Glibc-2.42
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
 PKG_NAME="glibc"
 check_built "$PKG_NAME" && exit 0

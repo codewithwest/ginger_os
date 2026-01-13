@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 5.4. Linux-6.16.1 Headers
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
 PKG_NAME="linux-headers"
 check_built "$PKG_NAME" && exit 0

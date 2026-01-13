@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.64. Groff-1.23.0
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="groff"
 check_built "$PKG_NAME" && exit 0
 extract "groff"

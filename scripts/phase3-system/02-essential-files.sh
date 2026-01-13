@@ -2,7 +2,7 @@
 # LFS 12.4 - 7.6. Essential Files and Symlinks
 # To be run INSIDE chroot.
 
-source "/scripts/common.sh"
+source "/scripts/../common.sh"
 
 log "INFO" "Creating essential symlinks and files..."
 

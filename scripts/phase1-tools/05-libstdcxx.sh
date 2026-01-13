@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 5.6. Libstdc++ from GCC-15.2.0
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
 PKG_NAME="libstdcxx"
 check_built "$PKG_NAME" && exit 0

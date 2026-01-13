@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 6.16. Xz-5.8.1
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
 PKG_NAME="xz-temp"
 check_built "$PKG_NAME" && exit 0

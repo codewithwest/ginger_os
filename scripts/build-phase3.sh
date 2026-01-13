@@ -4,7 +4,7 @@
 
 # We can't source common.sh easily from here because paths have changed.
 # But inside chroot, / is /mnt/lfs.
-# We expect common.sh to be at /scripts/common.sh (relative to host $LFS)
+# We expect common.sh to be at /scripts/../common.sh (relative to host $LFS)
 
 # Re-define a simple log for inside chroot if common.sh isn't accessible
 log() {

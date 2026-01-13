@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 6.12. Make-4.4.1
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
 PKG_NAME="make-temp"
 check_built "$PKG_NAME" && exit 0

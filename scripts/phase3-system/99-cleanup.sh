@@ -1,6 +1,6 @@
 #!/bin/bash
 # GingerOS - Final System cleanup
-source "/scripts/common.sh"
+source "/scripts/../common.sh"
 log "INFO" "Cleaning up system..."
 rm -rf /tmp/*
 # Remove static libraries if any remain

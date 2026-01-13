@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.50. Elfutils-0.193
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="elfutils"
 check_built "$PKG_NAME" && exit 0
 extract "elfutils"
