@@ -2,7 +2,10 @@
 # GingerOS - Disk Image Preparation
 # Creates a 20GB raw image, partitions it, and mounts it to $LFS
 
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+source "${SCRIPT_DIR}/../config/env.sh"
+source "${SCRIPT_DIR}/common.sh"
 
 IMAGE_PATH="${GINGER_ROOT}/ginger_os.img"
 

@@ -87,7 +87,9 @@ export IANA_ETC_VERSION="20250807"
 export LFS="/mnt/lfs"
 
 # Chroot Detection: If we are inside the new system, LFS should be /
-if [ -f /usr/bin/bash ] && [ ! -d /mnt/lfs ]; then
+# Chroot detection
+# Only clear LFS if we are ACTUALLY inside the chroot
+if [ "$(id -u)" -eq 0 ] && [ -d /tools ] && [ -d /sources ]; then
     export LFS=""
 fi
 
