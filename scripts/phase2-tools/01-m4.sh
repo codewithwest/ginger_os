@@ -12,6 +12,7 @@ extract "m4"
 
 log "PROCESS" "Compiling M4 (Temporary Tools)..."
 
+# check for 
 # Some modern hosts need these extra flags for GNULIB safety
 ./configure --prefix=/usr   \
             --host=$LFS_TGT \

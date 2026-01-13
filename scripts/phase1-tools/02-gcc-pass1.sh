@@ -53,14 +53,27 @@ log "PROCESS" "Finalizing GCC Internal Headers (Fixing MB_LEN_MAX issues)..."
 # We must perform this from the source directory, not the build directory
 cd ..
 
-# Ensure the destination directory exists (sometimes make install misses the subfolder)
-LIMITS_DIR=$(dirname "$($LFS_TGT-gcc -print-libgcc-file-name)")/install-tools/include
-mkdir -pv "$LIMITS_DIR"
+# CRITICAL: The limits.h file MUST be in include-fixed where the compiler searches
+# The compiler does NOT search install-tools/include (verified with gcc -v -E)
+# This causes MB_LEN_MAX errors in Phase 2 if placed in the wrong directory
+GCC_INCLUDE_DIR=$($LFS_TGT-gcc -print-libgcc-file-name | sed 's/libgcc.a//')include-fixed
+mkdir -pv "$GCC_INCLUDE_DIR"
 
 # Creation of the fixed limits.h
-cat gcc/limitx.h gcc/glimits.h gcc/limity.h > "$LIMITS_DIR/limits.h"
 
-log "INFO" "GCC Pass 1 finalized. Header located at: $LIMITS_DIR/limits.h"
+cat gcc/limitx.h gcc/glimits.h gcc/limity.h > \
+  `dirname $($LFS_TGT-gcc -print-libgcc-file-name)`/include/limits.h
+
+cat gcc/limitx.h gcc/glimits.h gcc/limity.h > "$GCC_INCLUDE_DIR/limits.h"
+
+# Use sed to fix MB_LEN_MAX (replace default 1 with correct 16)
+sed -i 's/#define MB_LEN_MAX 1/#define MB_LEN_MAX 16/' "$GCC_INCLUDE_DIR/limits.h"
+# Also fix the duplicate location if it exists
+if [ -f "$LFS/tools/lib/gcc/x86_64-lfs-linux-gnu/15.2.0/include/limits.h" ]; then
+    sed -i 's/#define MB_LEN_MAX 1/#define MB_LEN_MAX 16/' "$LFS/tools/lib/gcc/x86_64-lfs-linux-gnu/15.2.0/include/limits.h"
+fi
+
+log "INFO" "GCC Pass 1 finalized. Header located at: $GCC_INCLUDE_DIR/limits.h"
 
 cd ..
 rm -rf "gcc-"*
