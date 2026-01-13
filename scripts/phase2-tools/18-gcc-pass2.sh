@@ -21,31 +21,31 @@ case $(uname -m) in
 esac
 
 # Create compatibility symlink for fixincludes
-sed '/^DL_ITERATE_PHDR_P/s/$/ || 1/' -i libgcc/crtstuff.c
+sed '/thread_header =/s/@.*@/gthr-posix.h/' \
+    -i libgcc/Makefile.in libstdc++-v3/include/Makefile.in
 
 log "PROCESS" "Compiling GCC Pass 2..."
 mkdir -v build
 cd build
 
-mkdir -pv $LFS_TGT/libgcc
-ln -s ../../../libgcc/gthr-posix.h $LFS_TGT/libgcc/gthr.h
-
-../configure --build=$(../config.guess)                  \
-             --host=$LFS_TGT                             \
-             --target=$LFS_TGT                           \
-             LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc   \
-             --prefix=/usr                               \
-             --with-build-sysroot=$LFS                   \
-             --enable-default-pie                        \
-             --enable-default-ssp                        \
-             --disable-nls                               \
-             --disable-multilib                          \
-             --disable-libatomic                         \
-             --disable-libgomp                           \
-             --disable-libquadmath                       \
-             --disable-libssp                            \
-             --disable-libvtv                            \
-             --enable-languages=c,c++
+../configure                   \
+    --build=$(../config.guess) \
+    --host=$LFS_TGT            \
+    --target=$LFS_TGT          \
+    --prefix=/usr              \
+    --with-build-sysroot=$LFS  \
+    --enable-default-pie       \
+    --enable-default-ssp       \
+    --disable-nls              \
+    --disable-multilib         \
+    --disable-libatomic        \
+    --disable-libgomp          \
+    --disable-libquadmath      \
+    --disable-libsanitizer     \
+    --disable-libssp           \
+    --disable-libvtv           \
+    --enable-languages=c,c++   \
+    LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc
 
 make $MAKEFLAGS
 make DESTDIR=$LFS install

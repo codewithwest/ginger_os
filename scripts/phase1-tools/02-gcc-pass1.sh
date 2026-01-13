@@ -9,18 +9,17 @@ extract "gcc"
 
 log "PROCESS" "Setting up GCC internal dependencies..."
 # Use wildcards to find dependencies in the source folder
-tar -xvf $(find "$GINGER_SOURCES" -type f | grep -m1 "$GINGER_SOURCES/mpfr" | grep tar) \
-    --one-top-level=mpfr --strip-components 1
-tar -xvf $(find "$GINGER_SOURCES" -type f | grep -m1 "$GINGER_SOURCES/gmp" | grep tar) \
-    --one-top-level=gmp --strip-components 1
-tar -xvf $(find "$GINGER_SOURCES" -type f | grep -m1 "$GINGER_SOURCES/mpc" | grep tar) \
-    --one-top-level=mpc --strip-components 1
+cd gcc
+tar -xf "$GINGER_SOURCES"/mpfr-*.tar.* && mv -v mpfr-* mpfr
+tar -xf "$GINGER_SOURCES"/gmp-*.tar.*  && mv -v gmp-* gmp
+tar -xf "$GINGER_SOURCES"/mpc-*.tar.*  && mv -v mpc-* mpc
 
 # Fix case for 64-bit systems
 case $(uname -m) in
   x86_64)
-    sed -e '/m64=/s/lib64/lib/' \
-        -i.orig gcc/config/i386/t-linux64
+if [ -f gcc/config/i386/t-linux64 ]; then
+    sed -e '/m64=/s/lib64/lib/' -i.orig gcc/config/i386/t-linux64
+fi
  ;;
 esac
 

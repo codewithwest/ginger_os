@@ -16,6 +16,8 @@ extract "xz"
 make $MAKEFLAGS
 make DESTDIR=$LFS install
 
+rm -v $LFS/usr/lib/liblzma.la
+
 cd ..
 rm -rf "xz-"*
 

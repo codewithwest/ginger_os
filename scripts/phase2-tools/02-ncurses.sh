@@ -10,13 +10,15 @@ extract "ncurses"
 log "PROCESS" "Compiling Ncurses (Temporary Tools)..."
 
 # Ensure tic is built on the host
-sed -i s/mawk// configure
+# sed -i s/mawk// configure
 
 mkdir build
+
 pushd build
-  ../configure
+  ../configure --prefix=$LFS/tools AWK=gawk
   make -C include
   make -C progs tic
+  install progs/tic $LFS/tools/bin
 popd
 
 ./configure --prefix=/usr                \
@@ -33,16 +35,11 @@ popd
             AWK=gawk
 
 make $MAKEFLAGS
-make DESTDIR=$LFS TIC_PATH=$(pwd)/build/progs/tic install
-ln -sfv libncursesw.so $LFS/usr/lib/libncurses.so
 
-# The file might not exist in some snapshots or logic paths
-if [ -f "$LFS/usr/lib/pkgconfig/ncursesw.pc" ]; then
-    sed -e 's/^#if.*XOPEN.*$/#if 1/' \
-        -i $LFS/usr/include/curses.h
-else
-    log "WARN" "ncursesw.pc not found in /usr/lib/pkgconfig, skipping bold fix."
-fi
+make DESTDIR=$LFS install
+ln -sv libncursesw.so $LFS/usr/lib/libncurses.so
+sed -e 's/^#if.*XOPEN.*$/#if 1/' \
+    -i $LFS/usr/include/curses.h
 
 cd ..
 rm -rf "ncurses"*
