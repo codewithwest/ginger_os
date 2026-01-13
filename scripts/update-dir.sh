@@ -16,11 +16,11 @@ esac
 
 mkdir -pv $LFS/tools
 
-
-# Update the directory
+mkdir /mnt/lfs/var/lib/ginger/
 chown -v lfs $LFS/{usr{,/*},var,etc,tools}
 case $(uname -m) in
   x86_64) chown -v lfs $LFS/lib64 ;;
 esac
 
+chown -v lfs $LFS/var/lib/ginger/
 su - lfs
