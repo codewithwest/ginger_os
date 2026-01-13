@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.48. OpenSSL-3.5.2
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 PKG_NAME="openssl"
 check_built "$PKG_NAME" && exit 0
 extract "openssl"

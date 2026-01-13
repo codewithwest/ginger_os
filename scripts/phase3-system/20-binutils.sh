@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.20. Binutils-2.45
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 PKG_NAME="binutils-final"
 check_built "$PKG_NAME" && exit 0
 extract "binutils"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 6.10. Grep-3.11
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 
 PKG_NAME="grep-temp"
 check_built "$PKG_NAME" && exit 0

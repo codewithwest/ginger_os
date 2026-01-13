@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.33. Gettext-0.23.1
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 PKG_NAME="gettext"
 check_built "$PKG_NAME" && exit 0
 extract "gettext"

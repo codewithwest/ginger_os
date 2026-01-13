@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 7.8. Bison-3.8.2 (Temporary)
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 PKG_NAME="bison-bridge"
 check_built "$PKG_NAME" && exit 0
 extract "bison"

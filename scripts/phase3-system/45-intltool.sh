@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.45. Intltool-0.51.0
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 PKG_NAME="intltool"
 check_built "$PKG_NAME" && exit 0
 extract "intltool"

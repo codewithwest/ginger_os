@@ -1,7 +1,7 @@
 #!/bin/bash
 # LFS 12.2 - 8.4. Using GRUB to Set Up the Boot Process
 
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 
 PKG_NAME="grub-setup"
 

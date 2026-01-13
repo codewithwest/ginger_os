@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.28. Shadow-4.17.3
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 PKG_NAME="shadow"
 check_built "$PKG_NAME" && exit 0
 extract "shadow"

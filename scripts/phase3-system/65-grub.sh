@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.65. GRUB-2.12
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 PKG_NAME="grub"
 check_built "$PKG_NAME" && exit 0
 extract "grub"

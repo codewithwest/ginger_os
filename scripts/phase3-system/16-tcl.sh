@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.16. Tcl-8.6.16
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 PKG_NAME="tcl"
 check_built "$PKG_NAME" && exit 0
 

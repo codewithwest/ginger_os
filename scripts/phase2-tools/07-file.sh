@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 6.7. File-5.46
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 
 PKG_NAME="file-temp"
 check_built "$PKG_NAME" && exit 0

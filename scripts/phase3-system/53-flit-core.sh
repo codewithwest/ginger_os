@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.53. Flit-core-3.11.0
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 PKG_NAME="flit-core"
 check_built "$PKG_NAME" && exit 0
 extract "flit_core"

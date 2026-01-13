@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 5.3. GCC-15.2.0 - Pass 1
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 
 PKG_NAME="gcc-pass1"
 check_built "$PKG_NAME" && exit 0

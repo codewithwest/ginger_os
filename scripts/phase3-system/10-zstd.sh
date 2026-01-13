@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.10. Zstd-1.5.7
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 PKG_NAME="zstd"
 check_built "$PKG_NAME" && exit 0
 extract "zstd"
