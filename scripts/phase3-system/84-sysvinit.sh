@@ -6,7 +6,7 @@ check_built "$PKG_NAME" && exit 0
 extract "sysvinit"
 
 # Apply patch if present
-patch -Np1 -i /sources/sysvin it-3.14-consolidated-1.patch
+patch -Np1 -i /sources/sysvinit-3.14-consolidated-1.patch
 
 make $MAKEFLAGS
 make install
