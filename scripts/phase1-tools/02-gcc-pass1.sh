@@ -8,8 +8,7 @@ check_built "$PKG_NAME" && exit 0
 extract "gcc"
 
 log "PROCESS" "Setting up GCC internal dependencies..."
-# Use wildcards to find dependencies in the source folder
-cd gcc
+# Extract dependencies into the GCC source directory
 tar -xf "$GINGER_SOURCES"/mpfr-*.tar.* && mv -v mpfr-* mpfr
 tar -xf "$GINGER_SOURCES"/gmp-*.tar.*  && mv -v gmp-* gmp
 tar -xf "$GINGER_SOURCES"/mpc-*.tar.*  && mv -v mpc-* mpc
@@ -17,10 +16,8 @@ tar -xf "$GINGER_SOURCES"/mpc-*.tar.*  && mv -v mpc-* mpc
 # Fix case for 64-bit systems
 case $(uname -m) in
   x86_64)
-if [ -f gcc/config/i386/t-linux64 ]; then
     sed -e '/m64=/s/lib64/lib/' -i.orig gcc/config/i386/t-linux64
-fi
- ;;
+  ;;
 esac
 
 log "PROCESS" "Configuring GCC Pass 1..."
