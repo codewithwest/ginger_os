@@ -1,14 +1,12 @@
 #!/bin/bash
-# LFS 12.4 - 8.76. Jinja2-3.1.6
+# LFS 12.4 - 8.54. Wheel-0.45.1
 source "/scripts/common.sh"
-PKG_NAME="jinja2"
+PKG_NAME="wheel"
 check_built "$PKG_NAME" && exit 0
-extract "jinja2"
+extract "wheel"
 
 pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+pip3 install --no-index --find-links dist wheel
 
-pip3 install --no-index --find-links dist Jinja2
-
-cp -rv dest/* /
-cd .. && rm -rf "jinja2-"*
+cd .. && rm -rf "wheel-"*
 mark_built "$PKG_NAME"

@@ -4,8 +4,11 @@ source "/scripts/common.sh"
 PKG_NAME="markupsafe"
 check_built "$PKG_NAME" && exit 0
 extract "MarkupSafe"
-python3 setup.py build
-python3 setup.py install --root dest
+
+pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+
+pip3 install --no-index --find-links dist Markupsafe
+
 cp -rv dest/* /
 cd .. && rm -rf "MarkupSafe-"*
 mark_built "$PKG_NAME"

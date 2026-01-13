@@ -4,12 +4,17 @@ source "/scripts/common.sh"
 PKG_NAME="elfutils"
 check_built "$PKG_NAME" && exit 0
 extract "elfutils"
-./configure --prefix=/usr                \
-            --disable-debuginfod         \
+
+./configure --prefix=/usr        \
+            --disable-debuginfod \
             --enable-libdebuginfod=dummy
+
 make $MAKEFLAGS
+make -C libelf install
+
 make -C libelf install
 install -vm644 config/libelf.pc /usr/lib/pkgconfig
 rm /usr/lib/libelf.a
+
 cd .. && rm -rf "elfutils-"*
 mark_built "$PKG_NAME"

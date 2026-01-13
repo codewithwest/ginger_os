@@ -6,11 +6,10 @@ check_built "$PKG_NAME" && exit 0
 extract "sysvinit"
 
 # Apply patch if present
-if [ -f "$GINGER_SOURCES/sysvinit-3.14-consolidated-1.patch" ]; then
-    patch -Np1 -i "$GINGER_SOURCES/sysvinit-3.14-consolidated-1.patch"
-fi
+patch -Np1 -i ../sysvinit-3.14-consolidated-1.patch
 
 make $MAKEFLAGS
 make install
+
 cd .. && rm -rf "sysvinit-"*
 mark_built "$PKG_NAME"

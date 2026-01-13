@@ -4,8 +4,11 @@ source "/scripts/common.sh"
 PKG_NAME="groff"
 check_built "$PKG_NAME" && exit 0
 extract "groff"
+
 PAGE=A4 ./configure --prefix=/usr
+
 make $MAKEFLAGS
 make install
+
 cd .. && rm -rf "groff-"*
 mark_built "$PKG_NAME"
