@@ -22,5 +22,8 @@ case $(uname -m) in
   x86_64) chown -v lfs $LFS/lib64 ;;
 esac
 
-chown -v lfs $LFS/var/lib/ginger/
+chown -v lfs "$LFS/var"
+chown -v lfs "$LFS/var/lib"
+chown -R lfs "$LFS/var/lib/ginger"
+
 su - lfs
