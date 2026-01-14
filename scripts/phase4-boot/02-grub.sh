@@ -12,7 +12,7 @@ log "PROCESS" "Installing GRUB to the disk..."
 # We need to know the target device. Usually passed as an env var.
 
 # Auto-detect the device if not specified
-if [ -z "${BOOT_DEVICE}" ]; then
+if [ -z "${BOOT_DEVICE:-}" ]; then
     # Find the device mounted at /
     CURRENT_DEV=$(df --output=source / | tail -n1)
     
