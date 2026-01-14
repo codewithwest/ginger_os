@@ -1,37 +1,48 @@
 #!/bin/bash
-# LFS 12.2 - 8.4. Portable GRUB Setup (Fixing LVM Probe)
+# LFS 12.2 - Final Hybrid GRUB Setup
 
 source "$(dirname "$(readlink -f "$0")")/../common.sh"
-PKG_NAME="grub-setup"
 
-log "PROCESS" "Configuring portable GRUB..."
+log "PROCESS" "Starting Hybrid GRUB Installation..."
 
-# 1. Identify the root partition UUID
-ROOT_DEV="/dev/sda2"
-ROOT_UUID=$(blkid -s UUID -o value $ROOT_DEV)
-
-if [ -z "$ROOT_UUID" ]; then
-    log "ERROR" "Could not determine UUID for $ROOT_DEV."
-    exit 1
+# 1. Ensure device nodes exist so blkid works
+if [ ! -b /dev/sda1 ]; then
+    mknod /dev/sda b 8 0
+    mknod /dev/sda1 b 8 1
 fi
 
-# 2. CREATE THE DEVICE MAP (Crucial Fix)
-# This prevents GRUB from looking at your Ubuntu host's LVM volumes
+# 2. Identify the REAL root partition UUID
+ROOT_UUID=$(blkid -s UUID -o value /dev/sda1)
+log "INFO" "Syncing with UUID: $ROOT_UUID"
+
+# 3. Create /etc/fstab (If it's missing, the kernel will panic)
+if [ ! -f /etc/fstab ]; then
+    log "INFO" "Creating missing /etc/fstab..."
+    cat > /etc/fstab << EOF
+UUID=$ROOT_UUID  /      ext4     defaults            1     1
+proc               /proc  proc     nosuid,noexec,nodev 0     0
+sysfs              /sys   sysfs    nosuid,noexec,nodev 0     0
+EOF
+fi
+
+# 4. Physical Install (Your Module approach + LVM fix)
 echo "(hd0) /dev/sda" > /boot/grub/device.map
-log "INFO" "Created /boot/grub/device.map to bypass host LVM."
+grub-install /dev/sda \
+    --target=i386-pc \
+    --modules="part_msdos ext2 biosdisk" \
+    --force \
+    --no-floppy
 
-# 3. Install GRUB using the map
-# We add --no-floppy to speed things up
-grub-install --target=i386-pc --force --no-floppy /dev/sda
-
-# 4. Generate the grub.cfg
+# 5. Logical Config (Portable UUID approach)
 cat > /boot/grub/grub.cfg << EOF
 set default=0
-set timeout=5
+set timeout=2
 
-insmod part_gpt
+# Load modules just in case
+insmod part_msdos
 insmod ext2
 
+# Search by UUID for bundle-safety
 search --no-floppy --fs-uuid --set=root $ROOT_UUID
 
 menuentry "GingerOS (LFS 12.2)" {
@@ -39,9 +50,5 @@ menuentry "GingerOS (LFS 12.2)" {
 }
 EOF
 
-# Clean up the map so it doesn't cause issues in the final image
 rm /boot/grub/device.map
-
-log "INFO" "GRUB installation complete."
-
-mark_built "$PKG_NAME"
+log "SUCCESS" "Image is now boot-ready and bundle-safe."
