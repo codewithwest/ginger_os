@@ -23,11 +23,11 @@ mkdir -p /boot/grub
 echo "(hd0) /dev/sda" > /boot/grub/device.map
 
 # 4. Physical Install with your requested modules
-grub-install /dev/sda \
-    --target=i386-pc \
-    --modules="part_msdos ext2 biosdisk" \
-    --force \
-    --no-floppy
+grub-install --target=i386-pc \
+             --boot-directory=/boot \
+             --modules="part_msdos ext2 biosdisk" \
+             --force \
+             --no-floppy /dev/sda
 
 # 5. Create the configuration
 cat > /boot/grub/grub.cfg << EOF
