@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.2 - 8.4. Portable GRUB Setup
+# LFS 12.2 - 8.4. Portable GRUB Setup (Fixing LVM Probe)
 
 source "$(dirname "$(readlink -f "$0")")/../common.sh"
 PKG_NAME="grub-setup"
@@ -7,37 +7,31 @@ PKG_NAME="grub-setup"
 log "PROCESS" "Configuring portable GRUB..."
 
 # 1. Identify the root partition UUID
-# We target the second partition (gpt2)
 ROOT_DEV="/dev/sda2"
 ROOT_UUID=$(blkid -s UUID -o value $ROOT_DEV)
 
 if [ -z "$ROOT_UUID" ]; then
-    log "ERROR" "Could not determine UUID for $ROOT_DEV. Check /dev nodes."
+    log "ERROR" "Could not determine UUID for $ROOT_DEV."
     exit 1
 fi
 
-log "INFO" "Found Root UUID: $ROOT_UUID"
+# 2. CREATE THE DEVICE MAP (Crucial Fix)
+# This prevents GRUB from looking at your Ubuntu host's LVM volumes
+echo "(hd0) /dev/sda" > /boot/grub/device.map
+log "INFO" "Created /boot/grub/device.map to bypass host LVM."
 
-# 2. Install GRUB to the MBR/GPT gap
-# We use --force for loopback compatibility
-grub-install --target=i386-pc --force /dev/sda
+# 3. Install GRUB using the map
+# We add --no-floppy to speed things up
+grub-install --target=i386-pc --force --no-floppy /dev/sda
 
-# 3. Generate a dynamic grub.cfg
+# 4. Generate the grub.cfg
 cat > /boot/grub/grub.cfg << EOF
-# Begin /boot/grub/grub.cfg
 set default=0
 set timeout=5
-
-# Serial console for QEMU debugging
-serial --unit=0 --speed=115200
-terminal_input serial console
-terminal_output serial console
 
 insmod part_gpt
 insmod ext2
 
-# DYNAMIC SEARCH: This is the key to 'valid bundling'
-# It finds the device by UUID and sets it as root, regardless of drive index
 search --no-floppy --fs-uuid --set=root $ROOT_UUID
 
 menuentry "GingerOS (LFS 12.2)" {
@@ -45,6 +39,9 @@ menuentry "GingerOS (LFS 12.2)" {
 }
 EOF
 
-log "INFO" "GRUB installation complete and portable."
+# Clean up the map so it doesn't cause issues in the final image
+rm /boot/grub/device.map
+
+log "INFO" "GRUB installation complete."
 
 mark_built "$PKG_NAME"
