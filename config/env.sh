@@ -84,6 +84,9 @@ export SYSLOGD_VERSION="2.7.2"
 export SYSVINIT_VERSION="3.14"
 export BOOTSCRIPTS_VERSION="20250827"
 export IANA_ETC_VERSION="20250807"
+export LIBBURN_VERSION="1.5.6"
+export LIBISOFS_VERSION="1.5.6"
+export LIBISOBURN_VERSION="1.5.6"
 
 # Target directory for the LFS system
 export LFS="/mnt/lfs"

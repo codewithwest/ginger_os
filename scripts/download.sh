@@ -27,7 +27,27 @@ log "INFO" "Downloading packages (using wget-list)..."
 # We add -4 to ensure IPv4 and -nc to skip existing
 wget -4 --input-file=wget-list --continue --tries=5 --timeout=20
 
-# 4. Verification
+
+# ---------------------------------------------------------------------
+# Download Extra BLFS Packages (xorriso support)
+# ---------------------------------------------------------------------
+log "INFO" "Downloading extra BLFS packages (libburn, libisofs, libisoburn)..."
+
+# Libburn
+if [ ! -f "libburn-1.5.6.tar.gz" ]; then
+    wget https://files.libburnia-project.org/releases/libburn-1.5.6.tar.gz
+fi
+
+# Libisofs
+if [ ! -f "libisofs-1.5.6.tar.gz" ]; then
+    wget https://files.libburnia-project.org/releases/libisofs-1.5.6.tar.gz
+fi
+
+# Libisoburn
+if [ ! -f "libisoburn-1.5.6.tar.gz" ]; then
+    wget https://files.libburnia-project.org/releases/libisoburn-1.5.6.tar.gz
+fi
+
 log "INFO" "Verifying checksums..."
 md5sum -c md5sums || {
   log "ERROR" "Checksum verification failed"

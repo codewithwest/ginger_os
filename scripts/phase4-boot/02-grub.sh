@@ -27,6 +27,7 @@ if [ -z "${BOOT_DEVICE:-}" ]; then
     fi
 else
     DEVICE="${BOOT_DEVICE}"
+    CURRENT_DEV="${BOOT_DEVICE}"  # Add this line to prevent the unbound error
 fi
 
 log "INFO" "Detected install device: $DEVICE (from ${CURRENT_DEV:-manual})"
