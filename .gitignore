@@ -1,2 +1,5 @@
 *.iso
-*qcow2
+*.qcow2
+*.img
+vmlinuz-*
+

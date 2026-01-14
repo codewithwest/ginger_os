@@ -32,8 +32,10 @@ fi
 
 log "INFO" "Detected install device: $DEVICE (from ${CURRENT_DEV:-manual})"
 
-# Install GRUB files to /boot
-grub-install "$DEVICE"
+# try to install GRUB files to /boot if it fails use modules
+
+grub-install "$DEVICE" --modules="part_gpt part_msdos ext2"
+
 
 # Create grub.cfg
 cat > /boot/grub/grub.cfg << "EOF"
@@ -41,11 +43,18 @@ cat > /boot/grub/grub.cfg << "EOF"
 set default=0
 set timeout=5
 
-insmod ext2
-set root=(hd0,msdos1)
+serial --unit=0 --speed=115200
+terminal_input serial console
+terminal_output serial console
 
-menuentry "GingerOS (LFS 12.4)" {
-        linux   /boot/vmlinuz-$LINUX_VERSION-lfs-12.4 root=/dev/sda1 ro
+insmod part_gpt
+insmod ext2
+
+# (hd0,2) typically refers to the second partition of the first disk
+set root=(/dev/sda2,2)
+
+menuentry "GNU/Linux, Linux 6.16.1-lfs-12.4" {
+    linux /boot/vmlinuz-6.16.1-lfs-12.4 root=/dev/sda2 ro
 }
 EOF
 

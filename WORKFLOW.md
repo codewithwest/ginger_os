@@ -68,6 +68,21 @@ While still in chroot:
     ./qemu-run.sh
     ```
 
+## 📤 Retrieving the Image (If built inside a VM)
+If you built GingerOS inside a virtual machine (e.g., QEMU with `ubuntu_host.qcow2`), the `ginger_os.img` file is inside that VM. To copy it to your host machine:
+
+**Prerequsites:**
+- VM must be running.
+- VM must have port forwarding set up (e.g., `-nic user,hostfwd=tcp::2223-:22`).
+- SSH server must be running inside VM (`sudo systemctl start ssh`).
+
+**Run this on your HOST machine:**
+```bash
+# syntax: scp -P <HostPort> <User>@localhost:<PathToImage> <LocalDestination>
+scp -P 2223 ginger@localhost:/opt/ginger_os/ginger_os.img ./
+```
+*Replace `2223` with your forwarded port and `ginger` with your VM username.*
+
 ---
 ---
 ## 🏁 Recovery & Troubleshooting
