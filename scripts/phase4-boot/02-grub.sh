@@ -1,48 +1,44 @@
 #!/bin/bash
-# LFS 12.2 - Final Hybrid GRUB Setup
+# LFS 12.2 - Final Bootloader Setup
 
 source "$(dirname "$(readlink -f "$0")")/../common.sh"
 
-log "PROCESS" "Starting Hybrid GRUB Installation..."
+log "PROCESS" "Starting Final GRUB Installation..."
 
-# 1. Ensure device nodes exist so blkid works
-if [ ! -b /dev/sda1 ]; then
-    mknod /dev/sda b 8 0
-    mknod /dev/sda1 b 8 1
-fi
-
-# 2. Identify the REAL root partition UUID
+# 1. Identify the UUID (Now that /dev/sda1 is confirmed)
 ROOT_UUID=$(blkid -s UUID -o value /dev/sda1)
 log "INFO" "Syncing with UUID: $ROOT_UUID"
 
-# 3. Create /etc/fstab (If it's missing, the kernel will panic)
-if [ ! -f /etc/fstab ]; then
-    log "INFO" "Creating missing /etc/fstab..."
-    cat > /etc/fstab << EOF
-UUID=$ROOT_UUID  /      ext4     defaults            1     1
-proc               /proc  proc     nosuid,noexec,nodev 0     0
-sysfs              /sys   sysfs    nosuid,noexec,nodev 0     0
+# 2. Ensure /etc/fstab exists (The 'Valid Bundle' Requirement)
+log "INFO" "Updating /etc/fstab..."
+cat > /etc/fstab << EOF
+# file system      mount-point  type     options             dump  pass
+UUID=$ROOT_UUID    /            ext4     defaults            1     1
+proc               /proc        proc     nosuid,noexec,nodev 0     0
+sysfs              /sys         sysfs    nosuid,noexec,nodev 0     0
 EOF
-fi
 
-# 4. Physical Install (Your Module approach + LVM fix)
+# 3. Create directory and Map (Bypasses Ubuntu LVM error)
+mkdir -p /boot/grub
 echo "(hd0) /dev/sda" > /boot/grub/device.map
+
+# 4. Physical Install with your requested modules
 grub-install /dev/sda \
     --target=i386-pc \
     --modules="part_msdos ext2 biosdisk" \
     --force \
     --no-floppy
 
-# 5. Logical Config (Portable UUID approach)
+# 5. Create the configuration
 cat > /boot/grub/grub.cfg << EOF
 set default=0
-set timeout=2
+set timeout=5
 
-# Load modules just in case
+# Load essential modules
 insmod part_msdos
 insmod ext2
 
-# Search by UUID for bundle-safety
+# Portable search
 search --no-floppy --fs-uuid --set=root $ROOT_UUID
 
 menuentry "GingerOS (LFS 12.2)" {
@@ -50,5 +46,7 @@ menuentry "GingerOS (LFS 12.2)" {
 }
 EOF
 
+# Clean up temporary map
 rm /boot/grub/device.map
-log "SUCCESS" "Image is now boot-ready and bundle-safe."
+
+log "SUCCESS" "Bootloader is fully configured."
