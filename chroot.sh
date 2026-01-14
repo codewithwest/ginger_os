@@ -49,16 +49,17 @@ chroot "$LFS" /usr/bin/env -i   \
 # Determine if we are running in interactive mode or executing a script
 if [ $# -gt 0 ]; then
     log "INFO" "Executing command inside chroot: $@"
-    $CHROOT_BIN "$LFS" /usr/bin/env -i   \
-        HOME=/root                      \
-        TERM="$TERM"                    \
-        PATH=/usr/bin:/usr/sbin         \
-        /usr/bin/bash -c "$@"
+    chroot "$LFS" /usr/bin/env -i   \
+        HOME=/root                  \
+        TERM="$TERM"                \
+        PATH=/usr/bin:/usr/sbin     \
+        /bin/bash -c "$@"
 else
-    $CHROOT_BIN "$LFS" /usr/bin/env -i   \
-        HOME=/root                      \
-        TERM="$TERM"                    \
+    log "INFO" "Entering interactive chroot..."
+    chroot "$LFS" /usr/bin/env -i   \
+        HOME=/root                  \
+        TERM="$TERM"                \
         PS1='(ginger-chroot) \u:\w\$ '  \
-        PATH=/usr/bin:/usr/sbin         \
-        /usr/bin/bash --login
+        PATH=/usr/bin:/usr/sbin     \
+        /bin/bash --login
 fi
