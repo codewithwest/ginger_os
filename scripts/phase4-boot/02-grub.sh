@@ -29,7 +29,7 @@ else
     DEVICE="${BOOT_DEVICE}"
 fi
 
-log "INFO" "Detected install device: $DEVICE (from $CURRENT_DEV)"
+log "INFO" "Detected install device: $DEVICE (from ${CURRENT_DEV:-manual})"
 
 # Install GRUB files to /boot
 grub-install "$DEVICE"
