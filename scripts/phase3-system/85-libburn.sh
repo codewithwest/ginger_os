@@ -6,7 +6,11 @@ PKG_NAME="libburn"
 check_built "$PKG_NAME" && exit 0
 extract "libburn"
 
-./configure --prefix=/usr --disable-static
+sed -i 's/catch_int ()/catch_int (int signum)/' test/poll.c
+
+
+./configure --prefix=/usr --disable-static &&
+
 make $MAKEFLAGS
 make install
 

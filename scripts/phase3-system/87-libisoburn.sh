@@ -8,15 +8,10 @@ extract "libisoburn"
 
 ./configure --prefix=/usr              \
             --disable-static           \
-            --enable-pkg-check-modules
-make $MAKEFLAGS
-make install
+            --enable-pkg-check-modules &&
+make
 
-# Install documentation if needed (skipping for minimal build, but following instructions)
-install -v -dm755 /usr/share/doc/libisoburn-$LIBISOBURN_VERSION
-if [ -d doc/html ]; then
-    install -v -m644 doc/html/* /usr/share/doc/libisoburn-$LIBISOBURN_VERSION
-fi
+make install
 
 cd .. && rm -rf "libisoburn-"*
 mark_built "$PKG_NAME"
