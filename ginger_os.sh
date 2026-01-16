@@ -69,10 +69,6 @@ run_step "06_host_reqs" "bash ./scripts/host-requirements-install.sh"
 # 7. Version Check
 run_step "07_version_check" "bash ./scripts/version-check.sh"
 
-# 8. Chroot Mounts
-# Fixed path: ./scripts/chroot.sh -> ./chroot.sh
-run_step "08_chroot_mounts" "bash ./chroot.sh"
-
 # 9. Setup LFS User Environment
 # Note: 'su - lfs' resets CWD. We must ensure the script is accessible.
 # Using absolute path for safety if possible, or assuming lfs user can access $SCRIPT_DIR.
@@ -82,14 +78,18 @@ run_step "09_setup_lfs_env" "sudo chroot "$LFS" /bin/bash -c \"bash $SCRIPT_DIR/
 
 # 10. Phase 1 - Temporary Toolchain
 # Run as LFS user
-run_step "10_phase1_toolchain" "sudo chroot "$LFS" /bin/bash -c \"bash $SCRIPT_DIR/build-phase1.sh\""
+run_step "10_phase1_toolchain" "sudo su - lfs -c \"bash $SCRIPT_DIR/build-phase1.sh\""
 
 # 11. Phase 2 - Permanent Toolchain
 # Run as LFS user
-run_step "11_phase2_toolchain" "sudo chroot "$LFS" /bin/bash -c \"bash $SCRIPT_DIR/build-phase2.sh\""
+run_step "11_phase2_toolchain" "sudo su - lfs -c \"bash $SCRIPT_DIR/build-phase2.sh\""
+
+# 8. Chroot Mounts
+# Fixed path: ./scripts/chroot.sh -> ./chroot.sh
+run_step "08_chroot_mounts" "bash $SCRIPT_DIR/chroot.sh"
 
 # 12. Phase 3 - System Tools
-run_step "12_phase3_system" "sudo chroot "$LFS" /bin/bash -c \"bash $SCRIPT_DIR/build-phase3.sh\""
+run_step "12_phase3_system" "sudo su - lfs -c \"bash $SCRIPT_DIR/build-phase3.sh\""
 
 # 13. Kernel
 run_step "13_kernel" "sudo chroot "$LFS" /bin/bash -c \"bash $SCRIPT_DIR/phase4-boot/01-kernel.sh\""
