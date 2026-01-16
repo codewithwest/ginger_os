@@ -95,7 +95,7 @@ run_step "12_phase3_system" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/buil
 run_step "13_kernel" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/phase4-boot/01-kernel.sh\""
 
 # 14. GRUB
-run_step "14_grub" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/phase4-boot/02-grub.sh\""
+run_step "14_grub" "bash scripts/phase4-boot/02-grub.sh"
 
 # 15. Teardown
 run_step "15_teardown" "bash ./teardown.sh"
