@@ -6,8 +6,17 @@ source "$(dirname "$(readlink -f "$0")")/common.sh"
 
 mkdir -pv $LFS/{etc,var} $LFS/usr/{bin,lib,sbin}
 
+# create symlinks for bin, lib, sbin
 for i in bin lib sbin; do
-  ln -sv usr/$i $LFS/$i
+  if [ -L "$LFS/$i" ]; then
+    echo "Symlink $LFS/$i already exists — skipping"
+  elif [ -d "$LFS/$i" ]; then
+    echo "Replacing directory $LFS/$i with symlink"
+    rm -rf "$LFS/$i"
+    ln -sv "usr/$i" "$LFS/$i"
+  else
+    ln -sv "usr/$i" "$LFS/$i"
+  fi
 done
 
 case $(uname -m) in
