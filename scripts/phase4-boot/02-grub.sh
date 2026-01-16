@@ -1,6 +1,6 @@
 #!/bin/bash
-# GingerOS - GRUB + /etc/inittab Setup (Image-based)
-# Mounts the LFS disk image, installs GRUB, writes grub.cfg, sets up inittab, and cleans up
+# GingerOS - GRUB + /etc/inittab + Users Setup (Image-based)
+# Mounts the LFS disk image, installs GRUB, sets up inittab, creates lfs/root users, and cleans up
 
 set -euo pipefail
 
@@ -10,7 +10,7 @@ source "${SCRIPT_DIR}/../common.sh"
 IMAGE="${GINGER_ROOT}/ginger_os.img"
 MOUNT_POINT="/mnt/lfs"
 
-log "PROCESS" "Starting Final Bootloader & init setup on image..."
+log "PROCESS" "Starting Final Bootloader, init, and users setup on image..."
 
 # ---------------------------------------------------------------------
 # Step 0 — detach any stale mounts / loop devices
@@ -43,7 +43,7 @@ sudo mount -t sysfs sysfs   "$MOUNT_POINT/sys"
 sudo mount -t tmpfs tmpfs   "$MOUNT_POINT/run"
 
 # ---------------------------------------------------------------------
-# Step 4 — chroot and install GRUB + /etc/inittab
+# Step 4 — chroot and install GRUB + /etc/inittab + users
 # ---------------------------------------------------------------------
 sudo chroot "$MOUNT_POINT" /bin/bash -c "
 set -e
@@ -111,6 +111,19 @@ l6:6:wait:/etc/rc.d/rc 6
 6:23:respawn:/sbin/agetty -L tty6 9600 vt100
 # End /etc/inittab
 INIT_EOF
+
+# --- Create users ---
+echo 'Creating users...'
+
+# root password
+echo 'root:root' | chpasswd
+
+if ! id lfs >/dev/null 2>&1; then
+    groupadd lfs
+    useradd -m -g lfs -s /bin/bash lfs
+    echo 'lfs:lfs' | chpasswd
+fi
+
 "
 
 # ---------------------------------------------------------------------
@@ -119,6 +132,7 @@ INIT_EOF
 sudo umount -R "$MOUNT_POINT"
 sudo losetup -d "$LOOP_DEV"
 
-log "SUCCESS" "GRUB + /etc/inittab installed successfully inside image."
+log "SUCCESS" "GRUB + inittab + users installed successfully inside image."
 log "INFO" "Boot with:"
 log "INFO" "  qemu-system-x86_64 -enable-kvm -m 2G -drive file=${IMAGE},format=raw -serial stdio"
+log "INFO" "Use 'lfs/lfs' or 'root/root' to login."
