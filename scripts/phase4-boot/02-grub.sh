@@ -16,6 +16,9 @@ cat > /etc/fstab << EOF
 UUID=$ROOT_UUID    /            ext4     defaults            1     1
 proc               /proc        proc     nosuid,noexec,nodev 0     0
 sysfs              /sys         sysfs    nosuid,noexec,nodev 0     0
+devpts             /dev/pts     devpts   gid=5,mode=620      0     0
+tmpfs              /run         tmpfs    defaults            0     0
+tmpfs              /dev/shm     tmpfs    defaults            0     0
 EOF
 
 # 3. Create directory and Map (Bypasses Ubuntu LVM error)
