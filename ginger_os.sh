@@ -85,7 +85,8 @@ run_step "11_phase2_toolchain" \
   "bash scripts/run-as-lfs.sh $SCRIPT_DIR/build-phase2.sh"
 
 # 12. Chroot Mounts
-run_step "12_chroot_mounts" "bash $SCRIPT_DIR/../chroot.sh"
+run_step "12_chroot_mounts" "bash chroot.sh"
+
 
 # 12. Phase 3 - System Tools
 run_step "12_phase3_system" "sudo chroot "$LFS" /bin/bash -c \"bash $SCRIPT_DIR/build-phase3.sh\""
