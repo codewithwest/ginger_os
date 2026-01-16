@@ -96,7 +96,7 @@ run_as_lfs() {
 
 # run the scripts as lfs user
 log "INFO" "Setting up LFS user environment..."
-run_as_lfs "bash ./scripts/setup-ls-user-env.sh"
+run_as_lfs "bash ./scripts/setup-lfs-user-env.sh"
 
 # begin LFS Chapter 5 (temporary toolchain)
 log "INFO" "Starting Phase 1 (Temporary Toolchain)..."
