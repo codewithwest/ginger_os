@@ -91,7 +91,7 @@ run_step "12_chroot_mounts" "bash $SCRIPT_DIR/chroot.sh"
 
 # 8. Chroot Mounts
 # Fixed path: ./scripts/chroot.sh -> ./chroot.sh
-run_step "08_chroot_mounts" "bash $SCRIPT_DIR/chroot.sh"
+run_step "08_chroot_mounts" "bash $SCRIPT_DIR/../chroot.sh"
 
 # 12. Phase 3 - System Tools
 run_step "12_phase3_system" "sudo chroot "$LFS" /bin/bash -c \"bash $SCRIPT_DIR/build-phase3.sh\""
