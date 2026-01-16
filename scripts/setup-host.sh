@@ -119,6 +119,8 @@ log "INFO" "Final ownership checks..."
 chown -v lfs "$LFS/tools"
 chown -v lfs "$LFS/sources"
 
+chown -R lfs:lfs $LFS
+
 log "INFO" "Host setup complete."
 log "INFO" "Switch to the 'lfs' user to begin Phase 1:"
 log "INFO" "  su - lfs"
