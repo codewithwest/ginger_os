@@ -74,7 +74,7 @@ run_step "07_version_check" "bash ./scripts/version-check.sh"
 # Using absolute path for safety if possible, or assuming lfs user can access $SCRIPT_DIR.
 # We'll pass the full path to the script to ensure it's found.
 # Fixed path: setup-ls-user-env -> setup-lfs-user-env.sh
-run_step "09_setup_lfs_env" "sudo chroot "$LFS" /bin/bash -c \"bash $SCRIPT_DIR/setup-lfs-user-env.sh\""
+run_step "09_setup_lfs_env" "sudo su - lfs -c \"bash $SCRIPT_DIR/setup-lfs-user-env.sh\""
 
 # 10. Phase 1 - Temporary Toolchain
 # Run as LFS user
