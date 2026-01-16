@@ -15,8 +15,12 @@ log "INFO" "Setting permissions..."
 chmod -R 777 /opt/ginger_os
 
 # prepare the image
-log "INFO" "Preparing the image..."
-bash ./scripts/prepare-image.sh
+if [ ! -f "$IMAGE" ]; then
+    log "INFO" "Creating and preparing image..."
+    bash ./scripts/prepare-image.sh
+else
+    log "INFO" "$IMAGE exists; skipping creation"
+fi
 
 # download the sources
 log "INFO" "Downloading sources..."
@@ -24,7 +28,7 @@ bash ./scripts/download.sh
 
 # setup the host
 log "INFO" "Setting up host..."
-bash ./scripts/host-setup.sh
+bash ./scripts/setup-host.sh
 
 # update the directory
 log "INFO" "Updating directory..."
@@ -40,18 +44,44 @@ bash ./scripts/version-check.sh
 # run chroot
 log "INFO" "Entering chroot environment..."
 bash ./scripts/chroot.sh
+
+# mount the image
 log "INFO" "Mounting lfs drive file..."
-sudo mount /dev/loop0p1 /mnt/lfs
+# ----------------------------
+# Step 2 — Mount image
+# ----------------------------
+if ! mountpoint -q "$MOUNT_POINT"; then
+    LOOP_DEV=$(sudo losetup -fP --show "$IMAGE")
+    sudo mkdir -p "$MOUNT_POINT"
+    sudo mount "${LOOP_DEV}p1" "$MOUNT_POINT"
+    log "INFO" "Mounted $IMAGE to $MOUNT_POINT"
+else
+    log "INFO" "$MOUNT_POINT already mounted"
+fi
+
 log "INFO" "Checking mounted drive..."
 df -h /mnt/lfs
+
 log "INFO" "Creating directories..."
 sudo mkdir -p /mnt/lfs/{dev,proc,sys,run}
+
 log "INFO" "Mounting directories..."
-sudo mount --bind /dev      /mnt/lfs/dev
-sudo mount --bind /dev/pts  /mnt/lfs/dev/pts
-sudo mount -t proc proc     /mnt/lfs/proc
-sudo mount -t sysfs sysfs   /mnt/lfs/sys
-sudo mount -t tmpfs tmpfs   /mnt/lfs/run
+# try mount if already mounted skip
+if ! mountpoint -q /mnt/lfs/dev; then
+    sudo mount --bind /dev /mnt/lfs/dev
+fi
+if ! mountpoint -q /mnt/lfs/dev/pts; then
+    sudo mount --bind /dev/pts /mnt/lfs/dev/pts
+fi
+if ! mountpoint -q /mnt/lfs/proc; then
+    sudo mount -t proc proc /mnt/lfs/proc
+fi
+if ! mountpoint -q /mnt/lfs/sys; then
+    sudo mount -t sysfs sysfs /mnt/lfs/sys
+fi
+if ! mountpoint -q /mnt/lfs/run; then
+    sudo mount -t tmpfs tmpfs /mnt/lfs/run
+fi
 
 
 # this is how you supposed to run the scripts as lfs user
@@ -62,19 +92,19 @@ run_as_lfs() {
 
 # run the scripts as lfs user
 log "INFO" "Setting up LFS user environment..."
-run_as_lfs "bash ./scripts/setup-ls-user-env"
+run_as_lfs "bash ./scripts/setup-ls-user-env.sh"
 
 # begin LFS Chapter 5 (temporary toolchain)
 log "INFO" "Starting Phase 1 (Temporary Toolchain)..."
-run_as_lfs "bash ./build-phase1.sh"
+run_as_lfs "bash ./scripts/build-phase1.sh"
 
 # begin LFS Chapter 6 (permanent toolchain)
 log "INFO" "Starting Phase 2 (Permanent Toolchain)..."
-run_as_lfs "bash ./build-phase2.sh"
+run_as_lfs "bash ./scripts/build-phase2.sh"
 
 # begin LFS Chapter 7 (system tools)
 log "INFO" "Starting Phase 3 (System Tools)..."
-run_as_lfs "bash ./build-phase3.sh"
+run_as_lfs "bash ./scripts/build-phase3.sh"
 
 # compile the kernel
 log "INFO" "Compiling the kernel..."
