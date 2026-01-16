@@ -10,6 +10,10 @@ git clone https://github.com/codewithwest/ginger_os.git /opt/ginger_os
 log "INFO" "Changing directory to /opt/ginger_os..."
 cd /opt/ginger_os
 
+# checkout to ai-scripts-revamp
+log "INFO" "Checking out to ai-scripts-revamp..."
+git checkout ai-scripts-revamp
+
 # make the repo all access readable
 log "INFO" "Setting permissions..."
 chmod -R 777 /opt/ginger_os
