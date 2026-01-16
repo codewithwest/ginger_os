@@ -5,7 +5,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 source "${SCRIPT_DIR}/../config/env.sh"
-source "${SCRIPT_DIR}/../common.sh"
+source "${SCRIPT_DIR}/common.sh"
 
 IMAGE_PATH="${GINGER_ROOT}/ginger_os.img"
 
@@ -24,6 +24,8 @@ log "INFO" "Setting up loopback device..."
 # Find next available loop device
 LOOP_DEV=$(sudo losetup -fP --show "$IMAGE_PATH")
 
+# echo "$LOOP_DEV" > "$GINGER_ROOT/.loopdev"
+
 log "INFO" "Formatting partition..."
 sudo mkfs.ext4 "${LOOP_DEV}p1"
 
@@ -31,6 +33,10 @@ log "INFO" "Mounting to $LFS..."
 [ -d "$LFS" ] || sudo mkdir -p "$LFS"
 sudo mount "${LOOP_DEV}p1" "$LFS"
 # sudo chown -R lfs:lfs "$LFS"
+if ! mountpoint -q "$LFS"; then
+    log "ERROR" "Failed to mount LFS filesystem at $LFS"
+    exit 1
+fi
 
 log "INFO" "Image ready at $LFS (Loop device: $LOOP_DEV)"
 log "INFO" "Don't forget to unmount and detach after build."

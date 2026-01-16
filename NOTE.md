@@ -1,6 +1,6 @@
 # Files executed in order:
 
-1. disk-image-setup.sh (root, once)
+1. prepare-image.sh (root, once)
 2. download.sh (any user)
 3. host-setup.sh (root)
 4. sudo apt update
