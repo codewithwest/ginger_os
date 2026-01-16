@@ -4,40 +4,39 @@ GingerOS is a fully reproducible, automated build system for Linux From Scratch 
 
 ## 🚀 Quick Start (Automated Pipeline)
 
-1.  **Prepare Host**: Spin up an Ubuntu VM, copy the repository to `/opt/ginger_os`, and ensure the `lfs` user has ownership.
+The entire build process is now orchestrated by a single, fail-proof script (`ginger_os.sh`) that manages state and resumes automatically if interrupted.
+
+1.  **Run the Build Script**:
     ```bash
-    sudo mv ginger_os /opt/
-    sudo chown -R lfs:lfs /opt/ginger_os
+    sudo ./ginger_os.sh
     ```
-2.  **Source Acquisition**:
-    ```bash
-    cd /opt/ginger_os
-    ./scripts/download.sh
-    ```
-    *Note: GingerOS uses "Smart Extract"—it will automatically find the correct versioned tarball in your sources folder.*
-3.  **Disk Preparation**:
-    ```bash
-    sudo ./scripts/prepare-image.sh
-    ```
-4.  **Host Setup**:
-    ```bash
-    sudo ./scripts/setup-host.sh
-    ```
-5.  **Build Toolchain (As 'lfs' User)**:
-    ```bash
-    sudo su - lfs
-    cd /opt/ginger_os
-    ./build.sh
-    ```
-6.  **Build Final System (Inside Chroot)**:
-    ```bash
-    exit                              # Back to root
-    sudo ./chroot.sh "/scripts/build-phase3.sh"
-    ```
-7.  **Safe Cleanup**:
-    ```bash
-    sudo ./teardown.sh                # Safely unmount virtual systems
-    ```
+    This script will:
+    - Check and install host requirements.
+    - Prepare the disk image.
+    - Download sources.
+    - Set up the environment.
+    - Compile the toolchain (Phase 1 & 2).
+    - Build the final system (Phase 3).
+    - Compile Kernel and GRUB.
+    - Cleanup.
+
+## 📋 Step-by-Step Guide & Purpose
+
+The `ginger_os.sh` orchestrator executes the following sequence. Each step is tracked in `.build_state/` to ensure idempotency.
+
+1.  **Clone & Permissions**: Ensures the repository is correctly set up and accessible.
+2.  **Prepare Image (`scripts/prepare-image.sh`)**: Creates a 20GB raw disk image, partitions it, formats it (ext4), and mounts it to `$LFS` (/mnt/lfs). **Warning**: This wipes existing images.
+3.  **Download Sources (`scripts/download.sh`)**: Fetches all required source tarballs specified in `config/env.sh` into `sources/`.
+4.  **Host Setup (`scripts/setup-host.sh`)**: Configures the host environment, adds the `lfs` user, and sets up directory permissions.
+5.  **Host Requirements (`scripts/host-requirements-install.sh`)**: Installs necessary packages (bison, gum, etc.) on the host system to allow compilation.
+6.  **Version Check (`scripts/version-check.sh`)**: Verifies that the host tools meet LFS 12.4 version requirements.
+7.  **Chroot Preparation (`chroot.sh`)**: Mounts virtual kernel filesystems (`/dev`, `/proc`, `/sys`) into the `$LFS` mount point.
+8.  **Setup LFS Env (`scripts/setup-lfs-user-env.sh`)**: Configures the `.bashrc` and `.bash_profile` for the `lfs` user to ensure environment variables are loaded.
+9.  **Phase 1 - Temporary Toolchain (`scripts/build-phase1.sh`)**: builds the cross-compiler and basic tools (Binutils, GCC, Glibc) strictly as the `lfs` user.
+10. **Phase 2 - Permanent Toolchain (`scripts/build-phase2.sh`)**: Builds the intermediate toolchain that will be used inside chroot.
+11. **Phase 3 - System Tools (`scripts/build-phase3.sh`)**: The massive build phase. Compiles all base system software (coreutils, bash, etc.) using the new toolchain.
+12. **Kernel & Bootloader (`phases4-boot/`)**: Compiles the Linux Kernel (6.16.1) and installs GRUB.
+13. **Teardown (`teardown.sh`)**: Safely unmounts all virtual filesystems and the loopback device to finalize the image.
 
 ## 📖 Essential Documentation
 For the full detailed walkthrough, refer to:

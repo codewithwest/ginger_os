@@ -1,125 +1,104 @@
 #!/bin/bash
+# GingerOS Build Script - Automated & Fail-proof
+# This script manages the entire build process with state tracking to allow resuming.
 
-source ./scripts/common.sh
+# Ensure we are in the script's directory or project root
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+cd "$SCRIPT_DIR"
 
-# Clone the GingerOS repository
-log "INFO" "Cloning GingerOS repository to /opt/ginger_os..."
-git clone https://github.com/codewithwest/ginger_os.git /opt/ginger_os
-
-# change into the repository directory
-log "INFO" "Changing directory to /opt/ginger_os..."
-cd /opt/ginger_os
-
-# checkout to ai-scripts-revamp
-log "INFO" "Checking out to ai-scripts-revamp..."
-git checkout ai-scripts-revamp
-
-# make the repo all access readable
-log "INFO" "Setting permissions..."
-chmod -R 777 /opt/ginger_os
-
-# prepare the image
-if [ ! -f "$IMAGE" ]; then
-    log "INFO" "Creating and preparing image..."
-    bash ./scripts/prepare-image.sh
+# Source common functions
+if [ -f "./scripts/common.sh" ]; then
+    source ./scripts/common.sh
 else
-    log "INFO" "$IMAGE exists; skipping creation"
+    echo "Error: ./scripts/common.sh not found. key scripts missing?"
+    exit 1
 fi
 
-# download the sources
-log "INFO" "Downloading sources..."
-bash ./scripts/download.sh
+# State directory for tracking progress
+STATE_DIR="$SCRIPT_DIR/.build_state"
+mkdir -p "$STATE_DIR"
 
-# setup the host
-log "INFO" "Setting up host..."
-bash ./scripts/setup-host.sh
+# Function to run a step idempotently
+run_step() {
+    local STEP_NAME="$1"
+    local CMD="$2"
+    local STEP_FILE="$STATE_DIR/$STEP_NAME"
 
-# update the directory
-log "INFO" "Updating directory..."
-bash ./scripts/update-dir.sh
-
-# update the host packages
-log "INFO" "Installing host requirements..."
-bash ./scripts/host-requirements-install.sh
-
-log "INFO" "Running version check..."
-bash ./scripts/version-check.sh
-
-# run chroot
-log "INFO" "Entering chroot environment..."
-bash ./scripts/chroot.sh
-
-# mount the image
-log "INFO" "Mounting lfs drive file..."
-# ----------------------------
-# Step 2 — Mount image
-# ----------------------------
-if ! mountpoint -q "$MOUNT_POINT"; then
-    LOOP_DEV=$(sudo losetup -fP --show "$IMAGE")
-    sudo mkdir -p "$MOUNT_POINT"
-    sudo mount "${LOOP_DEV}p1" "$MOUNT_POINT"
-    log "INFO" "Mounted $IMAGE to $MOUNT_POINT"
-else
-    log "INFO" "$MOUNT_POINT already mounted"
-fi
-
-log "INFO" "Checking mounted drive..."
-df -h /mnt/lfs
-
-log "INFO" "Creating directories..."
-sudo mkdir -p /mnt/lfs/{dev,proc,sys,run}
-
-log "INFO" "Mounting directories..."
-# try mount if already mounted skip
-if ! mountpoint -q /mnt/lfs/dev; then
-    sudo mount --bind /dev /mnt/lfs/dev
-fi
-if ! mountpoint -q /mnt/lfs/dev/pts; then
-    sudo mount --bind /dev/pts /mnt/lfs/dev/pts
-fi
-if ! mountpoint -q /mnt/lfs/proc; then
-    sudo mount -t proc proc /mnt/lfs/proc
-fi
-if ! mountpoint -q /mnt/lfs/sys; then
-    sudo mount -t sysfs sysfs /mnt/lfs/sys
-fi
-if ! mountpoint -q /mnt/lfs/run; then
-    sudo mount -t tmpfs tmpfs /mnt/lfs/run
-fi
-
-
-# this is how you supposed to run the scripts as lfs user
-# create a function that takes a param and executes
-run_as_lfs() {
-    sudo chroot "$MOUNT_POINT" /bin/bash -c "$1"
+    if [ -f "$STEP_FILE" ]; then
+        log "INFO" "Step '$STEP_NAME' already completed. Skipping."
+    else
+        log "PROCESS" "Starting Step: $STEP_NAME"
+        log "INFO" "Command: $CMD"
+        
+        # Execute the command
+        eval "$CMD"
+        local RET=$?
+        
+        if [ $RET -eq 0 ]; then
+            touch "$STEP_FILE"
+            log "INFO" "Step '$STEP_NAME' completed successfully."
+        else
+            log "ERROR" "Step '$STEP_NAME' failed with exit code $RET."
+            exit $RET
+        fi
+    fi
 }
 
-# run the scripts as lfs user
-log "INFO" "Setting up LFS user environment..."
-run_as_lfs "bash ./scripts/setup-lfs-user-env.sh"
+log "INFO" "Starting GingerOS Build Process..."
 
-# begin LFS Chapter 5 (temporary toolchain)
-log "INFO" "Starting Phase 1 (Temporary Toolchain)..."
-run_as_lfs "bash ./scripts/build-phase1.sh"
+# 1. Permissions (Always run specific checks or skip if done)
+run_step "01_permissions" "chmod -R 777 ."
 
-# begin LFS Chapter 6 (permanent toolchain)
-log "INFO" "Starting Phase 2 (Permanent Toolchain)..."
-run_as_lfs "bash ./scripts/build-phase2.sh"
+# 2. Prepare Image (CLEANS EVERYTHING - so handle with care)
+# If image exists and step is marked, we skip.
+run_step "02_prepare_image" "bash ./scripts/prepare-image.sh"
 
-# begin LFS Chapter 7 (system tools)
-log "INFO" "Starting Phase 3 (System Tools)..."
-run_as_lfs "bash ./scripts/build-phase3.sh"
+# 3. Download Sources
+run_step "03_download_sources" "bash ./scripts/download.sh"
 
-# compile the kernel
-log "INFO" "Compiling the kernel..."
-run_as_lfs "bash ./scripts/phase4-boot/01-kernel.sh"
+# 4. Host Setup
+# Fixed path: host-setup.sh -> setup-host.sh
+run_step "04_host_setup" "bash ./scripts/setup-host.sh"
 
-# compile the boot loader
-log "INFO" "Compiling and installing GRUB..."
-bash ./scripts/phase4-boot/02-grub.sh
+# 5. Update Directory
+run_step "05_update_dir" "bash ./scripts/update-dir.sh"
 
-# teardown the chroot
-log "INFO" "Tearing down chroot..."
-bash ./scripts/teardown.sh
+# 6. Host Requirements
+run_step "06_host_reqs" "bash ./scripts/host-requirements-install.sh"
 
+# 7. Version Check
+run_step "07_version_check" "bash ./scripts/version-check.sh"
 
+# 8. Chroot Mounts
+# Fixed path: ./scripts/chroot.sh -> ./chroot.sh
+run_step "08_chroot_mounts" "bash ./chroot.sh"
+
+# 9. Setup LFS User Environment
+# Note: 'su - lfs' resets CWD. We must ensure the script is accessible.
+# Using absolute path for safety if possible, or assuming lfs user can access $SCRIPT_DIR.
+# We'll pass the full path to the script to ensure it's found.
+# Fixed path: setup-ls-user-env -> setup-lfs-user-env.sh
+run_step "09_setup_lfs_env" "su - lfs -c \"bash $SCRIPT_DIR/scripts/setup-lfs-user-env.sh\""
+
+# 10. Phase 1 - Temporary Toolchain
+# Run as LFS user
+run_step "10_phase1_toolchain" "su - lfs -c \"bash $SCRIPT_DIR/scripts/build-phase1.sh\""
+
+# 11. Phase 2 - Permanent Toolchain
+# Run as LFS user
+run_step "11_phase2_toolchain" "su - lfs -c \"bash $SCRIPT_DIR/scripts/build-phase2.sh\""
+
+# 12. Phase 3 - System Tools
+run_step "12_phase3_system" "su - lfs -c \"bash $SCRIPT_DIR/scripts/build-phase3.sh\""
+
+# 13. Kernel
+run_step "13_kernel" "su - lfs -c \"bash $SCRIPT_DIR/scripts/phase4-boot/01-kernel.sh\""
+
+# 14. GRUB
+run_step "14_grub" "su - lfs -c \"bash $SCRIPT_DIR/scripts/phase4-boot/02-grub.sh\""
+
+# 15. Teardown
+# Fixed path: ./scripts/teardown.sh -> ./teardown.sh
+run_step "15_teardown" "bash ./teardown.sh"
+
+log "INFO" "GingerOS build process finished successfully!"
