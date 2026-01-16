@@ -26,9 +26,16 @@ fi
 log "INFO" "Using LFS directory: $LFS"
 
 # Warn if LFS is on the host root filesystem
+if ! mountpoint -q "$LFS"; then
+    log "ERROR" "$LFS is not a mounted filesystem"
+    log "ERROR" "Mount the LFS disk or image at $LFS before continuing"
+    exit 1
+fi
+
 if [ "$(stat -c %d /)" = "$(stat -c %d "$LFS")" ]; then
-    log "WARN" "$LFS is on the host root filesystem."
-    log "WARN" "A separate partition or disk image is strongly recommended."
+    log "ERROR" "$LFS is on the host root filesystem"
+    log "ERROR" "This will corrupt the host system and break LFS"
+    exit 1
 fi
 
 # ---------------------------------------------------------------------
