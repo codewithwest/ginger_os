@@ -118,10 +118,10 @@ echo 'Creating users...'
 # root password
 echo 'root:root' | chpasswd
 
-if ! id lfs >/dev/null 2>&1; then
-    groupadd lfs
-    useradd -m -g lfs -s /bin/bash lfs
-    echo 'lfs:lfs' | chpasswd
+if ! id ginger >/dev/null 2>&1; then
+    groupadd ginger
+    useradd -m -g ginger -s /bin/bash ginger
+    echo 'ginger:ginger' | chpasswd
 fi
 
 "
@@ -135,4 +135,4 @@ sudo losetup -d "$LOOP_DEV"
 log "SUCCESS" "GRUB + inittab + users installed successfully inside image."
 log "INFO" "Boot with:"
 log "INFO" "  qemu-system-x86_64 -enable-kvm -m 2G -drive file=${IMAGE},format=raw -serial stdio"
-log "INFO" "Use 'lfs/lfs' or 'root/root' to login."
+log "INFO" "Use 'ginger/ginger' or 'root/root' to login."
