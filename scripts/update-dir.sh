@@ -26,4 +26,4 @@ chown -v lfs "$LFS/var"
 chown -v lfs "$LFS/var/lib"
 chown -R lfs "$LFS/var/lib/ginger"
 
-su - lfs
+chmod -R 777 "$GINGER_LOGS"

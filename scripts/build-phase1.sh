@@ -1,7 +1,7 @@
 #!/bin/bash
 # GingerOS - Main Build Orchestrator
-
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+# 
+source "$(dirname "$(readlink -f "$0")")/common.sh"
 
 # 1. Download sources
 # bash scripts/download.sh
@@ -21,3 +21,6 @@ for script in scripts/phase1-tools/*.sh; do
         exit 1
     fi
 done
+
+
+
