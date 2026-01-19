@@ -107,7 +107,7 @@ cat > /etc/rc.d/rc << 'RC_MINIMAL'
 #!/bin/bash
 # Minimal rc script
 /etc/rc.d/rc.sysinit
-exec /bin/bash
+# exec /bin/bash
 RC_MINIMAL
 
 chmod +x /etc/rc.d/rc
