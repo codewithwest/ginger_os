@@ -1,6 +1,6 @@
 #!/bin/bash
-# GingerOS - GRUB + /etc/inittab + Users Setup (Image-based)
-# Mounts the LFS disk image, installs GRUB, sets up inittab, creates lfs/root users, and cleans up
+# GingerOS - GRUB + init + users setup (Image-based)
+# Mounts the LFS disk image, installs GRUB, sets up inittab, creates minimal rc.sysinit + rc, adds users, and cleans up
 
 set -euo pipefail
 
@@ -10,10 +10,10 @@ source "${SCRIPT_DIR}/../common.sh"
 IMAGE="${GINGER_ROOT}/ginger_os.img"
 MOUNT_POINT="/mnt/lfs"
 
-log "PROCESS" "Starting Final Bootloader, init, and users setup on image..."
+log "PROCESS" "Starting final bootloader, init, and users setup on image..."
 
 # ---------------------------------------------------------------------
-# Step 0 — detach any stale mounts / loop devices
+# Step 0 — detach stale mounts / loop devices
 # ---------------------------------------------------------------------
 sudo umount -R "$MOUNT_POINT" 2>/dev/null || true
 sudo losetup -D
@@ -43,7 +43,7 @@ sudo mount -t sysfs sysfs   "$MOUNT_POINT/sys"
 sudo mount -t tmpfs tmpfs   "$MOUNT_POINT/run"
 
 # ---------------------------------------------------------------------
-# Step 4 — chroot and install GRUB + /etc/inittab + users
+# Step 4 — chroot and install GRUB + init scripts + users
 # ---------------------------------------------------------------------
 sudo chroot "$MOUNT_POINT" /bin/bash -c "
 set -e
@@ -52,13 +52,12 @@ set -e
 echo 'Updating /etc/fstab...'
 ROOT_UUID=\$(blkid -s UUID -o value /dev/loop0p1)
 cat > /etc/fstab << EOF
-# file system      mount-point  type   options             dump  pass
-UUID=\$ROOT_UUID    /            ext4   defaults            1     1
-proc               /proc        proc   nosuid,noexec,nodev 0     0
-sysfs              /sys         sysfs  nosuid,noexec,nodev 0     0
-devpts             /dev/pts     devpts gid=5,mode=620      0     0
-tmpfs              /run         tmpfs  defaults            0     0
-tmpfs              /dev/shm     tmpfs  defaults            0     0
+UUID=\$ROOT_UUID    /            ext4   defaults            1 1
+proc               /proc        proc   nosuid,noexec,nodev 0 0
+sysfs              /sys         sysfs  nosuid,noexec,nodev 0 0
+devpts             /dev/pts     devpts gid=5,mode=620    0 0
+tmpfs              /run         tmpfs  defaults            0 0
+tmpfs              /dev/shm     tmpfs  defaults            0 0
 EOF
 
 # --- GRUB installation ---
@@ -79,43 +78,52 @@ insmod ext2
 
 set root=(hd0,msdos1)
 
-menuentry 'GingerOS (LFS 12.2)' {
+menuentry 'GingerOS (LFS 12.4)' {
     linux /boot/vmlinuz-6.16.1-lfs-12.4 root=/dev/sda1 ro console=ttyS0,115200
 }
 GRUB_EOF
 
+# --- Create minimal rc.sysinit + rc ---
+mkdir -p /etc/rc.d
+
+cat > /etc/rc.d/rc.sysinit << 'RC_SYSINIT'
+#!/bin/bash
+# Minimal system initialization
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mount -t devtmpfs devtmpfs /dev
+mount -t tmpfs tmpfs /run
+[ -z \"\$(cat /etc/hostname 2>/dev/null)\" ] && echo \"gingeros\" > /etc/hostname
+echo \"Minimal rc.sysinit complete\"
+RC_SYSINIT
+
+chmod +x /etc/rc.d/rc.sysinit
+
+cat > /etc/rc.d/rc << 'RC_MINIMAL'
+#!/bin/bash
+# Minimal rc script
+/etc/rc.d/rc.sysinit
+exec /bin/bash
+RC_MINIMAL
+
+chmod +x /etc/rc.d/rc
+
 # --- /etc/inittab ---
-echo 'Creating /etc/inittab...'
 cat > /etc/inittab << 'INIT_EOF'
 # Begin /etc/inittab
 id:3:initdefault:
-
-# Boot-time system configuration/initialization script.
-si::sysinit:/etc/rc.d/rc.sysinit
-
-# What to do at each runlevel
-l0:0:wait:/etc/rc.d/rc 0
-l1:1:wait:/etc/rc.d/rc 1
-l2:2:wait:/etc/rc.d/rc 2
-l3:3:wait:/etc/rc.d/rc 3
-l4:4:wait:/etc/rc.d/rc 4
-l5:5:wait:/etc/rc.d/rc 5
-l6:6:wait:/etc/rc.d/rc 6
-
-# Default gettys in runlevel 3
-1:23:respawn:/sbin/agetty -L tty1 9600 vt100
-2:23:respawn:/sbin/agetty -L tty2 9600 vt100
-3:23:respawn:/sbin/agetty -L tty3 9600 vt100
-4:23:respawn:/sbin/agetty -L tty4 9600 vt100
-5:23:respawn:/sbin/agetty -L tty5 9600 vt100
-6:23:respawn:/sbin/agetty -L tty6 9600 vt100
+si::sysinit:/etc/rc.d/rc
+1:2345:respawn:/sbin/agetty -L tty1 9600 vt100
+2:2345:respawn:/sbin/agetty -L tty2 9600 vt100
+3:2345:respawn:/sbin/agetty -L tty3 9600 vt100
+4:2345:respawn:/sbin/agetty -L tty4 9600 vt100
+5:2345:respawn:/sbin/agetty -L tty5 9600 vt100
+6:2345:respawn:/sbin/agetty -L tty6 9600 vt100
 # End /etc/inittab
 INIT_EOF
 
 # --- Create users ---
-echo 'Creating users...'
-
-# root password
+echo 'Setting root password...'
 echo 'root:root' | chpasswd
 
 if ! id ginger >/dev/null 2>&1; then
@@ -123,7 +131,6 @@ if ! id ginger >/dev/null 2>&1; then
     useradd -m -g ginger -s /bin/bash ginger
     echo 'ginger:ginger' | chpasswd
 fi
-
 "
 
 # ---------------------------------------------------------------------
@@ -132,7 +139,7 @@ fi
 sudo umount -R "$MOUNT_POINT"
 sudo losetup -d "$LOOP_DEV"
 
-log "SUCCESS" "GRUB + inittab + users installed successfully inside image."
+log "SUCCESS" "GRUB + init + users installed successfully inside image."
 log "INFO" "Boot with:"
 log "INFO" "  qemu-system-x86_64 -enable-kvm -m 2G -drive file=${IMAGE},format=raw -serial stdio"
-log "INFO" "Use 'ginger/ginger' or 'root/root' to login."
+log "INFO" "Login using 'root/root' or 'ginger/ginger'."
