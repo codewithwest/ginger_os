@@ -79,7 +79,7 @@ insmod ext2
 set root=(hd0,msdos1)
 
 menuentry 'GingerOS (LFS 12.4)' {
-    linux /boot/vmlinuz-6.16.1-lfs-12.4 root=/dev/sda1 ro console=ttyS0,115200
+    linux /boot/vmlinuz-6.16.1-lfs-12.4 root=/dev/sda1 rw console=ttyS0,115200
 }
 GRUB_EOF
 
@@ -93,6 +93,10 @@ mount -t proc proc /proc
 mount -t sysfs sys /sys
 mount -t devtmpfs devtmpfs /dev
 mount -t tmpfs tmpfs /run
+
+# Remount root as read-write
+mount -o remount,rw /
+
 [ -z \"\$(cat /etc/hostname 2>/dev/null)\" ] && echo \"gingeros\" > /etc/hostname
 echo \"Minimal rc.sysinit complete\"
 RC_SYSINIT
