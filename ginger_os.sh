@@ -87,25 +87,23 @@ log "INFO" "Starting GingerOS Build Process..."
 # 1. Permissions (Always run specific checks or skip if done)
 run_step "01_permissions" "chmod -R 777 ."
 
-# 2. Prepare Image (CLEANS EVERYTHING - so handle with care)
-# If image exists and step is marked, we skip.
-run_step "02_prepare_image" "bash ./scripts/prepare-image.sh"
-
-# 3. Download Sources
-run_step "03_download_sources" "bash ./scripts/download.sh"
-
-# 4. Host Setup
-# Fixed path: host-setup.sh -> setup-host.sh
-run_step "04_host_setup" "bash ./scripts/setup-host.sh"
-
-# 5. Update Directory
-run_step "05_update_dir" "bash ./scripts/update-dir.sh"
-
-# 6. Host Requirements
+# 2. Host Requirements (Includes creating 'lfs' user)
 run_step "06_host_reqs" "bash ./scripts/host-requirements-install.sh"
 
-# 7. Version Check
+# 3. Version Check
 run_step "07_version_check" "bash ./scripts/version-check.sh"
+
+# 4. Prepare Image
+run_step "02_prepare_image" "bash ./scripts/prepare-image.sh"
+
+# 5. Download Sources
+run_step "03_download_sources" "bash ./scripts/download.sh"
+
+# 6. Host Setup (Directory structure inside $LFS)
+run_step "04_host_setup" "bash ./scripts/setup-host.sh"
+
+# 7. Update Directory
+run_step "05_update_dir" "bash ./scripts/update-dir.sh"
 
 # 9. Setup LFS User Environment
 # Note: 'su - lfs' resets CWD. We must ensure the script is accessible.

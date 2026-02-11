@@ -39,18 +39,6 @@ if [ "$(stat -c %d /)" = "$(stat -c %d "$LFS")" ]; then
 fi
 
 # ---------------------------------------------------------------------
-# Create lfs user and group (if missing)
-# ---------------------------------------------------------------------
-if ! id lfs >/dev/null 2>&1; then
-    log "INFO" "Creating 'lfs' user and group..."
-    /usr/sbin/groupadd lfs
-    /usr/sbin/useradd -s /bin/bash -g lfs -m -k /dev/null lfs
-    echo "lfs:lfs" | /usr/sbin/chpasswd
-else
-    log "INFO" "'lfs' user already exists"
-fi
-
-# ---------------------------------------------------------------------
 # Prepare base LFS directory
 # ---------------------------------------------------------------------
 log "INFO" "Ensuring base LFS directory exists..."
