@@ -1,61 +1,59 @@
-# GingerOS - Scripted LFS 12.4 Build System
+# GingerOS - Cyberpunk Edition (Scripted LFS 12.4)
 
-GingerOS is a fully reproducible, automated build system for Linux From Scratch (LFS) version 12.4. It converts the manual instructions of the LFS book into a suite of idempotent shell scripts designed to run in a safe, isolated VM environment.
+GingerOS is a fully reproducible, automated, and **visually stunning** build system for Linux From Scratch (LFS) version 12.4. It transforms the manual work of building an OS into a professional dashboard-driven experience.
 
-## 🚀 Quick Start (Automated Pipeline)
+## 🚀 The Cyberpunk Experience
 
-The entire build process is now orchestrated by a single, fail-proof script (`ginger_os.sh`) that manages state and resumes automatically if interrupted.
+The entire build, from source collection to final ISO generation, is now driven by a high-tech terminal dashboard with:
+- **Neon Blue & Laser Green Theme**: A premium look for a premium system.
+- **Unified Roadmaps**: Real-time progress tracking across all 16+ build steps.
+- **Idempotent Engine**: Safely resume any step with a single command.
+- **Automated ISO Creation**: Build a bootable live environment in seconds.
 
-1.  **Run the Build Script**:
-    ```bash
-    sudo ./ginger_os.sh
-    ```
-    This script will:
-    - Check and install host requirements.
-    - Prepare a 20GB sparse disk image.
-    - Download and verify all LFS 12.4 sources in parallel.
-    - Set up the environment and `lfs` user.
-    - Compile the cross-toolchain (Phase 1).
-    - Compile the temporary system (Phase 2).
-    - Build the final system inside chroot (Phase 3).
-    - Compile the Linux Kernel and configure GRUB.
-    - Finalize and package the image for deployment.
+## 🛠 Usage guide
 
-2.  **Monitor Progress**:
-    Logs are stored in `logs/` for every package. If a build fails, the orchestrator will stop. After fixing the issue, just run `sudo ./ginger_os.sh` again to resume.
+### 1. Build the System
+The main build orchestrator assembles the LFS core toolchain and base system.
+```bash
+sudo ./ginger_os.sh
+```
 
-## 📋 Build Sequence
+### 2. Generate the Installer ISO
+Once the core is built, package it into a bootable Cyberpunk-themed installer.
+```bash
+sudo ./make-iso.sh
+```
 
-The `ginger_os.sh` orchestrator executes the following sequence. Each step is tracked in `.build_state/` to ensure idempotency.
+### 3. Test in QEMU
+Launch your new system or test the installer immediately.
+```bash
+./qemu-run.sh
+```
 
-1.  **Prepare Image (`scripts/prepare-image.sh`)**: Creates a 20GB raw disk image, partitions it, formats it (ext4), and mounts it to `$LFS`.
-2.  **Download Sources (`scripts/download.sh`)**: Fetches all required source tarballs in parallel and verifies MD5 checksums.
-3.  **Host Setup**: Installs dependencies and configures the `lfs` user environment.
-4.  **Toolchain Phase**: Builds the cross-compiler and temporary tools (Binutils, GCC, Glibc).
-5.  **System Phase**: The chroot environment build. Compiles all base system software using the new toolchain.
-6.  **Boot Phase**: Compiles the Linux Kernel and sets up the GRUB bootloader.
-7.  **Finalization**: Cleans the system, installs generic user accounts, and packages the results.
+## 📋 New Reorganized Architecture
+
+The project has been refactored for maximum reusability and clarity:
+
+- **`scripts/`**: The engine of GingerOS.
+  - **`lib/`**: Shared logic for UI themes, disk management, and bash configurations.
+  - **`host/`**: Host requirement checks and environment setup.
+  - **`image/`**: Raw disk image preparation and teardown.
+  - **`iso/`**: Bootable media builders and the professional OS installer.
+  - **`phases/`**: Step-by-step LFS compilation phases.
+- **`docs/`**: Project documentation, VM configuration, and the official LFS book reference.
+- **`sources/`**: Parallel-downloaded terminal tarballs.
+- **`logs/`**: Detailed build output for every package.
 
 ## 📦 Final Outputs
 
-Once the script completes, you will find the following artifacts in the project root:
-- `ginger_os.img`: A 20GB bootable disk image. You can `dd` this to a physical drive or boot it directly in QEMU.
-- `gingeros-base-rootfs.tar`: A compressed backup of the entire root filesystem, ready for custom deployment.
-
-## 🏗 Project Architecture
-- `config/`: Global environment variables and package versions.
-- `scripts/`: Modular build scripts for every chapter.
-  - `phase1-tools/`: The cross-toolchain.
-  - `phase2-tools/`: Temporary tools.
-  - `phase3-system/`: The native system software.
-  - `phase4-boot/`: Linux Kernel and GRUB bootloader.
-- `logs/`: Individual compilation logs for every package.
-- `sources/`: All downloaded tarballs (md5 verified).
+- `gingeros-installer.iso`: A bootable live environment with a TUI installer.
+- `ginger_os.img`: The primary bootable raw image of your new system.
+- `gingeros-base-rootfs.tar.gz`: A portable payload that can be deployed to any machine.
 
 ## 🛡 Design Philosophy
-- **Idempotency**: Every script checks for `.built` flags. If a build fails, just fix and restart—it skips what it has already done.
-- **Speed**: Optimized with parallel downloads (`xargs`) and parallel compilation (`MAKEFLAGS`).
-- **Safety**: Builds happen inside a virtual loopback disk image to avoid touching your host root.
+- **User-Centric**: The installer now handles full user account setup and password configuration.
+- **Terminal Excellence**: Custom Bash profiles with Cyberpunk color schemes are applied to the final system.
+- **Safety First**: All builds occur in isolated loopback images to protect your host.
 
 ---
-Built with pride for the LFS 12.4 ecosystem.
+*Built for speed. Designed for the terminal. GingerOS 12.4.*
