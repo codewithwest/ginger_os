@@ -36,8 +36,6 @@ else
 fi
 
 cd ..
-# LFS 12.4 advises keeping the source tree for BLFS
-# If you must remove it, ensure the above copy succeeded.
-# rm -rf "linux-"* 
+rm -rf "linux-"* 
 
 mark_built "$PKG_NAME"
