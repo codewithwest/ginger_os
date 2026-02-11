@@ -75,9 +75,9 @@ check_extra() {
     fi
 }
 
-check_extra "libburn-1.5.6.tar.gz" "7843818f98a3350367e163351ec3c2e6"
-check_extra "libisofs-1.5.6.tar.gz" "601e355df02741d440938afdc1dd2138"
-check_extra "libisoburn-1.5.6.tar.gz" "576722d7a9609a56d683783a3889163b"
+check_extra "libburn-1.5.6.tar.gz" "cf9852f3b71dbc2b6c9e76f6eb0474f0"
+check_extra "libisofs-1.5.6.tar.gz" "9f996b317f622802f12d28d27891709f"
+check_extra "libisoburn-1.5.6.tar.gz" "efb19f7f718f0791f717b2c6094995ec"
 
 if [ -n "$FAILED_FILES" ]; then
     ui_error "Integrity check failed. Bad files:$FAILED_FILES"
