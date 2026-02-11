@@ -95,7 +95,7 @@ TOOLS=(
     # Shell and Basic File Ops
     bash sh ls cat cp mv mkdir rm ln chmod chown chgrp
     # Text Processing
-    grep sed awk tee head tail sort uniq wc cut tr xargs basename dirname printf
+    grep sed awk tee head tail sort uniq wc cut tr xargs basename dirname
     # Disk and Filesystem
     mount umount findmnt blkid parted lsblk fdisk udevadm wipefs mke2fs mkfs.ext4 
     # System Info and Process
@@ -115,14 +115,16 @@ for tool in "${TOOLS[@]}"; do
     
     # 2. Try Host fallback if LFS is not mounted
     if [ -z "$FILE" ]; then
-        FILE=$(command -v "$tool" 2>/dev/null) || true
+        # Use 'which' to ensure we get an absolute path, preventing shell builtin issues
+        FILE=$(which "$tool" 2>/dev/null) || true
     fi
 
-    if [ -n "$FILE" ]; then
+    # Verify that what we found is actually an existing file path
+    if [ -n "$FILE" ] && [ -f "$FILE" ]; then
         log "INFO" "Adding tool: $tool ($FILE)"
         cp -v "$FILE" "$INITRD_WORK/bin/"
     else
-        log "WARN" "Tool NOT found: $tool (Skipping...)"
+        log "WARN" "Tool NOT found or is a builtin: $tool (Skipping...)"
     fi
 done
 
