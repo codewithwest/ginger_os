@@ -1,20 +1,20 @@
 #!/bin/bash
 # GingerOS - Main Build Orchestrator
-
-source "$(dirname "$(readlink -f "$0")")/lib/ui.sh"
+# 
+source "$(dirname "$(readlink -f "$0")")/../lib/ui.sh"
 
 set -e
 set -o pipefail
 
 # Collect package names for the dashboard
-SCRIPTS=(scripts/phase2-tools/*.sh)
+SCRIPTS=(../phase1-tools/*.sh)
 PKG_NAMES=()
 for s in "${SCRIPTS[@]}"; do
     PKG_NAMES+=($(basename "$s" .sh | cut -d'-' -f2-))
 done
 
 ui_init_dashboard "${PKG_NAMES[@]}"
-ui_log "Starting Phase 2: Temporary Tools..."
+log "INFO" "Starting Phase 1: Cross Toolchain..."
 
 for i in "${!SCRIPTS[@]}"; do
     script="${SCRIPTS[$i]}"
@@ -23,13 +23,13 @@ for i in "${!SCRIPTS[@]}"; do
 
     ui_step "$i"
 
-    # Check for both standard name and -temp variant
-    if [ -f "$LFS/var/lib/ginger/$PKG_NAME.built" ] || [ -f "$LFS/var/lib/ginger/$PKG_NAME-temp.built" ]; then
+    if [ -f "$LFS/var/lib/ginger/$PKG_NAME.built" ]; then
         ui_log "$PKG_NAME already built. Skipping."
         continue
     fi
 
     ui_log "Building $PKG_NAME..."
+    # Execute build with a spinner for the visual touch
     (bash "$script" > "$GINGER_LOGS/$SCRIPT_NAME.log" 2>&1) &
     ui_spinner $! "Compiling $PKG_NAME..."
     
@@ -39,7 +39,6 @@ for i in "${!SCRIPTS[@]}"; do
     ui_log "Successfully installed $PKG_NAME"
 done
 
-ui_draw_header
-echo -e "${LASER_GREEN}${BOLD}PHASE 2 (TEMPORARY TOOLS) COMPLETE!${NC}"
-echo -e "\nNext step: sudo ./chroot.sh \"/scripts/build-phase3.sh\"\n"
+
+
 

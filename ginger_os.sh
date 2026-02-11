@@ -29,6 +29,7 @@ get_step_index() {
         04*)          echo 2 ;; # Environment
         05*)          echo 3 ;; # Download
         06*|07*)      echo 1 ;; # Host Tools
+        09*)          echo 2 ;; # Environment (Setup LFS)
         10*)          echo 4 ;; # Phase 1
         11*)          echo 5 ;; # Phase 2
         12*)          echo 6 ;; # Chroot
@@ -36,6 +37,7 @@ get_step_index() {
         14*)          echo 8 ;; # Kernel
         15*)          echo 9 ;; # Finalize
         16*)          echo 10 ;; # Teardown
+        *)            echo 0 ;; # Fallback
     esac
 }
 
@@ -131,19 +133,20 @@ run_step "06_host_setup" "bash ./scripts/host/setup-host.sh"
 run_step "07_update_dir" "bash ./scripts/host/update-dir.sh"
 
 # 9. Setup LFS User Environment
-run_step "09_setup_lfs_env" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/setup-lfs-user-env.sh"
+run_step "09_setup_lfs_env" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/scripts/phases/setup-lfs-user-env.sh"
 
 # 10. Phase 1 - Temporary Toolchain
-run_step "10_phase1_toolchain" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/build-phase1.sh"
+run_step "10_phase1_toolchain" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/scripts/phases/build-phase1.sh"
 
 # 11. Phase 2 - Temporary System
-run_step "11_phase2_toolchain" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/build-phase2.sh"
+run_step "11_phase2_toolchain" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/scripts/phases/build-phase2.sh"
 
 # 12. Chroot Mounts
 run_step "12_chroot_mounts" "bash chroot.sh"
 
 # 13. Phase 3 - System Tools
-run_step "13_phase3_system" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/build-phase3.sh\""
+run_step "13_phase3_system" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/phases/build-phase3.sh\""
+
 
 # 14. Kernel
 run_step "14_kernel" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/phase4-boot/01-kernel.sh\""

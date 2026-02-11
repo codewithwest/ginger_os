@@ -112,7 +112,7 @@ echo "GingerOS Cyberpunk Edition - Booting..."
 mkdir -p /mnt/iso
 found=0
 for dev in /dev/sr* /dev/sd*; do
-    ui_log "Checking $dev for GingerOS media..."
+    echo "Checking $dev for GingerOS media..."
     if mount -t iso9660 -o ro $dev /mnt/iso 2>/dev/null; then
         if [ -f /mnt/iso/installer/installer.sh ]; then
             found=1

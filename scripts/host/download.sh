@@ -39,19 +39,31 @@ if grep -v '^#' md5sums | xargs -P "$(nproc)" -I {} sh -c "echo '{}' | md5sum -c
     fi
 fi
 
-# 4. Download packages in parallel
+# 4. Download packages in parallel (but show progress)
 ui_step 3
 ui_log "Downloading missing packages (this may take a while)..."
-grep -v '^#' wget-list | xargs -P 4 -n 1 wget -4 -q -nc --continue --tries=5 --timeout=20 &
-ui_spinner $! "Acquiring LFS sources..."
+total=$(grep -v '^#' wget-list | wc -l)
+current=0
 
-ui_log "Acquiring extra BLFS tools (xorriso dependencies)..."
-wget -q -nc https://files.libburnia-project.org/releases/libburn-1.5.6.tar.gz &
-ui_spinner $! "Downloading libburn..."
-wget -q -nc https://files.libburnia-project.org/releases/libisofs-1.5.6.tar.gz &
-ui_spinner $! "Downloading libisofs..."
-wget -q -nc https://files.libburnia-project.org/releases/libisoburn-1.5.6.tar.gz &
-ui_spinner $! "Downloading libisoburn..."
+while read -r url; do
+    current=$((current + 1))
+    pkg=$(basename "$url")
+    ui_log "[$current/$total] Acquiring $pkg..."
+    wget -4 -q -nc --continue --tries=5 --timeout=20 "$url"
+done < <(grep -v '^#' wget-list)
+
+ui_log "Acquiring extra BLFS tools..."
+extra_urls=(
+    "https://files.libburnia-project.org/releases/libburn-1.5.6.tar.gz"
+    "https://files.libburnia-project.org/releases/libisofs-1.5.6.tar.gz"
+    "https://files.libburnia-project.org/releases/libisoburn-1.5.6.tar.gz"
+)
+
+for url in "${extra_urls[@]}"; do
+    pkg=$(basename "$url")
+    ui_log "Acquiring extra: $pkg..."
+    wget -q -nc "$url"
+done
 
 ui_step 4
 ui_log "Performing final integrity check..."
