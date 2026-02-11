@@ -8,8 +8,8 @@ command -v wget >/dev/null || {
   exit 1
 }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../config/env.sh"
-source "${SCRIPT_DIR}/lib/common.sh"
+source "${SCRIPT_DIR}/../../config/env.sh"
+source "${SCRIPT_DIR}/../lib/common.sh"
 
 # 1. Prepare directory
 log "INFO" "Preparing sources directory..."

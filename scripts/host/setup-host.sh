@@ -7,8 +7,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-source "${SCRIPT_DIR}/../config/env.sh"
-source "${SCRIPT_DIR}/lib/common.sh"
+
+source "${SCRIPT_DIR}/../lib/common.sh"
 
 # ---------------------------------------------------------------------
 # Safety checks
