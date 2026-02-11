@@ -127,7 +127,16 @@ sudo mount --bind /proc "$MNT/proc"
 sudo mount --bind /sys "$MNT/sys"
 
 # Use chroot to install grub to the target disk's MBR
-sudo chroot "$MNT" grub-install --target=i386-pc "$TARGET_DEV"
+log "Locating grub-install inside the new system..."
+GRUB_BIN=$(find "$MNT/usr/sbin" "$MNT/usr/bin" "$MNT/sbin" "$MNT/bin" -name "grub-install" | head -n 1) || true
+if [ -n "$GRUB_BIN" ]; then
+    # Convert to the path relative to the chroot
+    GRUB_REL_PATH=$(echo "$GRUB_BIN" | sed "s|^$MNT||")
+    log "Running grub-install ($GRUB_REL_PATH) on $TARGET_DEV..."
+    sudo chroot "$MNT" "$GRUB_REL_PATH" --target=i386-pc "$TARGET_DEV"
+else
+    error "grub-install not found in the installed system! Your build might be missing GRUB."
+fi
 
 # 8. Cleanup
 log "Cleaning up..."
