@@ -11,44 +11,49 @@ log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] [$1] $2"
 }
 
+source /scripts/lib/ui.sh
+
 set -e
 set -o pipefail
 
-log "INFO" "Inside Chroot: Starting Phase 3 (Final System Build)..."
+ui_init_dashboard "Base Setup" "System Libs" "Core Utils" "Shell & Env" "Final Tools"
+ui_log "Inside Chroot: Starting Phase 3 (Final System Build)..."
 
-# Sanity Check: Ensure we ARE in chroot and not on the host!
-if [ ! -f /usr/bin/bash ] || [ "$(id -u)" != "0" ]; then
-    log "ERROR" "Sanity check failed! Are you sure you are running this inside the chroot as root?"
-    exit 1
-fi
+# Mapping 94 scripts to 5 UI steps
+get_phase3_idx() {
+    local num=$(echo "$1" | cut -d'-' -f1 | sed 's/^0//')
+    if [ "$num" -le 10 ]; then echo 0;    # Base Setup
+    elif [ "$num" -le 35 ]; then echo 1; # System Libs
+    elif [ "$num" -le 65 ]; then echo 2; # Core Utils
+    elif [ "$num" -le 85 ]; then echo 3; # Shell & Env
+    else echo 4;                         # Final Tools
+    fi
+}
 
-# We need to source environment variables again
-# They are at /config/env.sh (host $LFS/config/env.sh)
-source /config/env.sh
-
-# Marker for log location inside chroot
-LOG_DIR="/logs"
-mkdir -p "$LOG_DIR"
-
-# Loop through Phase 3 scripts
-for script in /scripts/phase3-system/*.sh; do
+SCRIPTS=(/scripts/phase3-system/*.sh)
+for script in "${SCRIPTS[@]}"; do
     SCRIPT_NAME=$(basename "$script" .sh)
-    # Most Phase 3 scripts name their PKG_NAME without the leading number
-    # If the script uses '01-directories', PKG_NAME might be 'directories'
-    # but some use '03-man-pages' -> 'man-pages'.
-    # We'll try to extract it from the script itself if possible, or just use the prefix-stripped name.
     PKG_NAME=$(echo "$SCRIPT_NAME" | cut -d'-' -f2-)
+    
+    IDX=$(get_phase3_idx "$SCRIPT_NAME")
+    ui_step "$IDX"
 
     if [ -f "/var/lib/ginger/$PKG_NAME.built" ]; then
-        log "INFO" "$PKG_NAME already built. Skipping."
+        ui_log "$PKG_NAME already built. Skipping."
         continue
     fi
 
-    log "INFO" "Running $script..."
-    if ! time bash "$script" 2>&1 | tee "$LOG_DIR/$SCRIPT_NAME.log"; then
-        log "ERROR" "Build failed during $script. Check $LOG_DIR/$SCRIPT_NAME.log"
-        exit 1
+    ui_log "Building $PKG_NAME..."
+    (bash "$script" > "$LOG_DIR/$SCRIPT_NAME.log" 2>&1) &
+    ui_spinner $! "Compiling $PKG_NAME..."
+    
+    if [ $? -ne 0 ]; then
+        ui_error "Build failed: $PKG_NAME. Check $LOG_DIR/$SCRIPT_NAME.log"
     fi
+    ui_log "Successfully installed $PKG_NAME"
 done
 
-log "INFO" "Phase 3 complete! Your system is now built."
+ui_draw_header
+echo -e "${LASER_GREEN}${BOLD}PHASE 3 COMPLETE! YOUR SYSTEM IS ASSEMBLED.${NC}"
+sleep 2
+

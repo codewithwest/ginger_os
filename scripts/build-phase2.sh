@@ -1,42 +1,45 @@
 #!/bin/bash
 # GingerOS - Main Build Orchestrator
 
-source "$(dirname "$(readlink -f "$0")")/lib/common.sh"
-
-# 1. Download sources
-# bash scripts/download.sh
-
-
-
+source "$(dirname "$(readlink -f "$0")")/lib/ui.sh"
 
 set -e
 set -o pipefail
 
-# 4. Phase 2 - Temporary Tools
-log "INFO" "Starting Phase 2: Temporary Tools..."
-for script in scripts/phase2-tools/*.sh; do
-    SCRIPT_NAME=$(basename "$script" .sh)
-    PKG_NAME=$(echo "$SCRIPT_NAME" | cut -d'-' -f2-)
+# Collect package names for the dashboard
+SCRIPTS=(scripts/phase2-tools/*.sh)
+PKG_NAMES=()
+for s in "${SCRIPTS[@]}"; do
+    PKG_NAMES+=($(basename "$s" .sh | cut -d'-' -f2-))
+done
 
-    # Check for both standard name and -temp variant (common in Phase 2)
+ui_init_dashboard "${PKG_NAMES[@]}"
+ui_log "Starting Phase 2: Temporary Tools..."
+
+for i in "${!SCRIPTS[@]}"; do
+    script="${SCRIPTS[$i]}"
+    SCRIPT_NAME=$(basename "$script" .sh)
+    PKG_NAME="${PKG_NAMES[$i]}"
+
+    ui_step "$i"
+
+    # Check for both standard name and -temp variant
     if [ -f "$LFS/var/lib/ginger/$PKG_NAME.built" ] || [ -f "$LFS/var/lib/ginger/$PKG_NAME-temp.built" ]; then
-        log "INFO" "$PKG_NAME already built. Skipping."
+        ui_log "$PKG_NAME already built. Skipping."
         continue
     fi
 
-    log "INFO" "Running $script..."
-    if ! time bash "$script" 2>&1 | tee "$GINGER_LOGS/$SCRIPT_NAME.log"; then
-        log "ERROR" "Build failed during $script. Check $GINGER_LOGS/$SCRIPT_NAME.log"
-        exit 1
+    ui_log "Building $PKG_NAME..."
+    (bash "$script" > "$GINGER_LOGS/$SCRIPT_NAME.log" 2>&1) &
+    ui_spinner $! "Compiling $PKG_NAME..."
+    
+    if [ $? -ne 0 ]; then
+        ui_error "Build failed: $PKG_NAME. Check $GINGER_LOGS/$SCRIPT_NAME.log"
     fi
+    ui_log "Successfully installed $PKG_NAME"
 done
 
-# 5. Phase 2 Complete - Transition to Chroot
-log "INFO" "========================================"
-log "INFO" "PHASE 2 (TEMPORARY TOOLS) COMPLETE!"
-log "INFO" "========================================"
-log "INFO" "The next phase (Phase 3) requires entering the chroot environment."
-log "INFO" "Since this requires root privileges, please run the following:"
-log "INFO" "  sudo ./chroot.sh \"/scripts/build-phase3.sh\""
-log "INFO" "Alternatively, for an interactive shell, run: sudo ./chroot.sh"
-log "INFO" "========================================"
+ui_draw_header
+echo -e "${LASER_GREEN}${BOLD}PHASE 2 (TEMPORARY TOOLS) COMPLETE!${NC}"
+echo -e "\nNext step: sudo ./chroot.sh \"/scripts/build-phase3.sh\"\n"
+
