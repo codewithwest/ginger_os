@@ -6,13 +6,14 @@ check_built "$PKG_NAME" && exit 0
 extract "linux"
 
 log "PROCESS" "Configuring Kernel..."
-# Only use mrproper for a fresh build; it wipes existing .config
 make mrproper
+make defconfig
 
 if [ -f "$GINGER_ROOT/config/kernel.config" ]; then
-    cp "$GINGER_ROOT/config/kernel.config" .config
-else
-    make defconfig
+    log "INFO" "Merging GingerOS custom kernel requirements..."
+    cat "$GINGER_ROOT/config/kernel.config" >> .config
+    # olddefconfig accepts all defaults for symbols not in the file
+    make olddefconfig
 fi
 
 log "PROCESS" "Compiling Kernel and Modules..."
