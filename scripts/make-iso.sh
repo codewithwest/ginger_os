@@ -91,7 +91,7 @@ mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sbin,sys,tmp,var}
 
 # Copy essential tools to the initrd
 log "Copying tools to initrd..."
-TOOLS=(bash sh ls cat cp mv mkdir mount umount md5sum tar gzip grep sed awk findmnt blkid parted grub-install mke2fs mkfs.ext4 wipefs lsblk fdisk udevadm sudo id whoami grep)
+TOOLS=(bash sh ls cat cp mv mkdir mount umount md5sum tar gzip grep sed awk findmnt blkid parted grub-install mke2fs mkfs.ext4 wipefs lsblk fdisk udevadm sudo id whoami grep sleep sync chmod chown)
 for tool in "${TOOLS[@]}"; do
     # 1. Try LFS first
     FILE=$(sudo find "$LFS/bin" "$LFS/sbin" "$LFS/usr/bin" "$LFS/usr/sbin" -name "$tool" 2>/dev/null | head -n 1) || true
