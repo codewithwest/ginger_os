@@ -14,7 +14,7 @@ for s in "${SCRIPTS[@]}"; do
 done
 
 ui_init_dashboard "${PKG_NAMES[@]}"
-log "INFO" "Starting Phase 1: Cross Toolchain..."
+ui_log "Starting Phase 1: Cross Toolchain..."
 
 for i in "${!SCRIPTS[@]}"; do
     script="${SCRIPTS[$i]}"

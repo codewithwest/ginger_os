@@ -58,6 +58,15 @@ ln -sf usr/lib "$INITRD_WORK/lib"
 ln -sf lib "$INITRD_WORK/lib64"
 ln -sf bin "$INITRD_WORK/usr/sbin"
 
+# CRITICAL: Manually find and copy the dynamic linker
+# The kernel will look for /lib64/ld-linux-x86-64.so.2 -> /usr/lib/ld-linux-x86-64.so.2
+LD_LINUX=$(find "$LFS/lib" "$LFS/usr/lib" -name "ld-linux-x86-64.so.2" 2>/dev/null | head -n 1)
+if [ -n "$LD_LINUX" ]; then
+    cp -v "$LD_LINUX" "$INITRD_WORK/usr/lib/"
+else
+    ui_error "Dynamic Linker (ld-linux-x86-64.so.2) not found in LFS! Boot will fail."
+fi
+
 # Tools List (Consolidated)
 TOOLS=(bash sh ls cat cp mv mkdir rm ln chmod chown chgrp grep sed awk tee head tail sort uniq wc cut tr xgettext xargs basename dirname find mount umount findmnt blkid parted lsblk fdisk udevadm wipefs mke2fs mkfs.ext4 id whoami sleep sync uname hostname dmesg ps top kill mktemp readlink realpath tar gzip bzip2 xz md5sum grub-install grub-probe grub-mkconfig sudo chroot mountpoint find vi nano)
 
@@ -74,11 +83,26 @@ done
 ui_log "Solving binary dependencies..."
 for file in "$INITRD_WORK/usr/bin/"*; do
     [ -f "$file" ] || continue
+    # ldd returns the resolved path on the HOST system.
     LIBS=$(ldd "$file" 2>/dev/null | grep -o '/[a-zA-Z0-9._/-]*' || true)
     for lib in $LIBS; do
-        if [ -f "$LFS$lib" ]; then
+        BASE_LIB=$(basename "$lib")
+        
+        # KEY FIX: Always prioritize the LFS version of the library.
+        # Host ldd might say /lib/x86_64-linux-gnu/libc.so.6, but we want
+        # $LFS/usr/lib/libc.so.6 or $LFS/lib/libc.so.6
+        
+        # Check standard LFS locations
+        if [ -f "$LFS/usr/lib/$BASE_LIB" ]; then
+            SRC="$LFS/usr/lib/$BASE_LIB"
+        elif [ -f "$LFS/lib/$BASE_LIB" ]; then
+            SRC="$LFS/lib/$BASE_LIB"
+        # If not found in LFS, check if the ldd path exists inside LFS (rare)
+        elif [ -f "$LFS$lib" ]; then
             SRC="$LFS$lib"
+        # Absolute last resort: Host library (Dangerous, but sometimes needed for non-critical libs)
         elif [ -f "$lib" ]; then
+            ui_log "Warning: Using HOST library for $BASE_LIB"
             SRC="$lib"
         else
             continue
@@ -86,11 +110,10 @@ for file in "$INITRD_WORK/usr/bin/"*; do
         
         # Determine the target internal path
         # In merged-usr, everything in /lib or /usr/lib goes to /usr/lib in the ramdisk
-        target_name=$(basename "$lib")
         if [[ "$lib" == *"/bin/"* ]]; then
-             cp -Lv "$SRC" "$INITRD_WORK/usr/bin/$target_name" 2>/dev/null || true
+             cp -Lv "$SRC" "$INITRD_WORK/usr/bin/$BASE_LIB" 2>/dev/null || true
         else
-             cp -Lv "$SRC" "$INITRD_WORK/usr/lib/$target_name" 2>/dev/null || true
+             cp -Lv "$SRC" "$INITRD_WORK/usr/lib/$BASE_LIB" 2>/dev/null || true
         fi
     done
 done
