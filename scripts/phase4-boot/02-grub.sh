@@ -122,14 +122,37 @@ if [ -f "$IMAGE_PATH" ]; then
     else
         log "WARN" "Could not determine loop device for partition $PART_DEV."
     fi
+# ---------------------------------------------------------------------
+# Step 6 — Prep for Imaging
+# ---------------------------------------------------------------------
+log "INFO" "Ensuring kernel is saved to project root..."
+# Save a copy of the kernel to the project root so it's ready for make-iso.sh
+KERNEL_FILE=$(ls "$LFS/boot/vmlinuz-"* 2>/dev/null | head -n 1)
+if [ -n "$KERNEL_FILE" ]; then
+    cp -v "$KERNEL_FILE" "${GINGER_ROOT}/vmlinuz-ginger"
 fi
 
+log "INFO" "Unmounting virtual filesystems to prepare for clean imaging..."
+# We use the existing teardown script logic to clear bind mounts and kernel FS
+bash "${SCRIPT_DIR}/../../scripts/teardown.sh" || true
+
 # ---------------------------------------------------------------------
-# Step 6 — Create Portable RootFS Tarball
+# Step 7 — Create Portable RootFS Tarball
 # ---------------------------------------------------------------------
 OUTPUT_TAR="${GINGER_ROOT}/gingeros-base-rootfs.tar.gz"
 log "INFO" "Packaging root filesystem into $OUTPUT_TAR..."
-sudo tar --xattrs --acls --one-file-system -C "$LFS" -cpzf "$OUTPUT_TAR" .
+
+# We use direct directory exclusions and --warning=no-file-changed
+# This is the most robust way to tar a live root.
+sudo tar --xattrs --acls --one-file-system \
+    --warning=no-file-changed \
+    --exclude=./proc \
+    --exclude=./sys \
+    --exclude=./dev \
+    --exclude=./run \
+    --exclude=./tmp \
+    --exclude=./sources \
+    -C "$LFS" -cpzf "$OUTPUT_TAR" . || [ $? -eq 1 ]
 
 log "SUCCESS" "GingerOS finalized for installation."
-log "INFO" "The resulting image uses UUID=$PART_UUID and is hardware-agnostic."
+log "INFO" "The resulting image and kernel are ready in the project root."
