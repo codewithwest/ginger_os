@@ -75,11 +75,15 @@ fi
 
 # CRITICAL: Manually find and copy the dynamic linker
 # The kernel will look for /lib64/ld-linux-x86-64.so.2 -> /usr/lib/ld-linux-x86-64.so.2
-LD_LINUX=$(find "$LFS/lib" "$LFS/usr/lib" -name "ld-linux-x86-64.so.2" 2>/dev/null | head -n 1)
-if [ -n "$LD_LINUX" ]; then
-    cp -v "$LD_LINUX" "$INITRD_WORK/usr/lib/"
+if [ -f "$INITRD_WORK/usr/lib/ld-linux-x86-64.so.2" ]; then
+    ui_log "Dynamic Linker found via artifact extraction."
 else
-    ui_error "Dynamic Linker (ld-linux-x86-64.so.2) not found in LFS! Boot will fail."
+    LD_LINUX=$(find "$LFS/lib" "$LFS/usr/lib" -name "ld-linux-x86-64.so.2" 2>/dev/null | head -n 1)
+    if [ -n "$LD_LINUX" ]; then
+        cp -v "$LD_LINUX" "$INITRD_WORK/usr/lib/"
+    else
+        ui_error "Dynamic Linker (ld-linux-x86-64.so.2) not found in LFS! Boot will fail."
+    fi
 fi
 
 # Tools List (Consolidated)
