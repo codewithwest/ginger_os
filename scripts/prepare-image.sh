@@ -32,7 +32,7 @@ sudo mkfs.ext4 "${LOOP_DEV}p1"
 log "INFO" "Mounting to $LFS..."
 [ -d "$LFS" ] || sudo mkdir -p "$LFS"
 sudo mount "${LOOP_DEV}p1" "$LFS"
-# sudo chown -R lfs:lfs "$LFS"
+sudo chown -v lfs:lfs "$LFS"
 if ! mountpoint -q "$LFS"; then
     log "ERROR" "Failed to mount LFS filesystem at $LFS"
     exit 1

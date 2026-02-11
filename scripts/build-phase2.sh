@@ -15,9 +15,18 @@ set -o pipefail
 # 4. Phase 2 - Temporary Tools
 log "INFO" "Starting Phase 2: Temporary Tools..."
 for script in scripts/phase2-tools/*.sh; do
+    SCRIPT_NAME=$(basename "$script" .sh)
+    PKG_NAME=$(echo "$SCRIPT_NAME" | cut -d'-' -f2-)
+
+    # Check for both standard name and -temp variant (common in Phase 2)
+    if [ -f "$LFS/var/lib/ginger/$PKG_NAME.built" ] || [ -f "$LFS/var/lib/ginger/$PKG_NAME-temp.built" ]; then
+        log "INFO" "$PKG_NAME already built. Skipping."
+        continue
+    fi
+
     log "INFO" "Running $script..."
-    if ! time bash "$script" 2>&1 | tee "$GINGER_LOGS/$(basename $script .sh).log"; then
-        log "ERROR" "Build failed during $script. Check $GINGER_LOGS/$(basename $script .sh).log"
+    if ! time bash "$script" 2>&1 | tee "$GINGER_LOGS/$SCRIPT_NAME.log"; then
+        log "ERROR" "Build failed during $script. Check $GINGER_LOGS/$SCRIPT_NAME.log"
         exit 1
     fi
 done

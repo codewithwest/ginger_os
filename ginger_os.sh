@@ -24,6 +24,12 @@ run_step() {
     local CMD="$2"
     local STEP_FILE="$STATE_DIR/$STEP_NAME"
 
+    # For steps that require the filesystem to be mounted, ensure it is.
+    # We start requiring mounts from step 03 onwards (after prepare_image)
+    if [[ "$STEP_NAME" =~ ^(03|04|05|06|07|09|10|11|12|13|14) ]]; then
+        ensure_mounted
+    fi
+
     if [ -f "$STEP_FILE" ]; then
         log "INFO" "Step '$STEP_NAME' already completed. Skipping."
     else
@@ -40,6 +46,37 @@ run_step() {
         else
             log "ERROR" "Step '$STEP_NAME' failed with exit code $RET."
             exit $RET
+        fi
+    fi
+}
+
+# Ensure LFS is mounted if we are resuming
+ensure_mounted() {
+    # Part 1: Ensure LFS base is mounted
+    if ! mountpoint -q "$LFS"; then
+        log "WARN" "LFS is not mounted but we are past the preparation stage. Re-mounting..."
+        IMAGE_PATH="$SCRIPT_DIR/ginger_os.img"
+        if [ -f "$IMAGE_PATH" ]; then
+            LOOP_DEV=$(sudo losetup -j "$IMAGE_PATH" | cut -d: -f1 | head -n 1)
+            if [ -z "$LOOP_DEV" ]; then
+                LOOP_DEV=$(sudo losetup -fP --show "$IMAGE_PATH")
+            fi
+            [ -d "$LFS" ] || sudo mkdir -p "$LFS"
+            sudo mount "${LOOP_DEV}p1" "$LFS"
+            sudo chown -v lfs:lfs "$LFS"
+            log "INFO" "Successfully re-mounted $LFS"
+        else
+            log "ERROR" "Disk image not found at $IMAGE_PATH. Cannot resume."
+            exit 1
+        fi
+    fi
+
+    # Part 2: Ensure chroot mounts are present if we are in Phase 3 or later
+    # 12_chroot_mounts, 12_phase3_system, 13_kernel, 14_grub
+    if [[ "$STEP_NAME" =~ ^(12|13|14) ]] && [[ "$STEP_NAME" != "12_chroot_mounts" ]]; then
+        if ! mountpoint -q "$LFS/proc"; then
+            log "WARN" "Chroot mounts missing. Running chroot.sh..."
+            sudo bash chroot.sh
         fi
     fi
 }

@@ -31,20 +31,22 @@ LOG_DIR="/logs"
 mkdir -p "$LOG_DIR"
 
 # Loop through Phase 3 scripts
-# Scripts are at /scripts/phase3-system/*.sh (host $LFS/scripts/phase3-system/*.sh)
 for script in /scripts/phase3-system/*.sh; do
-    log "INFO" "Running $script..."
-    
-    # Check if already built (using the marker path from common.sh logic)
-    # Inside chroot, marker path is /var/lib/ginger
-    PKG_NAME=$(basename "$script" .sh)
+    SCRIPT_NAME=$(basename "$script" .sh)
+    # Most Phase 3 scripts name their PKG_NAME without the leading number
+    # If the script uses '01-directories', PKG_NAME might be 'directories'
+    # but some use '03-man-pages' -> 'man-pages'.
+    # We'll try to extract it from the script itself if possible, or just use the prefix-stripped name.
+    PKG_NAME=$(echo "$SCRIPT_NAME" | cut -d'-' -f2-)
+
     if [ -f "/var/lib/ginger/$PKG_NAME.built" ]; then
         log "INFO" "$PKG_NAME already built. Skipping."
         continue
     fi
 
-    if ! time bash "$script" 2>&1 | tee "$LOG_DIR/$PKG_NAME.log"; then
-        log "ERROR" "Build failed during $script. Check $LOG_DIR/$PKG_NAME.log"
+    log "INFO" "Running $script..."
+    if ! time bash "$script" 2>&1 | tee "$LOG_DIR/$SCRIPT_NAME.log"; then
+        log "ERROR" "Build failed during $script. Check $LOG_DIR/$SCRIPT_NAME.log"
         exit 1
     fi
 done
