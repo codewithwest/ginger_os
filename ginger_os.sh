@@ -55,7 +55,8 @@ ensure_mounted() {
     # Part 1: Ensure LFS base is mounted
     if ! mountpoint -q "$LFS"; then
         log "WARN" "LFS is not mounted but we are past the preparation stage. Re-mounting..."
-        IMAGE_PATH="$SCRIPT_DIR/ginger_os.img"
+        # Using GINGER_ROOT from env.sh (sourced via common.sh)
+        IMAGE_PATH="$GINGER_ROOT/ginger_os.img"
         if [ -f "$IMAGE_PATH" ]; then
             LOOP_DEV=$(sudo losetup -j "$IMAGE_PATH" | cut -d: -f1 | head -n 1)
             if [ -z "$LOOP_DEV" ]; then
