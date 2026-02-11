@@ -24,9 +24,9 @@ make modules_install || { log "ERROR" "Module installation failed!"; exit 1; }
 log "PROCESS" "Installing Kernel..."
 # Verify bzImage exists and is not empty before copying
 if [ -s arch/x86/boot/bzImage ]; then
-    cp -iv arch/x86/boot/bzImage /boot/vmlinuz-6.16.1-lfs-12.4
-    cp -iv System.map /boot/System.map-6.16.1
-    cp -iv .config /boot/config-6.16.1
+    cp -fv arch/x86/boot/bzImage /boot/vmlinuz-6.16.1-lfs-12.4
+    cp -fv System.map /boot/System.map-6.16.1
+    cp -fv .config /boot/config-6.16.1
     cp -r Documentation -T /usr/share/doc/linux-6.16.1
     # Fix ownership as recommended by LFS 12.4
     chown -R 0:0 .
