@@ -14,6 +14,14 @@ NC='\033[0m'
 log() { echo -e "${GREEN}[INSTALLER]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
+# Handle sudo gracefully (Live environments might not have it, but are already root)
+if [ "$(id -u)" -eq 0 ]; then
+    sudo() { "$@"; }
+fi
+
+# Check requirements
+command -v lsblk >/dev/null || { echo "Error: lsblk not found. Required for disk management."; exit 1; }
+
 TARGET_DEV="${1:-}"
 
 if [ -z "$TARGET_DEV" ]; then
