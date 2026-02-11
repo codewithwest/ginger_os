@@ -68,14 +68,18 @@ log "Preparing Live Initrd..."
 sudo rm -rf "$INITRD_WORK"
 mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sbin,sys,tmp,var}
 
-# Copy essential tools from our new LFS system to the initrd
-# We need basic shell and installation tools
+# Copy essential tools to the initrd
 log "Copying tools to initrd..."
-# Busybox is ideal here, but we'll use our LFS binaries
-# This ensures the "Live" environment is genuinely GingerOS-based
 TOOLS=(bash sh ls cat cp mv mkdir mount umount md5sum tar gzip grep sed awk findmnt blkid parted grub-install mke2fs mkfs.ext4 wipefs)
 for tool in "${TOOLS[@]}"; do
-    FILE=$(sudo find "$LFS/bin" "$LFS/sbin" "$LFS/usr/bin" "$LFS/usr/sbin" -name "$tool" | head -n 1)
+    # 1. Try LFS first
+    FILE=$(sudo find "$LFS/bin" "$LFS/sbin" "$LFS/usr/bin" "$LFS/usr/sbin" -name "$tool" 2>/dev/null | head -n 1)
+    
+    # 2. Try Host fallback if LFS is not mounted
+    if [ -z "$FILE" ]; then
+        FILE=$(command -v "$tool" 2>/dev/null)
+    fi
+
     if [ -n "$FILE" ]; then
         cp -v "$FILE" "$INITRD_WORK/bin/"
     fi
@@ -83,19 +87,36 @@ done
 
 # Copy required libraries (the heavy lifting)
 log "Solving library dependencies for initrd..."
-# We use a simple loop to find all .so files needed by our tools
 for file in "$INITRD_WORK/bin/"*; do
     [ -f "$file" ] || continue
-    LIBS=$(sudo chroot "$LFS" ldd "/bin/$(basename "$file")" 2>/dev/null | awk '{print $3}' | grep '^/') || true
+    
+    # We use ldd on the file itself. 
+    # If it's an LFS tool, we might need to search in $LFS/lib
+    LIBS=$(ldd "$file" 2>/dev/null | awk '{print $3}' | grep '^/') || true
     for lib in $LIBS; do
         target_dir="$INITRD_WORK/$(dirname "$lib" | sed 's|^/||')"
         mkdir -p "$target_dir"
-        cp -nv "$LFS$lib" "$target_dir/" 2>/dev/null || true
+        
+        if [ -f "$LFS$lib" ]; then
+            cp -nv "$LFS$lib" "$target_dir/" 2>/dev/null || true
+        else
+            cp -nv "$lib" "$target_dir/" 2>/dev/null || true
+        fi
     done
 done
+
 # Special case: Linker
-cp -nv "$LFS"/lib/ld-linux-x86-64.so.2 "$INITRD_WORK/lib/" 2>/dev/null || true
-cp -nv "$LFS"/lib64/ld-linux-x86-64.so.2 "$INITRD_WORK/lib64/" 2>/dev/null || true
+# Ensure we have the basic linker for x86_64
+LINKERS=("/lib/ld-linux-x86-64.so.2" "/lib64/ld-linux-x86-64.so.2")
+for linker in "${LINKERS[@]}"; do
+    target_dir="$INITRD_WORK/$(dirname "$linker" | sed 's|^/||')"
+    mkdir -p "$target_dir"
+    if [ -f "$LFS$linker" ]; then
+        cp -nv "$LFS$linker" "$target_dir/" 2>/dev/null || true
+    elif [ -f "$linker" ]; then
+        cp -nv "$linker" "$target_dir/" 2>/dev/null || true
+    fi
+done
 
 # 4. Create the Init Script (The first thing that runs)
 cat << 'EOF' > "$INITRD_WORK/init"
