@@ -61,15 +61,27 @@ for tool in "${TOOLS[@]}"; do
     fi
 done
 
+# Essential Symlinks for the Initrd boot
+ln -sf bin "$INITRD_WORK/sbin"
+ln -sf bin "$INITRD_WORK/usr/bin"
+ln -sf bin "$INITRD_WORK/usr/sbin"
+
 # Library Solver
 ui_log "Solving binary dependencies..."
+# We search ALL binaries for libraries, including the dynamic linker
 for file in "$INITRD_WORK/bin/"*; do
     [ -f "$file" ] || continue
-    LIBS=$(ldd "$file" 2>/dev/null | awk '{print $3}' | grep '^/' || true)
+    # Use ldd to find ALL paths, then filter for paths starting with /
+    LIBS=$(ldd "$file" 2>/dev/null | grep -o '/[a-zA-Z0-9._/-]*' || true)
     for lib in $LIBS; do
-        target_dir="$INITRD_WORK/$(dirname "$lib" | sed 's|^/||')"
-        mkdir -p "$target_dir"
-        [ -f "$LFS$lib" ] && cp -nv "$LFS$lib" "$target_dir/" 2>/dev/null || cp -nv "$lib" "$target_dir/" 2>/dev/null || true
+        [ -f "$lib" ] || [ -f "$LFS$lib" ] || continue
+        target_path="$INITRD_WORK$lib"
+        mkdir -p "$(dirname "$target_path")"
+        if [ -f "$LFS$lib" ]; then
+            cp -nv "$LFS$lib" "$target_path" 2>/dev/null || true
+        else
+            cp -nv "$lib" "$target_path" 2>/dev/null || true
+        fi
     done
 done
 
@@ -108,7 +120,7 @@ ui_log "Generating final ISO..."
 cat << EOF > "$ISO_DIR/boot/grub/grub.cfg"
 set default=0
 set timeout=5
-menuentry "GingerOS Installer (Cyberpunk Edition)" {
+menuentry "GingerOS Installer (west Edition)" {
     linux /boot/vmlinuz root=/dev/ram0 rw quiet loglevel=3 splash
     initrd /boot/initrd.img
 }

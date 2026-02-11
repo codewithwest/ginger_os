@@ -1,4 +1,4 @@
-# Curated Palette (Cyberpunk Blue & Laser Green)
+# Curated Palette (west Blue & Laser Green)
 ELECTRIC_BLUE='\033[38;5;39m'
 LASER_GREEN='\033[38;5;118m'
 WHITE='\033[1;37m'

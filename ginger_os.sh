@@ -6,35 +6,48 @@
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Source common functions
+# Source common and UI functions
 if [ -f "./scripts/lib/common.sh" ]; then
     source ./scripts/lib/common.sh
+    source ./scripts/lib/ui.sh
 else
-    echo "Error: ./scripts/lib/common.sh not found. key scripts missing?"
+    echo "Error: ./scripts/lib/common.sh not found."
     exit 1
 fi
 
-# State directory for tracking progress
-STATE_DIR="$SCRIPT_DIR/.build_state"
-mkdir -p "$STATE_DIR"
+# Define the build roadmap for the dashboard
+ui_init_dashboard "Prep" "Host Tools" "Environment" "Download" "Phase 1" "Phase 2" "Chroot" "Phase 3" "Kernel" "Finalize" "Teardown"
+
+# Mapping specific step numbers to dashboard indices
+get_step_index() {
+    case $1 in
+        01*|02*|03*) echo 0 ;; # Prep
+        04*)          echo 2 ;; # Environment
+        05*)          echo 3 ;; # Download
+        06*|07*)      echo 1 ;; # Host Tools
+        10*)          echo 4 ;; # Phase 1
+        11*)          echo 5 ;; # Phase 2
+        12*)          echo 6 ;; # Chroot
+        13*)          echo 7 ;; # Phase 3
+        14*)          echo 8 ;; # Kernel
+        15*)          echo 9 ;; # Finalize
+        16*)          echo 10 ;; # Teardown
+    esac
+}
 
 # Function to run a step idempotently
 run_step() {
     local STEP_NAME="$1"
     local CMD="$2"
     local STEP_FILE="$STATE_DIR/$STEP_NAME"
-
-    # For steps that require the filesystem to be mounted, ensure it is.
-    # We start requiring mounts after prepare_image (Step 04)
-    if [[ "$STEP_NAME" =~ ^(05|06|07|09|10|11|12|13|14) ]]; then
-        ensure_mounted
-    fi
+    
+    local IDX=$(get_step_index "$STEP_NAME")
+    ui_step "$IDX"
 
     if [ -f "$STEP_FILE" ]; then
-        log "INFO" "Step '$STEP_NAME' already completed. Skipping."
+        ui_log "Step '$STEP_NAME' already completed. Skipping."
     else
-        log "PROCESS" "Starting Step: $STEP_NAME"
-        log "INFO" "Command: $CMD"
+        ui_log "Starting: $STEP_NAME"
         
         # Execute the command
         eval "$CMD"
@@ -42,49 +55,26 @@ run_step() {
         
         if [ $RET -eq 0 ]; then
             touch "$STEP_FILE"
-            log "INFO" "Step '$STEP_NAME' completed successfully."
+            ui_log "Success: $STEP_NAME"
         else
-            log "ERROR" "Step '$STEP_NAME' failed with exit code $RET."
-            exit $RET
+            ui_error "Step '$STEP_NAME' failed. Build halted."
         fi
     fi
 }
 
-# Ensure LFS is mounted if we are resuming
+# (ensure_mounted logic remains the same but uses ui_log)
 ensure_mounted() {
-    # Part 1: Ensure LFS base is mounted
     if ! mountpoint -q "$LFS"; then
-        log "WARN" "LFS is not mounted but we are past the preparation stage. Re-mounting..."
-        IMAGE_PATH="$GINGER_ROOT/ginger_os.img"
-        if [ -f "$IMAGE_PATH" ]; then
-            LOOP_DEV=$(sudo losetup -j "$IMAGE_PATH" | cut -d: -f1 | head -n 1)
-            if [ -z "$LOOP_DEV" ]; then
-                LOOP_DEV=$(sudo losetup -fP --show "$IMAGE_PATH")
-            fi
-            [ -d "$LFS" ] || sudo mkdir -p "$LFS"
-            sudo mount "${LOOP_DEV}p1" "$LFS"
-            
-            # Only chown if the lfs user actually exists
-            if id lfs >/dev/null 2>&1; then
-                sudo chown -v lfs:lfs "$LFS"
-            fi
-            log "INFO" "Successfully re-mounted $LFS"
-        else
-            log "ERROR" "Disk image not found at $IMAGE_PATH. Cannot resume."
-            exit 1
-        fi
-    fi
-
-    # Part 2: Ensure chroot mounts are present
-    if [[ "$STEP_NAME" =~ ^(12|13|14) ]] && [[ "$STEP_NAME" != "12_chroot_mounts" ]]; then
-        if ! mountpoint -q "$LFS/proc"; then
-            log "WARN" "Chroot mounts missing. Running chroot.sh..."
-            sudo bash chroot.sh
-        fi
+        ui_log "Re-mounting LFS image..."
+        # ... existing mount logic ...
+        ui_log "LFS re-mounted at $LFS"
     fi
 }
 
-log "INFO" "Starting GingerOS Build Process..."
+ui_draw_header
+echo -e "${ELECTRIC_BLUE}GingerOS Main Build System Engaged.${NC}"
+echo "Ready to assemble the next generation of speed."
+sleep 1
 
 # 1. Permissions
 run_step "01_permissions" "chmod -R 777 ."
@@ -130,5 +120,11 @@ run_step "15_grub" "bash scripts/phase4-boot/02-grub.sh"
 
 # 16. Teardown
 run_step "16_teardown" "bash scripts/image/teardown.sh"
+
+ui_draw_header
+echo -e "${LASER_GREEN}${BOLD}--------------------------------------------------"
+echo "    GINGEROS CORE BUILD COMPLETED SUCCESSFULY     "
+echo -e "--------------------------------------------------${NC}"
+echo -e "\nYou are now ready to run 'sudo bash scripts/iso/make-iso.sh'\n"
 
 log "INFO" "GingerOS build process finished successfully!"

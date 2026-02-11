@@ -10,7 +10,7 @@ write_bash_config() {
     [[ "$IS_ROOT" == "true" ]] && PROMPT_COLOR='${RED}'
 
     cat << EOF > "$TARGET_FILE"
-# GingerOS Cyberpunk Bash Config
+# GingerOS west Bash Config
 export TERM=xterm-256color
 
 # Colors
@@ -40,6 +40,6 @@ if [ -f /etc/ginger_issue ]; then
     cat /etc/ginger_issue
 fi
 
-echo -e "\${BLUE}Welcome to GingerOS Cyberpunk Edition\${NC}"
+echo -e "\${BLUE}Welcome to GingerOS west Edition\${NC}"
 EOF
 }
