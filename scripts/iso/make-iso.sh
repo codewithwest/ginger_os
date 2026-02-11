@@ -58,6 +58,21 @@ ln -sf usr/lib "$INITRD_WORK/lib"
 ln -sf lib "$INITRD_WORK/lib64"
 ln -sf bin "$INITRD_WORK/usr/sbin"
 
+# --- ARTIFACT EXTRACTION MODE ---
+ROOTFS_TAR="$GINGER_ROOT/gingeros-base-rootfs.tar.gz"
+if [ -f "$ROOTFS_TAR" ]; then
+    ui_log "Found pre-built RootFS: $(basename "$ROOTFS_TAR")"
+    ui_log "Extracting artifacts for Live Environment..."
+    # Extract only the essential directories needed for the live env (bin, sbin, lib, lib64, usr)
+    # forcing them into our merged-usr structure
+    tar -xzf "$ROOTFS_TAR" -C "$INITRD_WORK" --wildcards '*bin/*' '*lib*' '*usr/*' --strip-components=1 2>/dev/null || true
+    
+    # Re-point LFS variable to our extracted work dir for the rest of the script
+    LFS="$INITRD_WORK"
+else
+    ui_log "No RootFS tarball found. Using live system at $LFS..."
+fi
+
 # CRITICAL: Manually find and copy the dynamic linker
 # The kernel will look for /lib64/ld-linux-x86-64.so.2 -> /usr/lib/ld-linux-x86-64.so.2
 LD_LINUX=$(find "$LFS/lib" "$LFS/usr/lib" -name "ld-linux-x86-64.so.2" 2>/dev/null | head -n 1)
