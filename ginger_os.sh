@@ -18,6 +18,10 @@ fi
 # Define the build roadmap for the dashboard
 ui_init_dashboard "Prep" "Host Tools" "Environment" "Download" "Phase 1" "Phase 2" "Chroot" "Phase 3" "Kernel" "Finalize" "Teardown"
 
+# State directory for tracking progress
+STATE_DIR="$SCRIPT_DIR/.build_state"
+mkdir -p "$STATE_DIR"
+
 # Mapping specific step numbers to dashboard indices
 get_step_index() {
     case $1 in
@@ -44,6 +48,12 @@ run_step() {
     local IDX=$(get_step_index "$STEP_NAME")
     ui_step "$IDX"
 
+    # For steps that require the filesystem to be mounted, ensure it is.
+    # We start requiring mounts after prepare_image (Step 04)
+    if [[ "$STEP_NAME" =~ ^(05|06|07|09|10|11|12|13|14) ]]; then
+        ensure_mounted
+    fi
+
     if [ -f "$STEP_FILE" ]; then
         ui_log "Step '$STEP_NAME' already completed. Skipping."
     else
@@ -62,12 +72,35 @@ run_step() {
     fi
 }
 
-# (ensure_mounted logic remains the same but uses ui_log)
+# Ensure LFS is mounted if we are resuming
 ensure_mounted() {
+    # Part 1: Ensure LFS base is mounted
     if ! mountpoint -q "$LFS"; then
-        ui_log "Re-mounting LFS image..."
-        # ... existing mount logic ...
-        ui_log "LFS re-mounted at $LFS"
+        ui_log "LFS is not mounted. Re-mounting image..."
+        IMAGE_PATH="$GINGER_ROOT/ginger_os.img"
+        if [ -f "$IMAGE_PATH" ]; then
+            LOOP_DEV=$(sudo losetup -j "$IMAGE_PATH" | cut -d: -f1 | head -n 1)
+            if [ -z "$LOOP_DEV" ]; then
+                LOOP_DEV=$(sudo losetup -fP --show "$IMAGE_PATH")
+            fi
+            [ -d "$LFS" ] || sudo mkdir -p "$LFS"
+            sudo mount "${LOOP_DEV}p1" "$LFS"
+            
+            if id lfs >/dev/null 2>&1; then
+                sudo chown -v lfs:lfs "$LFS"
+            fi
+            ui_log "Successfully re-mounted $LFS"
+        else
+            ui_error "Disk image not found at $IMAGE_PATH. Cannot resume build."
+        fi
+    fi
+
+    # Part 2: Ensure chroot mounts are present
+    if [[ "$STEP_NAME" =~ ^(12|13|14) ]] && [[ "$STEP_NAME" != "12_chroot_mounts" ]]; then
+        if ! mountpoint -q "$LFS/proc"; then
+            ui_log "Chroot mounts missing. Running chroot.sh..."
+            sudo bash chroot.sh
+        fi
     fi
 }
 
