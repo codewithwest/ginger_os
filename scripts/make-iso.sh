@@ -19,35 +19,52 @@ command -v grub-mkrescue >/dev/null || error "grub-mkrescue not found. Please in
 GINGER_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ISO_DIR="$GINGER_ROOT/iso_work"
 ISO_OUTPUT="$GINGER_ROOT/gingeros-installer.iso"
+INITRD_WORK="$GINGER_ROOT/initrd_work"
 LFS="/mnt/lfs"
 
-# 1. Cleanup old work
-sudo rm -rf "$ISO_DIR"
+# Cleanup function for safety
+cleanup() {
+    log "INFO" "Cleaning up temporary work directories..."
+    sudo rm -rf "$ISO_DIR" "$INITRD_WORK"
+}
+trap cleanup EXIT
+
+# 1. Pre-build Rescue and Cleanup
+log "INFO" "Preparing environment for ISO build..."
+
+# Rescue Kernel if mounted
+if mountpoint -q "$LFS"; then
+    KERNEL_SYS=$(ls "$LFS/boot/vmlinuz-"* 2>/dev/null | head -n 1)
+    if [ -n "$KERNEL_SYS" ]; then
+        log "INFO" "Found kernel at $LFS/boot. Copying to project root for safety..."
+        cp -v "$KERNEL_SYS" "$GINGER_ROOT/vmlinuz-ginger"
+    fi
+    log "INFO" "Unmounting $LFS to free resources..."
+    sudo umount -R "$LFS" 2>/dev/null || true
+fi
+
+# Force release any disconnected loop devices (Ghost space recovery)
+sudo losetup -D 2>/dev/null || true
+
+# 2. Cleanup old work
+cleanup
 mkdir -p "$ISO_DIR/boot/grub"
 mkdir -p "$ISO_DIR/installer"
 
-# 2. Collect Kernel
+# 3. Collect Kernel
 log "Copying Kernel..."
+# Look for the rescued kernel first
+KERNEL_IMG=$(ls "$GINGER_ROOT/vmlinuz-"* 2>/dev/null | head -n 1)
 
-# Use the kernel from the GingerOS image
-IMAGE_PATH="$GINGER_ROOT/ginger_os.img"
-if [ -f "$IMAGE_PATH" ]; then
-    LOOP_DEV=$(sudo losetup -j "$IMAGE_PATH" | cut -d: -f1 | head -n 1)
-    if [ -z "$LOOP_DEV" ]; then
-        LOOP_DEV=$(sudo losetup -fP --show "$IMAGE_PATH")
-    fi
-    KERNEL_IMG="${LOOP_DEV}p1"
-else
-    error "Disk image not found at $IMAGE_PATH. Cannot build ISO."
+if [ -z "$KERNEL_IMG" ]; then
+    error "Kernel not found. The image/mount is gone and no rescued kernel was found in $GINGER_ROOT."
 fi
 
-[ -z "$KERNEL_IMG" ] && error "Kernel not found at $LFS/boot. Did you finish the build?"
 cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 
 # 3. Create a Minimal Initrd (The "Live" filesystem)
 # This is a small RAM disk that boots the system and runs the installer.
 log "Preparing Live Initrd..."
-INITRD_WORK="$GINGER_ROOT/initrd_work"
 sudo rm -rf "$INITRD_WORK"
 mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sbin,sys,tmp,var}
 
