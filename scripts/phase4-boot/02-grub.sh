@@ -127,9 +127,9 @@ fi
 # ---------------------------------------------------------------------
 # Step 6 — Create Portable RootFS Tarball
 # ---------------------------------------------------------------------
-OUTPUT_TAR="${GINGER_ROOT}/gingeros-base-rootfs.tar"
+OUTPUT_TAR="${GINGER_ROOT}/gingeros-base-rootfs.tar.gz"
 log "INFO" "Packaging root filesystem into $OUTPUT_TAR..."
-sudo tar --xattrs --acls -C "$LFS" -cpf "$OUTPUT_TAR" .
+sudo tar --xattrs --acls --one-file-system -C "$LFS" -cpzf "$OUTPUT_TAR" .
 
 log "SUCCESS" "GingerOS finalized for installation."
 log "INFO" "The resulting image uses UUID=$PART_UUID and is hardware-agnostic."

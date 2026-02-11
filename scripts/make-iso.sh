@@ -28,7 +28,19 @@ mkdir -p "$ISO_DIR/installer"
 
 # 2. Collect Kernel
 log "Copying Kernel..."
-KERNEL_IMG=$(ls "$LFS/boot/vmlinuz-"* | head -n 1)
+
+# Use the kernel from the GingerOS image
+IMAGE_PATH="$GINGER_ROOT/ginger_os.img"
+if [ -f "$IMAGE_PATH" ]; then
+    LOOP_DEV=$(sudo losetup -j "$IMAGE_PATH" | cut -d: -f1 | head -n 1)
+    if [ -z "$LOOP_DEV" ]; then
+        LOOP_DEV=$(sudo losetup -fP --show "$IMAGE_PATH")
+    fi
+    KERNEL_IMG="${LOOP_DEV}p1"
+else
+    error "Disk image not found at $IMAGE_PATH. Cannot build ISO."
+fi
+
 [ -z "$KERNEL_IMG" ] && error "Kernel not found at $LFS/boot. Did you finish the build?"
 cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 
@@ -101,7 +113,7 @@ log "Packaging Initrd..."
 # 5. Add Installer and RootFS to ISO
 log "Adding GingerOS Installer and RootFS to ISO..."
 cp "$GINGER_ROOT/scripts/installer.sh" "$ISO_DIR/installer/"
-cp "$GINGER_ROOT/gingeros-base-rootfs.tar" "$ISO_DIR/installer/" || echo "Warning: RootFS tarball missing. Will build without payload."
+cp "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/" || echo "Warning: RootFS tarball missing. Will build without payload."
 
 # 6. Configure GRUB for ISO
 cat << EOF > "$ISO_DIR/boot/grub/grub.cfg"

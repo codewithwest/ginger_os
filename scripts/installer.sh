@@ -38,10 +38,10 @@ if [ "$CONFIRM" != "yes" ]; then
 fi
 
 # 2. Preparation
-TARBALL="gingeros-base-rootfs.tar"
+TARBALL="gingeros-base-rootfs.tar.gz"
 if [ ! -f "$TARBALL" ]; then
     # Try to find it in the current directory or parent
-    TARBALL=$(find . -name "gingeros-base-rootfs.tar" | head -n 1)
+    TARBALL=$(find . -name "gingeros-base-rootfs.tar.gz" | head -n 1)
     [ -z "$TARBALL" ] && error "Could not find $TARBALL. Please run the build first."
 fi
 
