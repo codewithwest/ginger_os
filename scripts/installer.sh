@@ -14,13 +14,15 @@ NC='\033[0m'
 log() { echo -e "${GREEN}[INSTALLER]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
-# Handle sudo gracefully (Live environments might not have it, but are already root)
-if [ "$(id -u)" -eq 0 ]; then
+# Handle sudo gracefully (Live environment is already root)
+# If sudo command is missing or we are already root, just run the command directly
+if [ -z "$(command -v sudo 2>/dev/null)" ] || [ "$EUID" == "0" ] || [ "$USER" == "root" ]; then
     sudo() { "$@"; }
 fi
 
-# Check requirements
-command -v lsblk >/dev/null || { echo "Error: lsblk not found. Required for disk management."; exit 1; }
+# Check requirements (use simple checks)
+command -v lsblk >/dev/null || { echo "Error: lsblk not found."; exit 1; }
+command -v tar >/dev/null   || { echo "Error: tar not found."; exit 1; }
 
 TARGET_DEV="${1:-}"
 
