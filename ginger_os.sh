@@ -3,8 +3,8 @@
 # This script manages the entire build process with state tracking to allow resuming.
 
 # Ensure we are in the script's directory or project root
-SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-cd "$SCRIPT_DIR"
+GINGER_PROJ="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+cd "$GINGER_PROJ"
 
 # Source common and UI functions
 if [ -f "./scripts/lib/common.sh" ]; then
@@ -19,7 +19,7 @@ fi
 ui_init_dashboard "Prep" "Host Tools" "Environment" "Download" "Phase 1" "Phase 2" "Chroot" "Phase 3" "Kernel" "Finalize" "Teardown"
 
 # State directory for tracking progress
-STATE_DIR="$SCRIPT_DIR/.build_state"
+STATE_DIR="$GINGER_PROJ/.build_state"
 mkdir -p "$STATE_DIR"
 
 # Mapping specific step numbers to dashboard indices
