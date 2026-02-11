@@ -9,7 +9,11 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-log() { echo -e "${GREEN}[ISO-BUILDER]${NC} $1"; }
+log() {
+    local TYPE=$1
+    local MSG=$2
+    echo -e "${GREEN}[ISO-BUILDER]${NC} [$TYPE] $MSG"
+}
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
 # Prerequisites check
@@ -25,11 +29,15 @@ LFS="/mnt/lfs"
 # Cleanup function for safety
 cleanup() {
     log "INFO" "Cleaning up temporary work directories..."
+    # If we moved the tarball, move it back before deleting the work dir
+    if [ -f "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz" ]; then
+        mv "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz" "$GINGER_ROOT/" 2>/dev/null || true
+    fi
     sudo rm -rf "$ISO_DIR" "$INITRD_WORK"
 }
 trap cleanup EXIT
 
-# 1. Pre-build Rescue and Cleanup
+# 1. Pre-build Res  cue and Cleanup
 log "INFO" "Preparing environment for ISO build..."
 
 # Rescue Kernel if mounted
@@ -149,9 +157,16 @@ log "Packaging Initrd..."
 (cd "$INITRD_WORK" && find . | cpio -o -H newc | gzip) > "$ISO_DIR/boot/initrd.img"
 
 # 5. Add Installer and RootFS to ISO
-log "Adding GingerOS Installer and RootFS to ISO..."
+log "PROCESS" "Adding GingerOS Installer and RootFS to ISO..."
 cp "$GINGER_ROOT/scripts/installer.sh" "$ISO_DIR/installer/"
-cp "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/" || echo "Warning: RootFS tarball missing. Will build without payload."
+
+# Use MV instead of CP to save space on tight disks (relying on cleanup trap to move it back)
+if [ -f "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" ]; then
+    log "INFO" "Moving RootFS to work dir to save space..."
+    mv "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/"
+else
+    log "WARN" "RootFS tarball missing. Will build without payload."
+fi
 
 # 6. Configure GRUB for ISO
 cat << EOF > "$ISO_DIR/boot/grub/grub.cfg"
