@@ -127,4 +127,4 @@ echo "    GINGEROS CORE BUILD COMPLETED SUCCESSFULY     "
 echo -e "--------------------------------------------------${NC}"
 echo -e "\nYou are now ready to run 'sudo bash scripts/iso/make-iso.sh'\n"
 
-log "INFO" "GingerOS build process finished successfully!"
+ui_log "Main Build Pipeline Finished Successfully."
