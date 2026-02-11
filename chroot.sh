@@ -3,7 +3,7 @@
 # MUST BE RUN AS ROOT
 
 # Source common functions (which also sources env.sh)
-source "$(dirname "$(readlink -f "$0")")/scripts/common.sh"
+source "$(dirname "$(readlink -f "$0")")/scripts/lib/common.sh"
 
 log "INFO" "Mounting virtual kernel file systems..."
 chown --from lfs -R root:root $LFS/{usr,var,etc,tools}

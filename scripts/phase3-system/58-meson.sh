@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.58. Meson-1.8.3
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="meson"
 check_built "$PKG_NAME" && exit 0
 extract "meson"

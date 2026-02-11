@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.63. Findutils-4.10.0
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="findutils"
 check_built "$PKG_NAME" && exit 0
 extract "findutils"

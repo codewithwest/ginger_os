@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.22. MPFR-4.2.2
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="mpfr"
 check_built "$PKG_NAME" && exit 0
 extract "mpfr"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.42. Less-679
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="less"
 check_built "$PKG_NAME" && exit 0
 extract "less"

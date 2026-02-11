@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-source "${SCRIPT_DIR}/../common.sh"
+source "${SCRIPT_DIR}/../lib/common.sh"
 
 # Ensure LFS is set and mounted
 if [ -z "${LFS:-}" ] || ! mountpoint -q "$LFS"; then
@@ -134,7 +134,7 @@ fi
 
 log "INFO" "Unmounting virtual filesystems to prepare for clean imaging..."
 # We use the existing teardown script logic to clear bind mounts and kernel FS
-bash "${SCRIPT_DIR}/../../scripts/teardown.sh" || true
+bash "${SCRIPT_DIR}/../image/teardown.sh" || true
 
 # ---------------------------------------------------------------------
 # Step 7 — Create Portable RootFS Tarball

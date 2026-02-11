@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.62. Gawk-5.3.1
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="gawk"
 check_built "$PKG_NAME" && exit 0
 extract "gawk"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.12. Readline-8.3
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="readline"
 check_built "$PKG_NAME" && exit 0
 extract "readline"

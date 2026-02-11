@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.54. Wheel-0.45.1
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="wheel"
 check_built "$PKG_NAME" && exit 0
 extract "wheel"

@@ -7,10 +7,10 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # Source common functions
-if [ -f "./scripts/common.sh" ]; then
-    source ./scripts/common.sh
+if [ -f "./scripts/lib/common.sh" ]; then
+    source ./scripts/lib/common.sh
 else
-    echo "Error: ./scripts/common.sh not found. key scripts missing?"
+    echo "Error: ./scripts/lib/common.sh not found. key scripts missing?"
     exit 1
 fi
 
@@ -90,31 +90,31 @@ log "INFO" "Starting GingerOS Build Process..."
 run_step "01_permissions" "chmod -R 777 ."
 
 # 2. Host Requirements (Creates 'lfs' user)
-run_step "02_host_reqs" "bash ./scripts/host-requirements-install.sh"
+run_step "02_host_reqs" "bash ./scripts/host/host-requirements-install.sh"
 
 # 3. Version Check
-run_step "03_version_check" "bash ./scripts/version-check.sh"
+run_step "03_version_check" "bash ./scripts/host/version-check.sh"
 
 # 4. Prepare Image
-run_step "04_prepare_image" "bash ./scripts/prepare-image.sh"
+run_step "04_prepare_image" "bash ./scripts/image/prepare-image.sh"
 
 # 5. Download Sources
-run_step "05_download_sources" "bash ./scripts/download.sh"
+run_step "05_download_sources" "bash ./scripts/host/download.sh"
 
 # 6. Host Setup
-run_step "06_host_setup" "bash ./scripts/setup-host.sh"
+run_step "06_host_setup" "bash ./scripts/host/setup-host.sh"
 
 # 7. Update Directory
-run_step "07_update_dir" "bash ./scripts/update-dir.sh"
+run_step "07_update_dir" "bash ./scripts/host/update-dir.sh"
 
 # 9. Setup LFS User Environment
-run_step "09_setup_lfs_env" "bash scripts/run-as-lfs.sh $SCRIPT_DIR/setup-lfs-user-env.sh"
+run_step "09_setup_lfs_env" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/setup-lfs-user-env.sh"
 
 # 10. Phase 1 - Temporary Toolchain
-run_step "10_phase1_toolchain" "bash scripts/run-as-lfs.sh $SCRIPT_DIR/build-phase1.sh"
+run_step "10_phase1_toolchain" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/build-phase1.sh"
 
 # 11. Phase 2 - Temporary System
-run_step "11_phase2_toolchain" "bash scripts/run-as-lfs.sh $SCRIPT_DIR/build-phase2.sh"
+run_step "11_phase2_toolchain" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/build-phase2.sh"
 
 # 12. Chroot Mounts
 run_step "12_chroot_mounts" "bash chroot.sh"
@@ -129,6 +129,6 @@ run_step "14_kernel" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/phase4-boot
 run_step "15_grub" "bash scripts/phase4-boot/02-grub.sh"
 
 # 16. Teardown
-run_step "16_teardown" "bash scripts/teardown.sh"
+run_step "16_teardown" "bash scripts/image/teardown.sh"
 
 log "INFO" "GingerOS build process finished successfully!"

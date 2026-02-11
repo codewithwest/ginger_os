@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 7.12. Util-linux-2.41.1 (Temporary)
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="util-linux-bridge"
 check_built "$PKG_NAME" && exit 0
 extract "util-linux"

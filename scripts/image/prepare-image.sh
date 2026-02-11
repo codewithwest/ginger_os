@@ -4,8 +4,8 @@
 
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-source "${SCRIPT_DIR}/../config/env.sh"
-source "${SCRIPT_DIR}/common.sh"
+source "${SCRIPT_DIR}/../../config/env.sh"
+source "${SCRIPT_DIR}/../lib/common.sh"
 
 IMAGE_PATH="${GINGER_ROOT}/ginger_os.img"
 

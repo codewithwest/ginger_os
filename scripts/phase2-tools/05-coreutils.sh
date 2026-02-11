@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 6.5. Coreutils-9.7
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="coreutils-temp"
 check_built "$PKG_NAME" && exit 0

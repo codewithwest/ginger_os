@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.74. Vim-9.1.1629
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="vim"
 check_built "$PKG_NAME" && exit 0
 extract "vim"

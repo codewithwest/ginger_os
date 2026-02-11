@@ -1,7 +1,7 @@
 #!/bin/bash
 # GingerOS - Main Build Orchestrator
 
-source "$(dirname "$(readlink -f "$0")")/common.sh"
+source "$(dirname "$(readlink -f "$0")")/lib/common.sh"
 
 # 1. Download sources
 # bash scripts/download.sh

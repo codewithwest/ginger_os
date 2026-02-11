@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.41. Inetutils-2.6
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="inetutils"
 check_built "$PKG_NAME" && exit 0
 extract "inetutils"

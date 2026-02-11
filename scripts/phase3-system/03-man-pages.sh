@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.3. Man-pages-6.15
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="man-pages"
 check_built "$PKG_NAME" && exit 0
 extract "man-pages"

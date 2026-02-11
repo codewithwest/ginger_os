@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.29. GCC-15.2.0 (Final)
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="gcc-final"
 check_built "$PKG_NAME" && exit 0
 extract "gcc"

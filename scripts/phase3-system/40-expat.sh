@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.40. Expat-2.7.1
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="expat"
 check_built "$PKG_NAME" && exit 0
 extract "expat"

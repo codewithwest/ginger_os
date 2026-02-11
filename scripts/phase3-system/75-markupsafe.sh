@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.75. MarkupSafe-3.0.2
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="markupsafe"
 check_built "$PKG_NAME" && exit 0
 extract "MarkupSafe"

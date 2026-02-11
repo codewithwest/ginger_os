@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.8. Xz-5.8.1
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="xz-final"
 check_built "$PKG_NAME" && exit 0
 extract "xz"

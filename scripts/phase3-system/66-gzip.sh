@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.66. Gzip-1.14
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="gzip"
 check_built "$PKG_NAME" && exit 0
 extract "gzip"

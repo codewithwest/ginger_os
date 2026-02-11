@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - Libisofs-1.5.6
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="libisofs"
 
 check_built "$PKG_NAME" && exit 0

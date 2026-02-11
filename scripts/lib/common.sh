@@ -6,7 +6,7 @@ set -u # Error on unset variables
 
 # Source environment - finding it relative to the script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../config/env.sh"
+source "${SCRIPT_DIR}/../../../../config/env.sh"
 
 STATUS_DIR="$LFS/var/lib/ginger"
 mkdir -p "$STATUS_DIR"
@@ -28,12 +28,12 @@ log() {
 
 # Source environment - finding it relative to the script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../config/env.sh"
+source "${SCRIPT_DIR}/../../../../config/env.sh"
 
 # Validate critical environment
 # Inside chroot, LFS should be empty/root, and LFS_TGT is not strictly required for native builds
 if [ -z "${LFS+x}" ]; then
-    log "ERROR" "LFS environment variable is not defined! Check config/env.sh"
+    log "ERROR" "LFS environment variable is not defined! Check ../../config/env.sh"
     exit 1
 fi
 
