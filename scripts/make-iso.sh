@@ -33,10 +33,6 @@ LFS="/mnt/lfs"
 # Cleanup function for safety
 cleanup() {
     log "INFO" "Cleaning up temporary work directories..."
-    # If we moved the tarball, move it back before deleting the work dir
-    if [ -f "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz" ]; then
-        mv "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz" "$GINGER_ROOT/" 2>/dev/null || true
-    fi
     sudo rm -rf "$ISO_DIR" "$INITRD_WORK"
 }
 trap cleanup EXIT
@@ -167,10 +163,9 @@ log "Packaging Initrd..."
 log "PROCESS" "Adding GingerOS Installer and RootFS to ISO..."
 cp "$GINGER_ROOT/scripts/installer.sh" "$ISO_DIR/installer/"
 
-# Use MV instead of CP to save space on tight disks (relying on cleanup trap to move it back)
 if [ -f "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" ]; then
-    log "INFO" "Moving RootFS to work dir to save space..."
-    mv "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/"
+    log "INFO" "Copying RootFS to work dir..."
+    cp "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/"
 else
     log "WARN" "RootFS tarball missing. Will build without payload."
 fi
