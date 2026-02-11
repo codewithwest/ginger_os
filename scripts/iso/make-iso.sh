@@ -90,6 +90,11 @@ fi
 TOOLS=(bash sh ls cat cp mv mkdir rm ln chmod chown chgrp grep sed awk tee head tail sort uniq wc cut tr xgettext xargs basename dirname find mount umount findmnt blkid parted lsblk fdisk udevadm wipefs mke2fs mkfs.ext4 id whoami sleep sync uname hostname dmesg ps top kill mktemp readlink realpath tar gzip bzip2 xz md5sum grub-install grub-probe grub-mkconfig sudo chroot mountpoint find vi nano)
 
 for tool in "${TOOLS[@]}"; do
+    # Skip if already present (from artifact extraction)
+    if [ -f "$INITRD_WORK/usr/bin/$tool" ]; then
+        continue
+    fi
+
     FILE=$(sudo find "$LFS/bin" "$LFS/sbin" "$LFS/usr/bin" "$LFS/usr/sbin" -name "$tool" 2>/dev/null | head -n 1) || true
     [ -z "$FILE" ] && FILE=$(which "$tool" 2>/dev/null) || true
     if [ -n "$FILE" ] && [ -f "$FILE" ]; then
