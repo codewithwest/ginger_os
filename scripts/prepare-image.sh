@@ -1,6 +1,6 @@
 #!/bin/bash
 # GingerOS - Disk Image Preparation
-# Creates a 20GB raw image, partitions it, and mounts it to $LFS
+# Creates a 12GB raw image, partitions it, and mounts it to $LFS
 
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
@@ -9,10 +9,10 @@ source "${SCRIPT_DIR}/common.sh"
 
 IMAGE_PATH="${GINGER_ROOT}/ginger_os.img"
 
-log "INFO" "Creating 20GB sparse disk image..."
+log "INFO" "Creating 12GB sparse disk image..."
 # Use truncate instead of dd to create a sparse file (takes almost 0 space until used)
 [ -f "$IMAGE_PATH" ] && rm "$IMAGE_PATH"
-truncate -s 20G "$IMAGE_PATH"
+truncate -s 12G "$IMAGE_PATH"
 
 log "INFO" "Partitioning image..."
 # Create a single primary bootable partition

@@ -1,8 +1,8 @@
 #!/bin/bash
 # GingerOS - Bootloader and System Finalization
 # 1. Configures GRUB inside the system
-2. # 2. Installs GRUB to the disk image MBR
-3. # 3. Creates a portable rootfs tarball
+# 2. Installs GRUB to the disk image MBR
+# 3. Creates a portable rootfs tarball
 
 set -euo pipefail
 
