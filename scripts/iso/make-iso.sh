@@ -57,7 +57,8 @@ for tool in "${TOOLS[@]}"; do
     FILE=$(sudo find "$LFS/bin" "$LFS/sbin" "$LFS/usr/bin" "$LFS/usr/sbin" -name "$tool" 2>/dev/null | head -n 1) || true
     [ -z "$FILE" ] && FILE=$(which "$tool" 2>/dev/null) || true
     if [ -n "$FILE" ] && [ -f "$FILE" ]; then
-        cp -v "$FILE" "$INITRD_WORK/bin/"
+        # Use -L to dereference symlinks into real files for the ramdisk
+        cp -Lv "$FILE" "$INITRD_WORK/bin/$tool"
     fi
 done
 
@@ -71,33 +72,57 @@ ui_log "Solving binary dependencies..."
 # We search ALL binaries for libraries, including the dynamic linker
 for file in "$INITRD_WORK/bin/"*; do
     [ -f "$file" ] || continue
-    # Use ldd to find ALL paths, then filter for paths starting with /
+    # Catch both standard libs and the dynamic interpreter
     LIBS=$(ldd "$file" 2>/dev/null | grep -o '/[a-zA-Z0-9._/-]*' || true)
     for lib in $LIBS; do
-        [ -f "$lib" ] || [ -f "$LFS$lib" ] || continue
+        if [ -f "$LFS$lib" ]; then
+            SRC="$LFS$lib"
+        elif [ -f "$lib" ]; then
+            SRC="$lib"
+        else
+            continue
+        fi
         target_path="$INITRD_WORK$lib"
         mkdir -p "$(dirname "$target_path")"
-        if [ -f "$LFS$lib" ]; then
-            cp -nv "$LFS$lib" "$target_path" 2>/dev/null || true
-        else
-            cp -nv "$lib" "$target_path" 2>/dev/null || true
-        fi
+        # Dereference symlinks into the ramdisk
+        cp -Lv "$SRC" "$target_path" 2>/dev/null || true
     done
 done
 
 # Step 3: Packaging
 ui_step 3
 ui_log "Creating Live Initrd and Payload..."
-# Create init script
+# Improved robust init script
 cat << 'EOF' > "$INITRD_WORK/init"
 #!/bin/sh
-mount -vt proc proc /proc; mount -vt sysfs sysfs /sys; mount -vt devtmpfs devtmpfs /dev
-echo "GingerOS Installation Media Booted"
+# GingerOS Live Init
+mount -vt proc proc /proc
+mount -vt sysfs sysfs /sys
+mount -vt devtmpfs devtmpfs /dev
+
+echo "GingerOS Cyberpunk Edition - Booting..."
+
+# Search for the ISO media
 mkdir -p /mnt/iso
-for dev in /dev/sr* /dev/sd*; do mount -t iso9660 -o ro $dev /mnt/iso 2>/dev/null && break; done
-if [ -f /mnt/iso/installer/installer.sh ]; then
-    cd /mnt/iso/installer && /bin/bash installer.sh
+found=0
+for dev in /dev/sr* /dev/sd*; do
+    ui_log "Checking $dev for GingerOS media..."
+    if mount -t iso9660 -o ro $dev /mnt/iso 2>/dev/null; then
+        if [ -f /mnt/iso/installer/installer.sh ]; then
+            found=1
+            break
+        fi
+        umount /mnt/iso
+    fi
+done
+
+if [ "$found" -eq 1 ]; then
+    echo "Installer found. Launching Cyberpunk Dashboard..."
+    cd /mnt/iso/installer
+    /bin/bash /mnt/iso/installer/installer.sh
 else
+    echo "ERROR: Installation media not found."
+    echo "Dropping to emergency bash shell..."
     /bin/bash
 fi
 EOF
