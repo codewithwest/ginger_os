@@ -40,19 +40,32 @@ trap cleanup EXIT
 # 1. Pre-build Rescue and Cleanup
 log "INFO" "Preparing environment for ISO build..."
 
-# Rescue Kernel if mounted
+# Check available disk space (need at least 5GB for a safe build)
+FREE_BLOCKS=$(df -k "$GINGER_ROOT" | awk 'NR==2 {print $4}')
+if [ "$FREE_BLOCKS" -lt 5000000 ]; then
+    log "WARN" "Extremely low disk space detected!"
+    IMAGE_PATH="$GINGER_ROOT/ginger_os.img"
+    if [ -f "$IMAGE_PATH" ]; then
+        log "INFO" "The 12GB ginger_os.img is taking up most of your space."
+        log "INFO" "Since you have the RootFS tarball, we can delete the image to proceed."
+        # Automatic cleanup for the user to make it seamless
+        log "PROCESS" "Deleting $IMAGE_PATH to free up 12GB..."
+        sudo umount -R "$LFS" 2>/dev/null || true
+        sudo rm "$IMAGE_PATH"
+        sudo losetup -D 2>/dev/null || true
+    fi
+fi
+
+# Rescue Kernel if mounted (as fallback)
 if mountpoint -q "$LFS"; then
     KERNEL_SYS=$(ls "$LFS/boot/vmlinuz-"* 2>/dev/null | head -n 1)
     if [ -n "$KERNEL_SYS" ]; then
-        log "INFO" "Found kernel at $LFS/boot. Copying to project root for safety..."
+        log "INFO" "Found kernel at $LFS/boot. Copying to project root..."
         cp -v "$KERNEL_SYS" "$GINGER_ROOT/vmlinuz-ginger"
     fi
-    log "INFO" "Unmounting $LFS to free resources..."
+    log "INFO" "Unmounting $LFS..."
     sudo umount -R "$LFS" 2>/dev/null || true
 fi
-
-# Force release any disconnected loop devices (Ghost space recovery)
-sudo losetup -D 2>/dev/null || true
 
 # 2. Cleanup old work
 cleanup
