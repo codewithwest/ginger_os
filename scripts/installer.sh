@@ -84,7 +84,7 @@ log "Mounting $PART to $MNT..."
 sudo mount "$PART" "$MNT"
 
 log "Extracting GingerOS RootFS (this may take a few minutes)..."
-sudo tar --xattrs --acls -C "$MNT" -xpf "$TARBALL"
+sudo tar -v --xattrs --acls -C "$MNT" -xpf "$TARBALL"
 
 # 6. Hardware-Specific Configuration (The critical part!)
 log "Configuring hardware-specific settings..."
