@@ -32,10 +32,15 @@ ui_draw_header() {
 
 ui_draw_status() {
     echo -e "\n${BOLD}SYSTEM PROGRESS:${NC}"
+    # Default to 0 if unset or empty
+    local current=${UI_CURRENT_STEP:-0}
+    # Ensure it's a number
+    [[ "$current" =~ ^[0-9]+$ ]] || current=0
+
     for i in "${!UI_STEPS[@]}"; do
-        if [ "$i" -lt "$UI_CURRENT_STEP" ]; then
+        if [ "$i" -lt "$current" ]; then
             echo -e " ${LASER_GREEN}[✓] ${UI_STEPS[$i]}${NC}"
-        elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
+        elif [ "$i" -eq "$current" ]; then
             echo -e " ${ELECTRIC_BLUE}[▶] ${UI_STEPS[$i]}${NC}"
         else
             echo -e " [ ] ${UI_STEPS[$i]}"
