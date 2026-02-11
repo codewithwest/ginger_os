@@ -3,8 +3,8 @@
 # This script manages the entire build process with state tracking to allow resuming.
 
 # Ensure we are in the script's directory or project root
-GINGER_PROJ="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-cd "$GINGER_PROJ"
+GINGER_OS_ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+cd "$GINGER_OS_ROOT"
 
 # Source common and UI functions
 if [ -f "./scripts/lib/common.sh" ]; then
@@ -19,7 +19,7 @@ fi
 ui_init_dashboard "Prep" "Host Tools" "Environment" "Download" "Phase 1" "Phase 2" "Chroot" "Phase 3" "Kernel" "Finalize" "Teardown"
 
 # State directory for tracking progress
-STATE_DIR="$GINGER_PROJ/.build_state"
+STATE_DIR="$GINGER_OS_ROOT/.build_state"
 mkdir -p "$STATE_DIR"
 
 # Mapping specific step numbers to dashboard indices
@@ -133,13 +133,13 @@ run_step "06_host_setup" "bash ./scripts/host/setup-host.sh"
 run_step "07_update_dir" "bash ./scripts/host/update-dir.sh"
 
 # 9. Setup LFS User Environment
-run_step "09_setup_lfs_env" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/scripts/phases/setup-lfs-user-env.sh"
+run_step "09_setup_lfs_env" "bash scripts/host/run-as-lfs.sh $GINGER_OS_ROOT/scripts/phases/setup-lfs-user-env.sh"
 
 # 10. Phase 1 - Temporary Toolchain
-run_step "10_phase1_toolchain" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/scripts/phases/build-phase1.sh"
+run_step "10_phase1_toolchain" "bash scripts/host/run-as-lfs.sh $GINGER_OS_ROOT/scripts/phases/build-phase1.sh"
 
 # 11. Phase 2 - Temporary System
-run_step "11_phase2_toolchain" "bash scripts/host/run-as-lfs.sh $SCRIPT_DIR/scripts/phases/build-phase2.sh"
+run_step "11_phase2_toolchain" "bash scripts/host/run-as-lfs.sh $GINGER_OS_ROOT/scripts/phases/build-phase2.sh"
 
 # 12. Chroot Mounts
 run_step "12_chroot_mounts" "bash chroot.sh"
