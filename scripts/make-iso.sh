@@ -85,15 +85,18 @@ log "Copying tools to initrd..."
 TOOLS=(bash sh ls cat cp mv mkdir mount umount md5sum tar gzip grep sed awk findmnt blkid parted grub-install mke2fs mkfs.ext4 wipefs)
 for tool in "${TOOLS[@]}"; do
     # 1. Try LFS first
-    FILE=$(sudo find "$LFS/bin" "$LFS/sbin" "$LFS/usr/bin" "$LFS/usr/sbin" -name "$tool" 2>/dev/null | head -n 1)
+    FILE=$(sudo find "$LFS/bin" "$LFS/sbin" "$LFS/usr/bin" "$LFS/usr/sbin" -name "$tool" 2>/dev/null | head -n 1) || true
     
     # 2. Try Host fallback if LFS is not mounted
     if [ -z "$FILE" ]; then
-        FILE=$(command -v "$tool" 2>/dev/null)
+        FILE=$(command -v "$tool" 2>/dev/null) || true
     fi
 
     if [ -n "$FILE" ]; then
+        log "INFO" "Adding tool: $tool ($FILE)"
         cp -v "$FILE" "$INITRD_WORK/bin/"
+    else
+        log "WARN" "Tool NOT found: $tool (Skipping...)"
     fi
 done
 
@@ -104,7 +107,7 @@ for file in "$INITRD_WORK/bin/"*; do
     
     # We use ldd on the file itself. 
     # If it's an LFS tool, we might need to search in $LFS/lib
-    LIBS=$(ldd "$file" 2>/dev/null | awk '{print $3}' | grep '^/') || true
+    LIBS=$(ldd "$file" 2>/dev/null | awk '{print $3}' | grep '^/' || true)
     for lib in $LIBS; do
         target_dir="$INITRD_WORK/$(dirname "$lib" | sed 's|^/||')"
         mkdir -p "$target_dir"
