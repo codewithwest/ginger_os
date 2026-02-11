@@ -11,8 +11,12 @@ NC='\033[0m'
 
 log() {
     local TYPE=$1
-    local MSG=$2
-    echo -e "${GREEN}[ISO-BUILDER]${NC} [$TYPE] $MSG"
+    local MSG="${2:-}"
+    if [ -z "$MSG" ]; then
+        echo -e "${GREEN}[ISO-BUILDER]${NC} $TYPE"
+    else
+        echo -e "${GREEN}[ISO-BUILDER]${NC} [$TYPE] $MSG"
+    fi
 }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
@@ -37,7 +41,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 1. Pre-build Res  cue and Cleanup
+# 1. Pre-build Rescue and Cleanup
 log "INFO" "Preparing environment for ISO build..."
 
 # Rescue Kernel if mounted
