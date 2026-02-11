@@ -1,123 +1,135 @@
 #!/bin/bash
-# GingerOS - Finalize Base RootFS Image (Generic)
-# Prepares a deployable, bootable LFS root filesystem image
-# Does NOT install GRUB to a real disk
-# Adds minimal init scripts and generic users for testing
+# GingerOS - Bootloader and System Finalization
+# 1. Configures GRUB inside the system
+2. # 2. Installs GRUB to the disk image MBR
+3. # 3. Creates a portable rootfs tarball
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 source "${SCRIPT_DIR}/../common.sh"
 
-ROOTFS="${GINGER_ROOT}/rootfs"   # Path to your chroot rootfs folder
-log "PROCESS" "Starting finalization of GingerOS base root filesystem..."
-
-# ---------------------------------------------------------------------
-# Step 0 — ensure ROOTFS exists
-# ---------------------------------------------------------------------
-if [ ! -d "$ROOTFS" ]; then
-    log "ERROR" "RootFS directory $ROOTFS does not exist. Build failed?"
+# Ensure LFS is set and mounted
+if [ -z "${LFS:-}" ] || ! mountpoint -q "$LFS"; then
+    log "ERROR" "LFS is not mounted. Cannot finalize."
     exit 1
 fi
+
+log "PROCESS" "Starting finalization of GingerOS..."
 
 # ---------------------------------------------------------------------
 # Step 1 — Clean temp files and machine-specific data
 # ---------------------------------------------------------------------
-log "INFO" "Cleaning temporary files..."
-rm -rf "$ROOTFS"/tmp/*
-rm -rf "$ROOTFS"/var/tmp/*
-find "$ROOTFS"/var/log -type f -exec truncate -s 0 {} \;
-rm -f "$ROOTFS"/etc/ssh/ssh_host_* 2>/dev/null || true
-rm -f "$ROOTFS"/etc/machine-id 2>/dev/null || true
-rm -f "$ROOTFS"/root/.bash_history
+log "INFO" "Cleaning temporary files in $LFS..."
+rm -rf "$LFS"/tmp/*
+rm -rf "$LFS"/var/tmp/*
+find "$LFS"/var/log -type f -exec truncate -s 0 {} \;
+rm -f "$LFS"/etc/ssh/ssh_host_* 2>/dev/null || true
+rm -f "$LFS"/etc/machine-id 2>/dev/null || true
+rm -f "$LFS"/root/.bash_history
 
 # ---------------------------------------------------------------------
-# Step 2 — Minimal init scripts
+# Step 2 — Configuration (Users and Passwords)
 # ---------------------------------------------------------------------
-log "INFO" "Creating minimal init scripts..."
-mkdir -p "$ROOTFS"/etc/rc.d
-
-cat > "$ROOTFS"/etc/rc.d/rc.sysinit << 'RC_SYSINIT'
-#!/bin/bash
-# Minimal system initialization
-mount -t proc proc /proc
-mount -t sysfs sys /sys
-mount -t devtmpfs devtmpfs /dev
-mount -t tmpfs tmpfs /run
-mount -o remount,rw /
-[ -z "$(cat /etc/hostname 2>/dev/null)" ] && echo "gingeros" > /etc/hostname
-echo "Minimal rc.sysinit complete"
-RC_SYSINIT
-
-chmod +x "$ROOTFS"/etc/rc.d/rc.sysinit
-
-cat > "$ROOTFS"/etc/rc.d/rc << 'RC_MINIMAL'
-#!/bin/bash
-# Minimal rc script
-/etc/rc.d/rc.sysinit
-# exec /bin/bash
-RC_MINIMAL
-
-chmod +x "$ROOTFS"/etc/rc.d/rc
-
-# ---------------------------------------------------------------------
-# Step 3 — /etc/inittab
-# ---------------------------------------------------------------------
-cat > "$ROOTFS"/etc/inittab << 'INIT_EOF'
-# Begin /etc/inittab
-id:3:initdefault:
-si::sysinit:/etc/rc.d/rc
-1:2345:respawn:/sbin/agetty -L tty1 9600 vt100
-2:2345:respawn:/sbin/agetty -L tty2 9600 vt100
-3:2345:respawn:/sbin/agetty -L tty3 9600 vt100
-4:2345:respawn:/sbin/agetty -L tty4 9600 vt100
-5:2345:respawn:/sbin/agetty -L tty5 9600 vt100
-6:2345:respawn:/sbin/agetty -L tty6 9600 vt100
-# End /etc/inittab
-INIT_EOF
-
-# ---------------------------------------------------------------------
-# Step 4 — Generic users
-# ---------------------------------------------------------------------
-log "INFO" "Creating generic root and user accounts..."
-sudo chroot "$ROOTFS" /bin/bash -c "
+log "INFO" "Setting up default accounts..."
+sudo chroot "$LFS" /bin/bash -c "
 set -e
 echo 'root:root' | chpasswd
 
 if ! id ginger >/dev/null 2>&1; then
-    groupadd ginger
-    useradd -m -g ginger -s /bin/bash ginger
+    groupadd -f ginger
+    useradd -m -g ginger -s /bin/bash ginger 2>/dev/null || true
     echo 'ginger:ginger' | chpasswd
 fi
 "
 
 # ---------------------------------------------------------------------
-# Step 5 — Prepare GRUB files (no disk install)
+# Step 3 — FSTAB Generation
 # ---------------------------------------------------------------------
-log "INFO" "Preparing GRUB config for future installer..."
-mkdir -p "$ROOTFS"/boot/grub
-cat > "$ROOTFS"/boot/grub/grub.cfg << 'GRUB_EOF'
+log "INFO" "Generating /etc/fstab..."
+
+# Inside the build VM, we can determine the UUID of the partition
+# We find the device currently mounted to $LFS
+PART_DEV=$(findmnt -n -o SOURCE "$LFS")
+PART_UUID=$(blkid -s UUID -o value "$PART_DEV")
+
+if [ -n "$PART_UUID" ]; then
+    log "INFO" "Detected Root UUID: $PART_UUID"
+    cat > "$LFS"/etc/fstab << EOF
+# /etc/fstab: static file system information.
+# <file system> <mount point>   <type>  <options>       <dump>  <pass>
+UUID=$PART_UUID      /               ext4    defaults        1       1
+EOF
+else
+    log "WARN" "Could not determine UUID for $PART_DEV. Using generic fallback."
+    cat > "$LFS"/etc/fstab << EOF
+# /etc/fstab: static file system information.
+/dev/sda1      /               ext4    defaults        1       1
+EOF
+fi
+
+# Add virtual filesystems to fstab
+cat >> "$LFS"/etc/fstab << EOF
+proc           /proc           proc    nosuid,noexec,nodev 0       0
+sysfs          /sys            sysfs   nosuid,noexec,nodev 0       0
+devpts         /dev/pts        devpts  gid=5,mode=620      0       0
+tmpfs          /run            tmpfs   defaults            0       0
+devtmpfs       /dev            devtmpfs mode=0755,nosuid    0       0
+EOF
+
+# ---------------------------------------------------------------------
+# Step 4 — GRUB Configuration
+# ---------------------------------------------------------------------
+log "INFO" "Creating hardware-agnostic GRUB configuration..."
+mkdir -p "$LFS"/boot/grub
+
+# We use the same UUID for the kernel command line
+if [ -n "$PART_UUID" ]; then
+    ROOT_PARAM="root=UUID=$PART_UUID"
+else
+    ROOT_PARAM="root=/dev/sda1"
+fi
+
+cat > "$LFS"/boot/grub/grub.cfg << GRUB_EOF
 set default=0
 set timeout=5
 
 insmod part_msdos
 insmod ext2
 
-set root=(hd0,msdos1)
+# Try to find the drive by UUID (more compatible)
+search --no-floppy --fs-uuid --set=root $PART_UUID
 
-menuentry 'GingerOS (LFS Base)' {
-    linux /boot/vmlinuz root=/dev/sda1 rw console=tty0
+menuentry 'GingerOS (LFS 12.4)' {
+    linux /boot/vmlinuz-6.16.1-lfs-12.4 $ROOT_PARAM rw console=tty0
 }
 GRUB_EOF
 
-# Note: actual grub-install to a disk will be done by installer script later
+# ---------------------------------------------------------------------
+# Step 5 — Install GRUB to Image MBR
+# ---------------------------------------------------------------------
+IMAGE_PATH="${GINGER_ROOT}/ginger_os.img"
+if [ -f "$IMAGE_PATH" ]; then
+    log "INFO" "Installing GRUB to disk image MBR..."
+    
+    # Locate the base loop device (e.g., /dev/loop0 from /dev/loop0p1)
+    LOOP_DEV=$(echo "$PART_DEV" | sed 's/p[0-9]*$//')
+    
+    if [ -n "$LOOP_DEV" ] && [ -b "$LOOP_DEV" ]; then
+        log "INFO" "Found loop device: $LOOP_DEV. Running grub-install..."
+        # Install GRUB to the MBR of the loop device
+        sudo grub-install --target=i386-pc --boot-directory="$LFS/boot" "$LOOP_DEV"
+    else
+        log "WARN" "Could not determine loop device for partition $PART_DEV."
+    fi
+fi
 
 # ---------------------------------------------------------------------
-# Step 6 — Package rootfs for installer
+# Step 6 — Create Portable RootFS Tarball
 # ---------------------------------------------------------------------
 OUTPUT_TAR="${GINGER_ROOT}/gingeros-base-rootfs.tar"
 log "INFO" "Packaging root filesystem into $OUTPUT_TAR..."
-sudo tar --xattrs --acls -C "$ROOTFS" -cpf "$OUTPUT_TAR" .
+sudo tar --xattrs --acls -C "$LFS" -cpf "$OUTPUT_TAR" .
 
-log "SUCCESS" "GingerOS base root filesystem finalized."
-log "INFO" "Installer can now deploy $OUTPUT_TAR to target disks."
+log "SUCCESS" "GingerOS finalized for installation."
+log "INFO" "The resulting image uses UUID=$PART_UUID and is hardware-agnostic."

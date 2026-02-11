@@ -94,13 +94,10 @@ run_step "12_phase3_system" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/buil
 # 13. Kernel
 run_step "13_kernel" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/phase4-boot/01-kernel.sh\""
 
-# # 14. GRUB
-# run_step "14_grub" "bash scripts/phase4-boot/02-grub.sh"
+# 14. GRUB & Finalize
+run_step "14_grub" "bash scripts/phase4-boot/02-grub.sh"
 
-# # 15. Teardown
-# run_step "15_teardown" "bash scripts/teardown.sh"
-
-# 16. Finalize Image
-run_step "16_finalize_image" "bash scripts/finalize-image.sh"
+# 15. Teardown
+run_step "15_teardown" "bash scripts/teardown.sh"
 
 log "INFO" "GingerOS build process finished successfully!"

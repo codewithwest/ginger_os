@@ -12,36 +12,35 @@ The entire build process is now orchestrated by a single, fail-proof script (`gi
     ```
     This script will:
     - Check and install host requirements.
-    - Prepare the disk image.
-    - Download sources.
-    - Set up the environment.
-    - Compile the toolchain (Phase 1 & 2).
-    - Build the final system (Phase 3).
-    - Compile Kernel and GRUB.
-    - Cleanup.
+    - Prepare a 20GB sparse disk image.
+    - Download and verify all LFS 12.4 sources in parallel.
+    - Set up the environment and `lfs` user.
+    - Compile the cross-toolchain (Phase 1).
+    - Compile the temporary system (Phase 2).
+    - Build the final system inside chroot (Phase 3).
+    - Compile the Linux Kernel and configure GRUB.
+    - Finalize and package the image for deployment.
 
-## 📋 Step-by-Step Guide & Purpose
+2.  **Monitor Progress**:
+    Logs are stored in `logs/` for every package. If a build fails, the orchestrator will stop. After fixing the issue, just run `sudo ./ginger_os.sh` again to resume.
+
+## 📋 Build Sequence
 
 The `ginger_os.sh` orchestrator executes the following sequence. Each step is tracked in `.build_state/` to ensure idempotency.
 
-1.  **Clone & Permissions**: Ensures the repository is correctly set up and accessible.
-2.  **Prepare Image (`scripts/prepare-image.sh`)**: Creates a 20GB raw disk image, partitions it, formats it (ext4), and mounts it to `$LFS` (/mnt/lfs). **Warning**: This wipes existing images.
-3.  **Download Sources (`scripts/download.sh`)**: Fetches all required source tarballs specified in `config/env.sh` into `sources/`.
-4.  **Host Setup (`scripts/setup-host.sh`)**: Configures the host environment, adds the `lfs` user, and sets up directory permissions.
-5.  **Host Requirements (`scripts/host-requirements-install.sh`)**: Installs necessary packages (bison, gum, etc.) on the host system to allow compilation.
-6.  **Version Check (`scripts/version-check.sh`)**: Verifies that the host tools meet LFS 12.4 version requirements.
-7.  **Chroot Preparation (`chroot.sh`)**: Mounts virtual kernel filesystems (`/dev`, `/proc`, `/sys`) into the `$LFS` mount point.
-8.  **Setup LFS Env (`scripts/setup-lfs-user-env.sh`)**: Configures the `.bashrc` and `.bash_profile` for the `lfs` user to ensure environment variables are loaded.
-9.  **Phase 1 - Temporary Toolchain (`scripts/build-phase1.sh`)**: builds the cross-compiler and basic tools (Binutils, GCC, Glibc) strictly as the `lfs` user.
-10. **Phase 2 - Permanent Toolchain (`scripts/build-phase2.sh`)**: Builds the intermediate toolchain that will be used inside chroot.
-11. **Phase 3 - System Tools (`scripts/build-phase3.sh`)**: The massive build phase. Compiles all base system software (coreutils, bash, etc.) using the new toolchain.
-12. **Kernel & Bootloader (`phases4-boot/`)**: Compiles the Linux Kernel (6.16.1) and installs GRUB.
-13. **Teardown (`teardown.sh`)**: Safely unmounts all virtual filesystems and the loopback device to finalize the image.
+1.  **Prepare Image (`scripts/prepare-image.sh`)**: Creates a 20GB raw disk image, partitions it, formats it (ext4), and mounts it to `$LFS`.
+2.  **Download Sources (`scripts/download.sh`)**: Fetches all required source tarballs in parallel and verifies MD5 checksums.
+3.  **Host Setup**: Installs dependencies and configures the `lfs` user environment.
+4.  **Toolchain Phase**: Builds the cross-compiler and temporary tools (Binutils, GCC, Glibc).
+5.  **System Phase**: The chroot environment build. Compiles all base system software using the new toolchain.
+6.  **Boot Phase**: Compiles the Linux Kernel and sets up the GRUB bootloader.
+7.  **Finalization**: Cleans the system, installs generic user accounts, and packages the results.
 
-## 📖 Essential Documentation
-For the full detailed walkthrough, refer to:
-- **[VM_Config.md](./VM_Config.md)**: How to set up your build machine (The "Infrastructure").
-- **[WORKFLOW.md](./WORKFLOW.md)**: The step-by-step master sequence for the build scripts.
+## 📦 Final Outputs
+
+Once the script completes, you will find the following artifacts in the project root:
+- `ginger_os.img`: A 20GB bootable disk image. You can `dd` this to a physical drive or boot it directly in QEMU.
+- `gingeros-base-rootfs.tar`: A compressed backup of the entire root filesystem, ready for custom deployment.
 
 ## 🏗 Project Architecture
 - `config/`: Global environment variables and package versions.
@@ -55,9 +54,8 @@ For the full detailed walkthrough, refer to:
 
 ## 🛡 Design Philosophy
 - **Idempotency**: Every script checks for `.built` flags. If a build fails, just fix and restart—it skips what it has already done.
-- **Smart Extract**: No more hardcoded version numbers in scripts. The system dynamically matches tarballs (supports `.tar.*` and `.tgz`).
-- **Safety**: Builds happen inside a virtual loopback disk image. `teardown.sh` ensures clean unmounting of kernel file systems.
-- **Logging**: Detailed per-package output makes troubleshooting simple.
+- **Speed**: Optimized with parallel downloads (`xargs`) and parallel compilation (`MAKEFLAGS`).
+- **Safety**: Builds happen inside a virtual loopback disk image to avoid touching your host root.
 
 ---
 Built with pride for the LFS 12.4 ecosystem.
