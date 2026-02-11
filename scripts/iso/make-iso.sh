@@ -46,9 +46,17 @@ cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 
 # Step 2: Initrd
 ui_step 2
-ui_log "Assembling Live Environment..."
+ui_log "Assembling Live Environment (Merged-Usr)..."
 sudo rm -rf "$INITRD_WORK"
-mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sbin,sys,tmp,var,root,usr}
+mkdir -p "$INITRD_WORK"/usr/{bin,lib}
+mkdir -p "$INITRD_WORK"/{dev,etc,mnt,proc,run,sys,tmp,var,root}
+
+# Essential Merged-Usr Symlinks
+ln -sf usr/bin "$INITRD_WORK/bin"
+ln -sf usr/bin "$INITRD_WORK/sbin"
+ln -sf usr/lib "$INITRD_WORK/lib"
+ln -sf lib "$INITRD_WORK/lib64"
+ln -sf bin "$INITRD_WORK/usr/sbin"
 
 # Tools List (Consolidated)
 TOOLS=(bash sh ls cat cp mv mkdir rm ln chmod chown chgrp grep sed awk tee head tail sort uniq wc cut tr xgettext xargs basename dirname find mount umount findmnt blkid parted lsblk fdisk udevadm wipefs mke2fs mkfs.ext4 id whoami sleep sync uname hostname dmesg ps top kill mktemp readlink realpath tar gzip bzip2 xz md5sum grub-install grub-probe grub-mkconfig sudo chroot mountpoint find vi nano)
@@ -57,22 +65,15 @@ for tool in "${TOOLS[@]}"; do
     FILE=$(sudo find "$LFS/bin" "$LFS/sbin" "$LFS/usr/bin" "$LFS/usr/sbin" -name "$tool" 2>/dev/null | head -n 1) || true
     [ -z "$FILE" ] && FILE=$(which "$tool" 2>/dev/null) || true
     if [ -n "$FILE" ] && [ -f "$FILE" ]; then
-        # Use -L to dereference symlinks into real files for the ramdisk
-        cp -Lv "$FILE" "$INITRD_WORK/bin/$tool"
+        # Copy to the merged-usr target
+        cp -Lv "$FILE" "$INITRD_WORK/usr/bin/$tool"
     fi
 done
 
-# Essential Symlinks for the Initrd boot
-ln -sf bin "$INITRD_WORK/sbin"
-ln -sf ../bin "$INITRD_WORK/usr/bin"
-ln -sf ../bin "$INITRD_WORK/usr/sbin"
-
 # Library Solver
 ui_log "Solving binary dependencies..."
-# We search ALL binaries for libraries, including the dynamic linker
-for file in "$INITRD_WORK/bin/"*; do
+for file in "$INITRD_WORK/usr/bin/"*; do
     [ -f "$file" ] || continue
-    # Catch both standard libs and the dynamic interpreter
     LIBS=$(ldd "$file" 2>/dev/null | grep -o '/[a-zA-Z0-9._/-]*' || true)
     for lib in $LIBS; do
         if [ -f "$LFS$lib" ]; then
@@ -82,10 +83,15 @@ for file in "$INITRD_WORK/bin/"*; do
         else
             continue
         fi
-        target_path="$INITRD_WORK$lib"
-        mkdir -p "$(dirname "$target_path")"
-        # Dereference symlinks into the ramdisk
-        cp -Lv "$SRC" "$target_path" 2>/dev/null || true
+        
+        # Determine the target internal path
+        # In merged-usr, everything in /lib or /usr/lib goes to /usr/lib in the ramdisk
+        target_name=$(basename "$lib")
+        if [[ "$lib" == *"/bin/"* ]]; then
+             cp -Lv "$SRC" "$INITRD_WORK/usr/bin/$target_name" 2>/dev/null || true
+        else
+             cp -Lv "$SRC" "$INITRD_WORK/usr/lib/$target_name" 2>/dev/null || true
+        fi
     done
 done
 

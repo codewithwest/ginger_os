@@ -57,10 +57,34 @@ if [ ! -f "libisoburn-1.5.6.tar.gz" ]; then
 fi
 
 log "INFO" "Performing final checksum verification..."
-# Use all available cores to verify checksums
-grep -v '^#' md5sums | xargs -P "$(nproc)" -I {} sh -c "echo '{}' | md5sum -c --status" || {
-  log "ERROR" "Checksum verification failed after download"
-  exit 1
+# Use all available cores to verify checksums, capture output to show failures
+FAILED_FILES=""
+while read -r line; do
+    echo "$line" | md5sum -c --status || FAILED_FILES="$FAILED_FILES $(echo "$line" | awk '{print $2}')"
+done < <(grep -v '^#' md5sums)
+
+# Verify extra BLFS packages manually
+check_extra() {
+    local file=$1
+    local expected=$2
+    if [ -f "$file" ]; then
+        local actual=$(md5sum "$file" | awk '{print $1}')
+        if [ "$actual" != "$expected" ]; then
+            FAILED_FILES="$FAILED_FILES $file(MD5_MISMATCH)"
+        fi
+    else
+        FAILED_FILES="$FAILED_FILES $file(MISSING)"
+    fi
 }
+
+check_extra "libburn-1.5.6.tar.gz" "7843818f98a3350367e163351ec3c2e6"
+check_extra "libisofs-1.5.6.tar.gz" "601e355df02741d440938afdc1dd2138"
+check_extra "libisoburn-1.5.6.tar.gz" "576722d7a9609a56d683783a3889163b"
+
+if [ -n "$FAILED_FILES" ]; then
+    log "ERROR" "Checksum verification failed for files:$FAILED_FILES"
+    log "INFO" "Try deleting the failed files and running the script again."
+    exit 1
+fi
 
 log "INFO" "Source acquisition complete."
