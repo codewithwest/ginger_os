@@ -93,8 +93,12 @@ UI_STEPS=(${UI_STEPS[@]@Q})
 EOF
 }
 
+UI_RENDER_TMP="/tmp/ginger_render.$GINGER_UI_MASTER_PID"
+
 ui_load_state() {
     if [[ -f "$UI_STATE_FILE" ]]; then
+        # Use a subshell to source and echo values to prevent variable pollution
+        # or stick to your sourcing if you trust the input (printf %q helps)
         source "$UI_STATE_FILE"
     fi
 }
@@ -240,32 +244,39 @@ ui_draw_minimal() {
 # ============================================================================
 
 ui_monitor() {
-    # This function runs in the background and continuously updates the UI
-    # by reading from the state file
-    
-    # Disable line wrap and hide cursor
-    printf "\e[?7l"
+    # Enter alternate screen buffer to keep terminal clean
+    tput smcup
     tput civis
-    
-    # Initial clear
-    clear
-    
+    printf "\e[?7l" # Disable wrap
+
+    # Handle terminal resize signals
+    trap 'clear' SIGWINCH
+
     while true; do
-        # Load current state
         ui_load_state
         
-        # Check terminal width and render appropriately
-        if check_width; then
-            ui_draw_full_dashboard
-        else
-            ui_draw_minimal
-        fi
+        # We write to a temp file first, then cat it to the terminal 
+        # to reduce flickering on slower SSH connections
+        {
+            if check_width; then
+                ui_draw_full_dashboard
+            else
+                ui_draw_minimal
+            fi
+        } > "$UI_RENDER_TMP"
         
-        # Refresh rate: 10 FPS for smooth spinner
+        tput cup 0 0
+        cat "$UI_RENDER_TMP"
+        
         sleep 0.1
     done
 }
 
+# Add a specific status for LFS ownership changes (as seen in your screenshot)
+ui_set_active_log() {
+    export UI_ACTIVE_LOG="$1"
+    ui_save_state
+}
 # ============================================================================
 # PUBLIC API
 # ============================================================================
