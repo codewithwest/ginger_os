@@ -11,6 +11,10 @@ RED='\033[0;31m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+ui_init_dashboard() {
+    UI_STEPS=($@)
+    UI_CURRENT_STEP=0
+}
 # ------------------------------
 # Draw the dashboard header + progress
 # ------------------------------
