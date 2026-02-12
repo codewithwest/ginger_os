@@ -198,3 +198,8 @@ ui_confirm() {
         ui_error "Aborted by user."
     fi
 }
+
+ui_step() {
+    UI_CURRENT_STEP="$1"
+    ui_draw_dashboard
+}
