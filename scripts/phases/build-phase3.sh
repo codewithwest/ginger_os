@@ -42,11 +42,16 @@ for script in "${SCRIPTS[@]}"; do
     fi
 
     ui_log "Building $PKG_NAME..."
-    (bash "$script" > "$LOG_DIR/$SCRIPT_NAME.log" 2>&1) &
-    ui_spinner $! "Compiling $PKG_NAME..."
-    
-    if [ $? -ne 0 ]; then
+    bash "$script" > "$LOG_DIR/$SCRIPT_NAME.log" 2>&1 &
+    PID=$!
+
+    ui_spinner $PID "Compiling $PKG_NAME..."
+    wait $PID
+    RET=$?
+
+    if [ $RET -ne 0 ]; then
         ui_error "Build failed: $PKG_NAME. Check $LOG_DIR/$SCRIPT_NAME.log"
+        exit 1
     fi
     ui_log "Successfully installed $PKG_NAME"
 done
