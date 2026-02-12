@@ -150,3 +150,37 @@ ui_run_step() {
 # Wrapper to run steps with logs and timer
 # ------------------------------
 
+
+ui_confirm() {
+    local msg=$1
+    echo -ne "${LASER_GREEN}${BOLD}$msg (type 'yes'): ${NC}"
+    read CONFIRM
+    if [ "$CONFIRM" != "yes" ]; then
+        echo -e "${RED}Aborted.${NC}"
+        exit 0
+    fi
+}
+
+ui_log() {
+    echo -e "${LASER_GREEN}[INFO]${NC} $1"
+}
+
+ui_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+    exit 1
+}
+
+ui_input() {
+    local prompt=$1
+    local var_name=$2
+    echo -ne "${ELECTRIC_BLUE}${BOLD}$prompt: ${NC}"
+    read $var_name
+}
+
+ui_password() {
+    local prompt=$1
+    local var_name=$2
+    echo -ne "${ELECTRIC_BLUE}${BOLD}$prompt: ${NC}"
+    read -s $var_name
+    echo ""
+}
