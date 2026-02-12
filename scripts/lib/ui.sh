@@ -255,19 +255,14 @@ ui_monitor() {
     while true; do
         ui_load_state
         
-        # We write to a temp file first, then cat it to the terminal 
-        # to reduce flickering on slower SSH connections
-        {
-            if check_width; then
-                ui_draw_full_dashboard
-            else
-                ui_draw_minimal
-            fi
-        } > "$UI_RENDER_TMP"
+        # Draw directly to the terminal
+        if check_width; then
+            ui_draw_full_dashboard
+        else
+            ui_draw_minimal
+        fi
         
-        tput cup 0 0
-        cat "$UI_RENDER_TMP"
-        
+        # Refresh rate: 10 FPS for smooth spinner
         sleep 0.1
     done
 }
@@ -301,8 +296,9 @@ ui_init() {
     ui_save_state
     
     # Start background monitor only if not already running
+    # Force output to /dev/tty to prevent UI leaking into step logs
     if ! pgrep -f "ui_monitor" >/dev/null; then
-        ui_monitor &
+        ui_monitor > /dev/tty 2>&1 &
         UI_MONITOR_PID=$!
         sleep 0.2
     fi
