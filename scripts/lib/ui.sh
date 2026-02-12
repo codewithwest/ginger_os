@@ -85,35 +85,29 @@ ui_error() {
     exit 1
 }
 
-ui_draw_header() {
-    # Move to top-left
-    tput cup 0 0
-    echo -e "${ELECTRIC_BLUE}${BOLD}"
+ui_draw_header_buffer() {
+    # Returns header content as string
+    local buffer=""
+    buffer+="${ELECTRIC_BLUE}${BOLD}\n"
     
     local lines=$(tput lines)
     if [ "$lines" -lt 30 ]; then
-        # Compact Header for short terminals
-        echo "  GingerOS Build System v1.0"
-        echo -e "${NC}\e[K"
+        # Compact Header
+        buffer+="  GingerOS Build System v1.0\n"
+        buffer+="${NC}\e[K\n"
     else
-        # Full ASCII Header
-        echo "  _____ _                         ____   ____"
-        echo " / ____(_)                       / __ \ / ____|"
-        echo "| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ "
-        echo "| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\"
-        echo "| |__| | | | | | (_| |  __/ |   | |__| |____) |"
-        echo " \_____|_|_| |_|\__, |\___|_|    \____/|_____/ "
-        echo "                 __/ |                         "
-        echo "                |___/         v1.0             "
-        echo -e "${NC}\e[K"
+        # Full Header
+        buffer+="  _____ _                         ____   ____\n"
+        buffer+=" / ____(_)                       / __ \ / ____|\n"
+        buffer+="| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ \n"
+        buffer+="| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\\n"
+        buffer+="| |__| | | | | | (_| |  __/ |   | |__| |____) |\n"
+        buffer+=" \_____|_|_| |_|\__, |\___|_|    \____/|_____/ \n"
+        buffer+="                 __/ |                         \n"
+        buffer+="                |___/         v1.0             \n"
+        buffer+="${NC}\e[K\n"
     fi
-}
-
-get_spinner() {
-    local chars="/-\|"
-    local char="${chars:$SPIN_IDX:1}"
-    SPIN_IDX=$(( (SPIN_IDX + 1) % 4 ))
-    echo "$char"
+    echo -ne "$buffer"
 }
 
 ui_draw_dashboard() {
@@ -122,21 +116,22 @@ ui_draw_dashboard() {
         return 0
     fi
 
-    # Hide cursor to prevent flicker
-    tput civis
-    
-    ui_draw_header
-    
-    echo -e "--------------------------------------------------------------------------------\e[K"
-    printf "${BOLD} %-${LEFT_COL_WIDTH}s | %s${NC}\e[K\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS"
-    echo -e "--------------------------+-----------------------------------------------------\e[K"
-
-    # Calculate current usage to adjust log lines dynamically
     local term_lines=$(tput lines)
-    local header_lines=6 # Approx for compact
-    [ "$term_lines" -ge 30 ] && header_lines=14 # Approx for full
+    local buffer=""
     
-    # Render table
+    # 1. Build Header
+    buffer+=$(ui_draw_header_buffer)
+    
+    buffer+="--------------------------------------------------------------------------------\e[K\n"
+    buffer+=$(printf "${BOLD} %-${LEFT_COL_WIDTH}s | %s${NC}\e[K\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS")
+    buffer+="--------------------------+-----------------------------------------------------\e[K\n"
+
+    # 2. Build Table
+    # We need to calculate how many lines the table takes to reserve space for logs
+    # But since resizing logs is dynamic, we do a two-pass or just accurate accounting.
+    # Let's just build the table and see how tall it is.
+    
+    local table_buffer=""
     for i in "${!UI_STEPS[@]}"; do
         local marker=" [ ]"
         local style="${NC}"
@@ -147,80 +142,75 @@ ui_draw_dashboard() {
         elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
             marker=" [$(get_spinner)]"; style="${ELECTRIC_BLUE}${BOLD}"
             
-            # --- Sub-step Rendering Logic ---
             if [ ${#SUBSTEPS_ORDER[@]} -eq 0 ]; then
-                # Fallback to simple message
                 right_content=$(echo "$CURRENT_PKG" | cut -c 1-$RIGHT_COL_WIDTH)
             else
-                # Render first sub-step here
                 local first_sub="${SUBSTEPS_ORDER[0]}"
                 local status="${SUBSTEP_STATUS[$first_sub]}"
                 local sub_marker="[ ]"
                 [ "$status" == "running" ] && sub_marker="[$(get_spinner)]"
                 [ "$status" == "done" ] && sub_marker="[✓]"
                 [ "$status" == "failed" ] && sub_marker="[X]"
-                
                 right_content="$sub_marker $first_sub"
             fi
         fi
-        printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %-${RIGHT_COL_WIDTH}b\e[K\n" "$marker ${UI_STEPS[$i]}" "$right_content"
-        header_lines=$((header_lines + 1))
         
-        # --- Handle Extra Lines for Sub-steps ---
+        table_buffer+=$(printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %-${RIGHT_COL_WIDTH}b\e[K\n" "$marker ${UI_STEPS[$i]}" "$right_content")
+        
+        # Sub-steps
         if [ "$i" -eq "$UI_CURRENT_STEP" ] && [ ${#SUBSTEPS_ORDER[@]} -gt 1 ]; then
             for j in "${!SUBSTEPS_ORDER[@]}"; do
-                [ "$j" -eq 0 ] && continue # Skip first one (already printed)
-                
+                [ "$j" -eq 0 ] && continue
                 local sub="${SUBSTEPS_ORDER[$j]}"
                 local status="${SUBSTEP_STATUS[$sub]}"
                 local sub_marker="[ ]"
                 local sub_style="${NC}"
-                
-                if [ "$status" == "running" ]; then
-                     sub_marker="[$(get_spinner)]"
-                     sub_style="${BOLD}"
-                elif [ "$status" == "done" ]; then
-                     sub_marker="[✓]"
-                     sub_style="${LASER_GREEN}"
-                elif [ "$status" == "failed" ]; then
-                     sub_marker="[X]"
-                     sub_style="${LASER_RED}"
-                fi
+                [ "$status" == "running" ] && { sub_marker="[$(get_spinner)]"; sub_style="${BOLD}"; }
+                [ "$status" == "done" ] && { sub_marker="[✓]"; sub_style="${LASER_GREEN}"; }
+                [ "$status" == "failed" ] && { sub_marker="[X]"; sub_style="${LASER_RED}"; }
 
-                printf " %-${LEFT_COL_WIDTH}s | ${sub_style}%-${RIGHT_COL_WIDTH}b${NC}\e[K\n" "" "$sub_marker $sub"
-                header_lines=$((header_lines + 1))
+                table_buffer+=$(printf " %-${LEFT_COL_WIDTH}s | ${sub_style}%-${RIGHT_COL_WIDTH}b${NC}\e[K\n" "" "$sub_marker $sub")
             done
         fi
     done
-
-    echo -e "--------------------------+-----------------------------------------------------\e[K"
-    echo -e "${BOLD} LIVE OUTPUT:${NC}\e[K"
-    echo -e "--------------------------------------------------------------------------------\e[K"
-    header_lines=$((header_lines + 3)) # Footer borders + title
     
-    # Cap Log Lines
-    local available_lines=$((term_lines - header_lines - 1)) # -1 (bottom border)
-    local target_log_lines=$LOG_LINES
-    if [ "$available_lines" -lt 1 ]; then
-        target_log_lines=0
-    elif [ "$available_lines" -lt "$LOG_LINES" ]; then
-        target_log_lines=$available_lines
-    fi
+    buffer+="$table_buffer"
+    buffer+="--------------------------+-----------------------------------------------------\e[K\n"
+    buffer+="${BOLD} LIVE OUTPUT:${NC}\e[K\n"
+    buffer+="--------------------------------------------------------------------------------\e[K\n"
 
-    # Render Logs
+    # 3. Calculate Log Space
+    # Count current lines in buffer (approximate by newlines)
+    local current_line_count=$(echo -ne "$buffer" | wc -l)
+    local available_lines=$((term_lines - current_line_count - 2)) # Reserve 1 for bottom border, 1 safety
+    
+    local target_log_lines=$LOG_LINES
+    if [ "$available_lines" -lt 1 ]; then target_log_lines=0
+    elif [ "$available_lines" -lt "$LOG_LINES" ]; then target_log_lines=$available_lines; fi
+
+    # 4. Build Logs
     local lines_printed=0
     if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ] && [ "$target_log_lines" -gt 0 ]; then
-        while read -r line; do
+        # We need to capture exact lines
+        local log_content=$(tail -n $target_log_lines "$LOG_FILE")
+        while IFS= read -r line; do
             local clean_line=$(echo "$line" | tr -d '\r' | cut -c 1-76)
-            printf "  %s\e[K\n" "$clean_line"
+            buffer+=$(printf "  %s\e[K\n" "$clean_line")
             ((lines_printed++))
-        done < <(tail -n $target_log_lines "$LOG_FILE")
+        done <<< "$log_content"
     fi
-    # Fill empty log space
-    while [ $lines_printed -lt $target_log_lines ]; do echo -e "\e[K"; ((lines_printed++)); done
+    # Fill filler
+    while [ $lines_printed -lt $target_log_lines ]; do
+        buffer+="\e[K\n"
+        ((lines_printed++))
+    done
     
-    echo -e "--------------------------------------------------------------------------------\e[K"
-    
-    # CRITICAL: Clear potentially lingering lines from previous taller frames
+    buffer+="--------------------------------------------------------------------------------\e[K"
+
+    # 5. ATOMIC PRINT
+    # Hide cursor, move to 0,0, print buffer, clear rest of screen
+    tput civis
+    tput cup 0 0
+    echo -ne "$buffer"
     tput ed
 }
