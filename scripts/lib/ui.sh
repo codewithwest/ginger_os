@@ -1,5 +1,5 @@
 #!/bin/bash
-# GingerOS UI Library
+# GingerOS UI Library - Optimized v1.1
 
 # --- Colors ---
 ELECTRIC_BLUE='\033[38;5;39m'
@@ -19,32 +19,25 @@ UI_CURRENT_STEP=0
 CURRENT_PKG="Waiting..."
 LOG_FILE=""
 SPIN_IDX=0
-
-# --- New Sub-step State ---
 declare -A SUBSTEP_STATUS
 SUBSTEPS_ORDER=()
+
+# --- Cleanup Trap (Restores cursor on exit) ---
+trap 'tput cnorm; echo -e "${NC}"; exit' INT TERM
 
 # --- Functions ---
 
 ui_init_dashboard() {
-    # Respect headless mode (for child processes)
-    if [ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]; then
-        return 0
-    fi
-
-    # Optional override for UI_STEPS
-    if [ $# -gt 0 ]; then
-        UI_STEPS=("$@")
-    fi
+    [[ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]] && return 0
+    [[ $# -gt 0 ]] && UI_STEPS=("$@")
+    
     clear
     tput civis
     ui_draw_dashboard
 }
 
 ui_step() {
-    local step_idx=$1
-    UI_CURRENT_STEP=$step_idx
-    # Clear substeps for new major step
+    UI_CURRENT_STEP=$1
     SUBSTEPS_ORDER=()
     SUBSTEP_STATUS=()
     ui_draw_dashboard
@@ -52,7 +45,6 @@ ui_step() {
 
 ui_init_substeps() {
     SUBSTEPS_ORDER=("$@")
-    SUBSTEP_STATUS=()
     for sub in "${SUBSTEPS_ORDER[@]}"; do
         SUBSTEP_STATUS["$sub"]="pending"
     done
@@ -60,127 +52,102 @@ ui_init_substeps() {
 }
 
 ui_set_substep() {
-    local sub_name="$1"
-    local status="$2"
-    SUBSTEP_STATUS["$sub_name"]="$status"
+    SUBSTEP_STATUS["$1"]="$2"
     ui_draw_dashboard
 }
 
 ui_log() {
     local msg="$1"
-    
-    # In headless mode (child process), echo to stdout so parent sees it in logs
-    if [ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]; then
+    if [[ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]]; then
         echo "$msg"
         return
     fi
 
-    # Basic logging to file if set
-    if [ -n "$LOG_FILE" ]; then
-        echo "$msg" >> "$LOG_FILE"
-    fi
-    # Also update CURRENT_PKG for simple feedback if no substeps
+    [[ -n "$LOG_FILE" ]] && echo "$msg" >> "$LOG_FILE"
     CURRENT_PKG="$msg"
     ui_draw_dashboard
 }
 
 ui_error() {
-    local msg="$1"
     tput cnorm
-    echo -e "${LASER_RED}[ERROR] $msg${NC}"
+    echo -e "\n${LASER_RED}${BOLD}[ERROR] $1${NC}"
     exit 1
 }
 
-ui_draw_header_to_buffer() {
-    UI_BUFFER+="${ELECTRIC_BLUE}${BOLD}\n"
-    
-    local lines=$(tput lines)
-    if [ "$lines" -lt 30 ]; then
-        # Compact Header
-        UI_BUFFER+="  GingerOS Build System v1.0\n"
-        UI_BUFFER+="${NC}\e[K\n"
-    else
-        # Full Header
-        UI_BUFFER+="  _____ _                         ____   ____\n"
-        UI_BUFFER+=" / ____(_)                       / __ \ / ____|\n"
-        UI_BUFFER+="| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ \n"
-        UI_BUFFER+="| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\\n"
-        UI_BUFFER+="| |__| | | | | | (_| |  __/ |   | |__| |____) |\n"
-        UI_BUFFER+=" \_____|_|_| |_|\__, |\___|_|    \____/|_____/ \n"
-        UI_BUFFER+="                 __/ |                         \n"
-        UI_BUFFER+="                |___/         v1.0             \n"
-        UI_BUFFER+="${NC}\e[K\n"
-    fi
+get_spinner() {
+    local chars='/-\|' # Fixed backslash escape
+    echo -n "${chars:SPIN_IDX:1}"
 }
 
-get_spinner() {
-    local chars="/-\|"
-    echo "${chars:$SPIN_IDX:1}"
+ui_draw_header() {
+    local lines
+    lines=$(tput lines)
+    UI_BUFFER+="${ELECTRIC_BLUE}${BOLD}"
+    if [ "$lines" -lt 30 ]; then
+        UI_BUFFER+="  GingerOS Build System v1.0\e[K\n"
+    else
+        UI_BUFFER+="  _____ _                         ____   ____\e[K\n"
+        UI_BUFFER+=" / ____(_)                       / __ \ / ____|\e[K\n"
+        UI_BUFFER+="| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ \e[K\n"
+        UI_BUFFER+="| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\\e[K\n"
+        UI_BUFFER+="| |__| | | | | | (_| |  __/ |   | |__| |____) |\e[K\n"
+        UI_BUFFER+=" \_____|_|_| |_|\__, |\___|_|    \____/|_____/ \e[K\n"
+        UI_BUFFER+="                 __/ |                         \e[K\n"
+        UI_BUFFER+="                |___/         v1.0             \e[K\n"
+    fi
+    UI_BUFFER+="${NC}"
 }
 
 ui_draw_dashboard() {
-    # Respect headless mode
-    if [ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]; then
-        return 0
-    fi
+    [[ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]] && return 0
     
-    # Increment spinner global state once per frame
     SPIN_IDX=$(( (SPIN_IDX + 1) % 4 ))
-
     local term_lines=$(tput lines)
-    UI_BUFFER="" # Global buffer
+    UI_BUFFER="" 
     
-    # 1. Build Header
-    ui_draw_header_to_buffer
+    ui_draw_header
     
     UI_BUFFER+="--------------------------------------------------------------------------------\e[K\n"
-    # Use printf -v to print to variable if bash 4.3+, but let's stick to string append for compat
     UI_BUFFER+=$(printf "${BOLD} %-${LEFT_COL_WIDTH}s | %s${NC}\e[K" "SYSTEM PROGRESS" "CURRENT PHASE STATUS")
-    UI_BUFFER+="\n"
-    UI_BUFFER+="--------------------------+-----------------------------------------------------\e[K\n"
+    UI_BUFFER+="\n--------------------------+-----------------------------------------------------\e[K\n"
 
-    # 2. Build Table
+    # Build Step Table
     for i in "${!UI_STEPS[@]}"; do
-        local marker=" [ ]"
-        local style="${NC}"
-        local right_content=""
-
+        local marker=" [ ]" style="${NC}" right_content=""
+        
         if [ "$i" -lt "$UI_CURRENT_STEP" ]; then
             marker=" [✓]"; style="${LASER_GREEN}"; right_content="Completed"
         elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
-            marker=" [$(get_spinner)]"; style="${ELECTRIC_BLUE}${BOLD}"
+            local s; s=$(get_spinner)
+            marker=" [$s]"; style="${ELECTRIC_BLUE}${BOLD}"
             
             if [ ${#SUBSTEPS_ORDER[@]} -eq 0 ]; then
-                right_content=$(echo "$CURRENT_PKG" | cut -c 1-$RIGHT_COL_WIDTH)
+                right_content="${CURRENT_PKG:0:$RIGHT_COL_WIDTH}"
             else
                 local first_sub="${SUBSTEPS_ORDER[0]}"
                 local status="${SUBSTEP_STATUS[$first_sub]}"
-                local sub_marker="[ ]"
-                [ "$status" == "running" ] && sub_marker="[$(get_spinner)]"
-                [ "$status" == "done" ] && sub_marker="[✓]"
-                [ "$status" == "failed" ] && sub_marker="[X]"
-                right_content="$sub_marker $first_sub"
+                local sub_m="[ ]"
+                [[ "$status" == "running" ]] && sub_m="[$s]"
+                [[ "$status" == "done" ]] && sub_m="[✓]"
+                [[ "$status" == "failed" ]] && sub_m="[X]"
+                right_content="$sub_m $first_sub"
             fi
         fi
         
-        # Append Line
-        UI_BUFFER+=$(printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %-${RIGHT_COL_WIDTH}b\e[K" "$marker ${UI_STEPS[$i]}" "$right_content")
+        UI_BUFFER+=$(printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %b\e[K" "$marker ${UI_STEPS[$i]}" "$right_content")
         UI_BUFFER+="\n"
         
-        # Sub-steps
+        # Draw Sub-steps
         if [ "$i" -eq "$UI_CURRENT_STEP" ] && [ ${#SUBSTEPS_ORDER[@]} -gt 1 ]; then
             for j in "${!SUBSTEPS_ORDER[@]}"; do
-                [ "$j" -eq 0 ] && continue
+                [[ "$j" -eq 0 ]] && continue
                 local sub="${SUBSTEPS_ORDER[$j]}"
                 local status="${SUBSTEP_STATUS[$sub]}"
-                local sub_marker="[ ]"
-                local sub_style="${NC}"
-                [ "$status" == "running" ] && { sub_marker="[$(get_spinner)]"; sub_style="${BOLD}"; }
-                [ "$status" == "done" ] && { sub_marker="[✓]"; sub_style="${LASER_GREEN}"; }
-                [ "$status" == "failed" ] && { sub_marker="[X]"; sub_style="${LASER_RED}"; }
-
-                UI_BUFFER+=$(printf " %-${LEFT_COL_WIDTH}s | ${sub_style}%-${RIGHT_COL_WIDTH}b${NC}\e[K" "" "$sub_marker $sub")
-                UI_BUFFER+="\n"
+                local sub_m="[ ]" sub_s="${NC}"
+                [[ "$status" == "running" ]] && { sub_m="[$(get_spinner)]"; sub_s="${BOLD}"; }
+                [[ "$status" == "done" ]] && { sub_m="[✓]"; sub_s="${LASER_GREEN}"; }
+                [[ "$status" == "failed" ]] && { sub_m="[X]"; sub_s="${LASER_RED}"; }
+                UI_BUFFER+=$(printf " %-${LEFT_COL_WIDTH}s | ${sub_s}%b${NC}\e[K\n" "" "$sub_m $sub")
             done
         fi
     done
@@ -189,51 +156,36 @@ ui_draw_dashboard() {
     UI_BUFFER+="${BOLD} LIVE OUTPUT:${NC}\e[K\n"
     UI_BUFFER+="--------------------------------------------------------------------------------\e[K\n"
 
-    # 3. Calculate Log Space
-    local current_line_count=$(echo -ne "$UI_BUFFER" | wc -l)
-    local available_lines=$((term_lines - current_line_count - 2)) # Reserve 1 for bottom border, 1 safety
-    
-    local target_log_lines=$LOG_LINES
-    if [ "$available_lines" -lt 1 ]; then target_log_lines=0
-    elif [ "$available_lines" -lt "$LOG_LINES" ]; then target_log_lines=$available_lines; fi
-
-    # 4. Build Logs
+    # Logs
     local lines_printed=0
-    if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ] && [ "$target_log_lines" -gt 0 ]; then
-        local log_content=$(tail -n $target_log_lines "$LOG_FILE")
+    if [[ -n "$LOG_FILE" && -f "$LOG_FILE" ]]; then
+        local log_content; log_content=$(tail -n "$LOG_LINES" "$LOG_FILE" 2>/dev/null)
         while IFS= read -r line; do
-            local clean_line=$(echo "$line" | tr -d '\r' | cut -c 1-76)
-            UI_BUFFER+=$(printf "  %s\e[K" "$clean_line")
-            UI_BUFFER+="\n"
+            # Clean carriage returns and truncate using bash expansion
+            local clean="${line//$'\r'/}"
+            UI_BUFFER+="  ${clean:0:76}\e[K\n"
             ((lines_printed++))
         done <<< "$log_content"
     fi
-    # Fill filler
-    while [ $lines_printed -lt $target_log_lines ]; do
-        UI_BUFFER+="\e[K\n"
-        ((lines_printed++))
-    done
     
-    # 5. Global Progress Bar (Footer)
-    local total_steps=${#UI_STEPS[@]}
+    # Pad logs
+    for ((p=lines_printed; p<LOG_LINES; p++)); do UI_BUFFER+="\e[K\n"; done
+
+    # Global Progress Bar
+    local total=${#UI_STEPS[@]}
     local percent=0
-    if [ "$total_steps" -gt 0 ]; then
-        percent=$(( (UI_CURRENT_STEP * 100) / total_steps ))
-    fi
+    [[ $total -gt 0 ]] && percent=$(( (UI_CURRENT_STEP * 100) / total ))
+    
     local filled=$(( percent / 4 ))
     local empty=$(( 25 - filled ))
-    
-    # Construct progress bar string
-    local prog_bar=$(printf " Progress: [${LASER_GREEN}%s${NC}%s] %d%%\e[K" \
-           "$(printf '#%.0s' $(seq 1 $filled 2>/dev/null))" \
-           "$(printf ' %.0s' $(seq 1 $empty 2>/dev/null))" \
-           "$percent")
-    
-    UI_BUFFER+="$prog_bar\n"
-    UI_BUFFER+="--------------------------------------------------------------------------------\e[K"
+    local bar_str=""
+    for ((i=0; i<filled; i++)); do bar_str+="#"; done
+    for ((i=0; i<empty; i++)); do bar_str+=" "; done
 
-    # 5. ATOMIC PRINT
-    tput civis
+    UI_BUFFER+="--------------------------------------------------------------------------------\e[K\n"
+    UI_BUFFER+=$(printf " Progress: [${LASER_GREEN}%s${NC}] %d%%\e[K" "$bar_str" "$percent")
+    
+    # Atomic redraw
     tput cup 0 0
     echo -ne "$UI_BUFFER"
     tput ed
