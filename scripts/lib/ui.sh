@@ -1,87 +1,322 @@
 #!/bin/bash
-# GingerOS UI Library - Resilient v1.3
+# GingerOS UI Library - Process-Safe v2.0
+# Background Logger Pattern: UI runs in dedicated loop, commands run in foreground
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
 
 ELECTRIC_BLUE='\033[38;5;39m'
 LASER_GREEN='\033[38;5;118m'
 LASER_RED='\033[38;5;196m'
+LASER_YELLOW='\033[38;5;226m'
 BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m'
 
-# State
+# State files
+UI_STATE_FILE="/tmp/ginger_ui_state.$$"
+UI_LOG_FILE="${UI_LOG_FILE:-build.log}"
+UI_MONITOR_PID=""
+
+# UI State
 UI_STEPS=()
 UI_CURRENT_STEP=0
-LOG_FILE="build.log"
-SPIN_CHARS='/-\|'
+UI_STATUS_MSG=""
+UI_MODE="full"  # "full" or "minimal"
+
+# Animation
+SPIN_CHARS='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
 SPIN_IDX=0
 
-# Cleanup on exit
-trap 'tput cnorm; printf "\e[?7h"; echo -e "${NC}"; exit' INT TERM
+# Terminal state
+ORIGINAL_TERM_STATE=""
+MIN_WIDTH=80
 
-ui_init_dashboard() {
-    UI_STEPS=("$@")
-    printf "\e[?7l" # Disable line wrap to prevent shredding
-    tput civis
-    clear
-    ui_draw_dashboard
-}
+# ============================================================================
+# CLEANUP AND SIGNAL HANDLING
+# ============================================================================
 
-ui_step() { UI_CURRENT_STEP=$1; ui_draw_dashboard; }
-
-ui_log() {
-    [[ -n "$1" ]] && echo "$1" >> "$LOG_FILE"
-    ui_draw_dashboard
-}
-
-ui_draw_dashboard() {
-    SPIN_IDX=$(( (SPIN_IDX + 1) % 4 ))
-    local s="${SPIN_CHARS:SPIN_IDX:1}"
-    local term_w=$(tput cols)
-    local term_h=$(tput lines)
-    local col_left=25
-    local col_right=$(( term_w - col_left - 8 ))
+ui_cleanup() {
+    # Stop background monitor if running
+    if [[ -n "$UI_MONITOR_PID" ]] && kill -0 "$UI_MONITOR_PID" 2>/dev/null; then
+        kill "$UI_MONITOR_PID" 2>/dev/null
+        wait "$UI_MONITOR_PID" 2>/dev/null
+    fi
     
-    # 1. Build Buffer in memory
+    # Restore terminal state
+    tput cnorm 2>/dev/null          # Show cursor
+    printf "\e[?7h" 2>/dev/null     # Re-enable line wrap
+    printf "${NC}" 2>/dev/null      # Reset colors
+    
+    # Clean up state file
+    rm -f "$UI_STATE_FILE" 2>/dev/null
+    
+    # Move cursor to bottom and print newline for clean exit
+    tput cup "$(tput lines)" 0 2>/dev/null
+    echo
+}
+
+trap 'ui_cleanup; exit' INT TERM EXIT
+
+# ============================================================================
+# TERMINAL WIDTH DETECTION
+# ============================================================================
+
+check_width() {
+    local term_w=$(tput cols 2>/dev/null || echo 80)
+    
+    if [[ $term_w -lt $MIN_WIDTH ]]; then
+        UI_MODE="minimal"
+        return 1
+    else
+        UI_MODE="full"
+        return 0
+    fi
+}
+
+# ============================================================================
+# STATE FILE MANAGEMENT
+# ============================================================================
+
+ui_save_state() {
+    cat > "$UI_STATE_FILE" <<EOF
+UI_CURRENT_STEP=$UI_CURRENT_STEP
+UI_STATUS_MSG=$UI_STATUS_MSG
+UI_STEPS=(${UI_STEPS[@]@Q})
+EOF
+}
+
+ui_load_state() {
+    if [[ -f "$UI_STATE_FILE" ]]; then
+        source "$UI_STATE_FILE"
+    fi
+}
+
+# ============================================================================
+# ATOMIC RENDERING - FULL DASHBOARD MODE
+# ============================================================================
+
+ui_draw_full_dashboard() {
+    local term_w=$(tput cols 2>/dev/null || echo 80)
+    local term_h=$(tput lines 2>/dev/null || echo 24)
+    
+    # Update spinner
+    SPIN_IDX=$(( (SPIN_IDX + 1) % ${#SPIN_CHARS} ))
+    local s="${SPIN_CHARS:SPIN_IDX:1}"
+    
+    # Column widths
+    local col_left=30
+    local col_right=$(( term_w - col_left - 8 ))
+    [[ $col_right -lt 20 ]] && col_right=20
+    
+    # Build entire dashboard as single string buffer
     local buf=""
     
-    # Header - Only show ASCII if window is wide enough
-    if [ "$term_w" -gt 80 ]; then
-        buf+="${ELECTRIC_BLUE}${BOLD}"
-        buf+="  GingerOS Build System v1.0\e[K\n"
-        buf+="  [ Step $((UI_CURRENT_STEP + 1)) of ${#UI_STEPS[@]} ]\e[K\n"
-    else
-        buf+="${ELECTRIC_BLUE}${BOLD} >> GINGER OS BUILD [${s}]\e[K\n"
-    fi
+    # ========== HEADER ==========
+    buf+="${ELECTRIC_BLUE}${BOLD}"
+    buf+="  ╔════════════════════════════════════════════════════════════╗\e[K\n"
+    buf+="  ║           🌶️  GingerOS Build System v2.0 🌶️              ║\e[K\n"
+    buf+="  ║        Process-Safe Terminal UI - LFS 12.4              ║\e[K\n"
+    buf+="  ╚════════════════════════════════════════════════════════════╝\e[K\n"
+    buf+="${NC}"
     
-    buf+="${NC}$(printf '%.0s-' $(seq 1 $term_w))\e[K\n"
-    buf+=$(printf "${BOLD} %-${col_left}s | %s${NC}\e[K\n" "PROCESS" "STATUS")
-    buf+="$(printf '%.0s-' $(seq 1 $term_w))\e[K\n"
-
-    # 2. Draw Steps
-    for i in "${!UI_STEPS[@]}"; do
-        local marker=" [ ]" style="${NC}" state="Pending"
-        if [ "$i" -lt "$UI_CURRENT_STEP" ]; then
-            marker=" [✓]"; style="${LASER_GREEN}"; state="Done"
-        elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
-            marker=" [$s]"; style="${ELECTRIC_BLUE}${BOLD}"; state="Processing..."
+    # ========== PROGRESS BAR ==========
+    local total_steps=${#UI_STEPS[@]}
+    local progress_pct=0
+    [[ $total_steps -gt 0 ]] && progress_pct=$(( (UI_CURRENT_STEP * 100) / total_steps ))
+    
+    buf+="${BOLD}  Progress: ${NC}"
+    buf+="[Step $((UI_CURRENT_STEP + 1))/${total_steps}] "
+    buf+="${progress_pct}%\e[K\n"
+    
+    # Draw progress bar
+    local bar_width=50
+    local filled=$(( (progress_pct * bar_width) / 100 ))
+    buf+="  ["
+    for ((i=0; i<bar_width; i++)); do
+        if [[ $i -lt $filled ]]; then
+            buf+="${LASER_GREEN}█${NC}"
+        else
+            buf+="${DIM}░${NC}"
         fi
-        buf+=$(printf "${style} %-${col_left}s${NC} | %-${col_right}s\e[K\n" "$marker ${UI_STEPS[$i]}" "$state")
     done
-
-    buf+="$(printf '%.0s-' $(seq 1 $term_w))\e[K\n"
-    buf+="${BOLD} LIVE LOGS:${NC}\e[K\n"
-
-    # 3. Dynamic Logs (fills remaining height)
-    local log_h=$(( term_h - ${#UI_STEPS[@]} - 10 ))
-    [[ $log_h -lt 3 ]] && log_h=3
+    buf+="]\e[K\n"
     
-    if [ -f "$LOG_FILE" ]; then
+    # ========== SEPARATOR ==========
+    buf+="$(printf '  %.0s─' $(seq 1 $((term_w - 4))))\e[K\n"
+    
+    # ========== STEP TABLE ==========
+    buf+=$(printf "${BOLD}  %-${col_left}s │ %s${NC}\e[K\n" "PROCESS" "STATUS")
+    buf+="$(printf '  %.0s─' $(seq 1 $((term_w - 4))))\e[K\n"
+    
+    for i in "${!UI_STEPS[@]}"; do
+        local marker="  [ ]"
+        local style="${NC}"
+        local state="Pending"
+        
+        if [[ $i -lt $UI_CURRENT_STEP ]]; then
+            marker="  [✓]"
+            style="${LASER_GREEN}"
+            state="Completed"
+        elif [[ $i -eq $UI_CURRENT_STEP ]]; then
+            marker="  [$s]"
+            style="${ELECTRIC_BLUE}${BOLD}"
+            state="${UI_STATUS_MSG:-Processing...}"
+        fi
+        
+        local step_name="${UI_STEPS[$i]}"
+        buf+=$(printf "${style}%-${col_left}s${NC} │ %-${col_right}s\e[K\n" "$marker $step_name" "$state")
+    done
+    
+    # ========== SEPARATOR ==========
+    buf+="$(printf '  %.0s─' $(seq 1 $((term_w - 4))))\e[K\n"
+    
+    # ========== LIVE LOGS ==========
+    buf+="${BOLD}  📋 LIVE LOGS:${NC}\e[K\n"
+    buf+="$(printf '  %.0s─' $(seq 1 $((term_w - 4))))\e[K\n"
+    
+    # Calculate available log lines
+    local header_lines=15
+    local log_h=$(( term_h - header_lines - ${#UI_STEPS[@]} ))
+    [[ $log_h -lt 3 ]] && log_h=3
+    [[ $log_h -gt 15 ]] && log_h=15
+    
+    if [[ -f "$UI_LOG_FILE" ]]; then
         while IFS= read -r line; do
-            buf+=$(printf "  > %-${col_right}s\e[K\n" "${line:0:$((term_w-5))}")
-        done < <(tail -n "$log_h" "$LOG_FILE")
+            # Truncate long lines
+            local display_line="${line:0:$((term_w - 6))}"
+            buf+=$(printf "  ${DIM}▸${NC} %s\e[K\n" "$display_line")
+        done < <(tail -n "$log_h" "$UI_LOG_FILE" 2>/dev/null)
+    else
+        buf+="  ${DIM}(No logs yet)${NC}\e[K\n"
     fi
-
-    # 4. Atomic Update
+    
+    # ========== ATOMIC RENDER ==========
+    # Move to top-left, print buffer, clear to end of screen
     tput cup 0 0
-    echo -ne "$buf"
+    printf "%b" "$buf"
     tput ed
+}
+
+# ============================================================================
+# MINIMAL STREAM MODE (for narrow terminals)
+# ============================================================================
+
+ui_draw_minimal() {
+    local s="${SPIN_CHARS:SPIN_IDX:1}"
+    SPIN_IDX=$(( (SPIN_IDX + 1) % ${#SPIN_CHARS} ))
+    
+    local total_steps=${#UI_STEPS[@]}
+    local current_step_name="${UI_STEPS[$UI_CURRENT_STEP]:-Unknown}"
+    
+    printf "\r${ELECTRIC_BLUE}${BOLD}[$s]${NC} GingerOS [%d/%d] %s... \e[K" \
+        "$((UI_CURRENT_STEP + 1))" "$total_steps" "$current_step_name"
+}
+
+# ============================================================================
+# BACKGROUND MONITOR LOOP
+# ============================================================================
+
+ui_monitor() {
+    # This function runs in the background and continuously updates the UI
+    # by reading from the state file
+    
+    # Disable line wrap and hide cursor
+    printf "\e[?7l"
+    tput civis
+    
+    # Initial clear
+    clear
+    
+    while true; do
+        # Load current state
+        ui_load_state
+        
+        # Check terminal width and render appropriately
+        if check_width; then
+            ui_draw_full_dashboard
+        else
+            ui_draw_minimal
+        fi
+        
+        # Refresh rate: 10 FPS for smooth spinner
+        sleep 0.1
+    done
+}
+
+# ============================================================================
+# PUBLIC API
+# ============================================================================
+
+ui_init() {
+    # Initialize UI with step names
+    # Usage: ui_init "Step 1" "Step 2" "Step 3"
+    
+    UI_STEPS=("$@")
+    UI_CURRENT_STEP=0
+    UI_STATUS_MSG=""
+    
+    # Create log file if it doesn't exist
+    touch "$UI_LOG_FILE"
+    
+    # Save initial state
+    ui_save_state
+    
+    # Start background monitor
+    ui_monitor &
+    UI_MONITOR_PID=$!
+    
+    # Give monitor time to start
+    sleep 0.2
+}
+
+ui_step() {
+    # Move to the next step
+    # Usage: ui_step <step_number> [status_message]
+    
+    UI_CURRENT_STEP=$1
+    UI_STATUS_MSG="${2:-Processing...}"
+    ui_save_state
+}
+
+ui_log() {
+    # Append message to log file
+    # Usage: ui_log "message"
+    
+    if [[ -n "$1" ]]; then
+        echo "[$(date +'%H:%M:%S')] $1" >> "$UI_LOG_FILE"
+    fi
+}
+
+ui_status() {
+    # Update status message for current step
+    # Usage: ui_status "Downloading packages..."
+    
+    UI_STATUS_MSG="$1"
+    ui_save_state
+}
+
+ui_finish() {
+    # Mark current step as complete and stop UI
+    
+    UI_CURRENT_STEP=${#UI_STEPS[@]}
+    ui_save_state
+    sleep 0.5
+    
+    # Cleanup will be called by trap
+}
+
+# ============================================================================
+# SUDO KEEPALIVE
+# ============================================================================
+
+ui_sudo_keepalive() {
+    # Keep sudo credentials fresh to prevent password prompts
+    # Usage: ui_sudo_keepalive &
+    
+    while true; do
+        sudo -v
+        sleep 60
+    done
 }
