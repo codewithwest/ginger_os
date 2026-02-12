@@ -89,15 +89,24 @@ ui_draw_header() {
     # Move to top-left
     tput cup 0 0
     echo -e "${ELECTRIC_BLUE}${BOLD}"
-    echo "  _____ _                         ____   ____"
-    echo " / ____(_)                       / __ \ / ____|"
-    echo "| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ "
-    echo "| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\"
-    echo "| |__| | | | | | (_| |  __/ |   | |__| |____) |"
-    echo " \_____|_|_| |_|\__, |\___|_|    \____/|_____/ "
-    echo "                 __/ |                         "
-    echo "                |___/         v1.0             "
-    echo -e "${NC}\e[K"
+    
+    local lines=$(tput lines)
+    if [ "$lines" -lt 30 ]; then
+        # Compact Header for short terminals
+        echo "  GingerOS Build System v1.0"
+        echo -e "${NC}\e[K"
+    else
+        # Full ASCII Header
+        echo "  _____ _                         ____   ____"
+        echo " / ____(_)                       / __ \ / ____|"
+        echo "| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ "
+        echo "| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\"
+        echo "| |__| | | | | | (_| |  __/ |   | |__| |____) |"
+        echo " \_____|_|_| |_|\__, |\___|_|    \____/|_____/ "
+        echo "                 __/ |                         "
+        echo "                |___/         v1.0             "
+        echo -e "${NC}\e[K"
+    fi
 }
 
 get_spinner() {
@@ -122,6 +131,12 @@ ui_draw_dashboard() {
     printf "${BOLD} %-${LEFT_COL_WIDTH}s | %s${NC}\e[K\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS"
     echo -e "--------------------------+-----------------------------------------------------\e[K"
 
+    # Calculate current usage to adjust log lines dynamically
+    local term_lines=$(tput lines)
+    local header_lines=6 # Approx for compact
+    [ "$term_lines" -ge 30 ] && header_lines=14 # Approx for full
+    
+    # Render table
     for i in "${!UI_STEPS[@]}"; do
         local marker=" [ ]"
         local style="${NC}"
@@ -149,6 +164,7 @@ ui_draw_dashboard() {
             fi
         fi
         printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %-${RIGHT_COL_WIDTH}b\e[K\n" "$marker ${UI_STEPS[$i]}" "$right_content"
+        header_lines=$((header_lines + 1))
         
         # --- Handle Extra Lines for Sub-steps ---
         if [ "$i" -eq "$UI_CURRENT_STEP" ] && [ ${#SUBSTEPS_ORDER[@]} -gt 1 ]; then
@@ -172,6 +188,7 @@ ui_draw_dashboard() {
                 fi
 
                 printf " %-${LEFT_COL_WIDTH}s | ${sub_style}%-${RIGHT_COL_WIDTH}b${NC}\e[K\n" "" "$sub_marker $sub"
+                header_lines=$((header_lines + 1))
             done
         fi
     done
@@ -179,24 +196,28 @@ ui_draw_dashboard() {
     echo -e "--------------------------+-----------------------------------------------------\e[K"
     echo -e "${BOLD} LIVE OUTPUT:${NC}\e[K"
     echo -e "--------------------------------------------------------------------------------\e[K"
+    header_lines=$((header_lines + 3)) # Footer borders + title
     
+    # Cap Log Lines
+    local available_lines=$((term_lines - header_lines - 1)) # -1 (bottom border)
+    local target_log_lines=$LOG_LINES
+    if [ "$available_lines" -lt 1 ]; then
+        target_log_lines=0
+    elif [ "$available_lines" -lt "$LOG_LINES" ]; then
+        target_log_lines=$available_lines
+    fi
+
+    # Render Logs
     local lines_printed=0
-    if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
-        # Use tac to show newest lines or stick to tail? User wants live output. 
-        # Tail is correct.
-        # Clean non-printable chars to avoid graphical glitches
+    if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ] && [ "$target_log_lines" -gt 0 ]; then
         while read -r line; do
-            # Format: Truncate to 76 chars, clean unicode/ansi if needed (but we want color from logs if any)
-            # Just ensure no wrapping
-            # Strip ANSI codes for length calc? No, that's complex in bash.
-            # Just strict truncation for safety.
             local clean_line=$(echo "$line" | tr -d '\r' | cut -c 1-76)
             printf "  %s\e[K\n" "$clean_line"
             ((lines_printed++))
-        done < <(tail -n $LOG_LINES "$LOG_FILE")
+        done < <(tail -n $target_log_lines "$LOG_FILE")
     fi
-    while [ $lines_printed -lt $LOG_LINES ]; do echo -e "\e[K"; ((lines_printed++)); done
-    echo -e "--------------------------------------------------------------------------------\e[K"
+    # Fill empty log space
+    while [ $lines_printed -lt $target_log_lines ]; do echo -e "\e[K"; ((lines_printed++)); done
     
-    # Don't restore cursor immediately, keep it hidden until exit
+    echo -e "--------------------------------------------------------------------------------\e[K"
 }
