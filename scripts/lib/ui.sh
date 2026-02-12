@@ -1,4 +1,5 @@
 #!/bin/bash
+# GingerOS UI Library
 
 # --- Colors ---
 ELECTRIC_BLUE='\033[38;5;39m'
@@ -7,21 +8,21 @@ LASER_RED='\033[38;5;196m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-# --- Layout ---
+# --- Layout Config ---
 LEFT_COL_WIDTH=25
 RIGHT_COL_WIDTH=55
-LOG_LINES=10
+LOG_LINES=8
 
+# --- UI State ---
 UI_STEPS=()
 UI_CURRENT_STEP=0
 CURRENT_PKG="Waiting..."
 LOG_FILE=""
+SPIN_IDX=0
 
-ui_init_dashboard() { UI_STEPS=("$@"); }
+# --- Functions ---
 
-ui_draw_dashboard() {
-    tput cup 0 0
-    # Logo
+ui_draw_header() {
     echo -e "${ELECTRIC_BLUE}${BOLD}"
     echo "  _____ _                         ____   ____"
     echo " / ____(_)                       / __ \ / ____|"
@@ -29,8 +30,22 @@ ui_draw_dashboard() {
     echo "| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\"
     echo "| |__| | | | | | (_| |  __/ |   | |__| |____) |"
     echo " \_____|_|_| |_|\__, |\___|_|    \____/|_____/ "
-    echo "                |___/         v1.0             ${NC}\e[K"
+    echo "                 __/ |                         "
+    echo "                |___/         v1.0             "
+    echo -e "${NC}\e[K"
+}
 
+get_spinner() {
+    local chars="/-\|"
+    local char="${chars:$SPIN_IDX:1}"
+    SPIN_IDX=$(( (SPIN_IDX + 1) % 4 ))
+    echo "$char"
+}
+
+ui_draw_dashboard() {
+    tput cup 0 0
+    ui_draw_header
+    
     echo -e "--------------------------------------------------------------------------------\e[K"
     printf "${BOLD} %-${LEFT_COL_WIDTH}s | %s${NC}\e[K\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS"
     echo -e "--------------------------+-----------------------------------------------------\e[K"
@@ -39,10 +54,12 @@ ui_draw_dashboard() {
         local marker=" [ ]"
         local style="${NC}"
         local right_content=""
+
         if [ "$i" -lt "$UI_CURRENT_STEP" ]; then
             marker=" [✓]"; style="${LASER_GREEN}"; right_content="Completed"
         elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
-            marker=" [▶]"; style="${ELECTRIC_BLUE}${BOLD}"; right_content=$(echo "$CURRENT_PKG" | cut -c 1-$RIGHT_COL_WIDTH)
+            marker=" [$(get_spinner)]"; style="${ELECTRIC_BLUE}${BOLD}"
+            right_content=$(echo "$CURRENT_PKG" | cut -c 1-$RIGHT_COL_WIDTH)
         fi
         printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %-${RIGHT_COL_WIDTH}b\e[K\n" "$marker ${UI_STEPS[$i]}" "$right_content"
     done

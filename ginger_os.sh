@@ -1,151 +1,63 @@
 #!/bin/bash
-# GingerOS Build Script - Automated & Fail-proof
-# This script manages the entire build process with state tracking, spinner, and live logs.
+# GingerOS Main Orchestrator
 
-set -e
-set -o pipefail
-
-# ------------------------------
-# Paths and initialization
-# ------------------------------
+# Secure the Root Path
 GINGER_OS_ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-cd "$GINGER_OS_ROOT"
-
 STATE_DIR="$GINGER_OS_ROOT/.build_state"
 mkdir -p "$STATE_DIR"
 
-LOG_LINES=15  # number of log lines to show in dashboard
+# Source the UI library using absolute path
+source "$GINGER_OS_ROOT/scripts/lib/ui.sh"
 
-# Source common and UI functions
-if [ -f "./scripts/lib/common.sh" ]; then
-    source ./scripts/lib/common.sh
-    source ./scripts/lib/ui.sh
-else
-    echo "Error: ./scripts/lib/common.sh not found."
-    exit 1
-fi
+# Define the build steps for the table
+UI_STEPS=("Prep" "Host Tools" "Phase 1" "Phase 2" "Phase 3" "Kernel")
+UI_CURRENT_STEP=0
 
-# ------------------------------
-# Dashboard setup
-# ------------------------------
-ui_init_dashboard "Prep" "Host Tools" "Environment" "Download" \
-                  "Phase 1" "Phase 2" "Chroot" "Phase 3" "Kernel" "Finalize" "Teardown"
-
-# ------------------------------
-# Map step names to dashboard indices
-# ------------------------------
 get_step_index() {
     case $1 in
-        01*|02*|03*) echo 0 ;; # Prep
-        04*)          echo 2 ;; # Environment
-        05*)          echo 3 ;; # Download
-        06*|07*)      echo 1 ;; # Host Tools
-        09*)          echo 2 ;; # Environment (Setup LFS)
-        10*)          echo 4 ;; # Phase 1
-        11*)          echo 5 ;; # Phase 2
-        12*)          echo 6 ;; # Chroot
-        13*)          echo 7 ;; # Phase 3
-        14*)          echo 8 ;; # Kernel
-        15*)          echo 9 ;; # Finalize
-        16*)          echo 10 ;; # Teardown
-        *)            echo 0 ;; # Fallback
+        "prep") echo 0 ;;
+        "host_tools") echo 1 ;;
+        "phase1") echo 2 ;;
+        "phase2") echo 3 ;;
+        "phase3") echo 4 ;;
+        "kernel") echo 5 ;;
+        *) echo 0 ;;
     esac
 }
-
-# ------------------------------
-# Run a step with spinner + live logs
-# ------------------------------
-ui_run_step() {
-    local CMD="$1"
-    local STEP_NAME="$2"
-    local LOG_FILE="$3"
-
-    : > "$LOG_FILE"
-    bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
-    local PID=$!
-
-    local spinstr='|/-\'
-    local start_time=$(date +%s)
-
-    while kill -0 "$PID" 2>/dev/null; do
-        # spinner frame
-        local frame=${spinstr:0:1}
-        spinstr=${spinstr:1}${frame}
-
-        # elapsed time
-        local now=$(date +%s)
-        local elapsed=$((now - start_time))
-        local min=$((elapsed / 60))
-        local sec=$((elapsed % 60))
-
-        # print spinner + step + elapsed
-        printf "\r ${ELECTRIC_BLUE}[%c] %s | Elapsed: %02d:%02d${NC}\n" \
-               "$frame" "$STEP_NAME" "$min" "$sec"
-
-        # show last LOG_LINES from log
-        tail -n $LOG_LINES "$LOG_FILE"
-
-        sleep 0.2
-        tput cuu $((LOG_LINES + 2))  # move cursor back
-    done
-
-    wait "$PID"
-    return $?
-}
-
-# ------------------------------
-# Run a build step idempotently
-# ------------------------------
-# ------------------------------
-# Run a build step with dashboard, spinner, pogs, and logs
-# ------------------------------
-# In your main orchestrator script:
 
 run_step() {
     local STEP_NAME="$1"
     local CMD="$2"
-    local STEP_FILE="$STATE_DIR/$STEP_NAME"
     LOG_FILE="$STATE_DIR/$STEP_NAME.log"
-
     UI_CURRENT_STEP=$(get_step_index "$STEP_NAME")
     
-    if [ -f "$STEP_FILE" ]; then return 0; fi
+    # Ensure log is fresh
+    : > "$LOG_FILE"
 
-    # Run command in background
+    # Start the worker in background
     eval "$CMD" >> "$LOG_FILE" 2>&1 &
     local PID=$!
 
-    tput civis # Hide cursor
+    tput civis
     while kill -0 $PID 2>/dev/null; do
-        # Extract the specific LFS package being built for the "Current Status" column
-        # We look for "Building", "Installing", or "Configuring" in the logs
-        CURRENT_PKG=$(tail -n 20 "$LOG_FILE" | grep -Ei "building|installing|checking|making" | tail -n 1 | sed 's/[^[:print:]]//g' | cut -c 1-50)
+        # Extract the current progress from the log
+        CURRENT_PKG=$(tail -n 1 "$LOG_FILE" | sed 's/[^[:print:]]//g' | cut -c 1-50)
         [ -z "$CURRENT_PKG" ] && CURRENT_PKG="Working..."
         
         ui_draw_dashboard
         sleep 0.2
     done
-    tput cnorm # Show cursor
-
+    tput cnorm
+    
     wait $PID
-    local RET=$?
-    if [ $RET -eq 0 ]; then
-        touch "$STEP_FILE"
-    else
-        echo -e "${LASER_RED}Step failed. Log: $LOG_FILE${NC}"
+    if [ $? -ne 0 ]; then
+        echo -e "${LASER_RED}Error in $STEP_NAME. Log: $LOG_FILE${NC}"
         exit 1
     fi
 }
 
-
-# ------------------------------
-# Main Build Pipeline
-# ------------------------------
-ui_draw_header
-echo -e "${ELECTRIC_BLUE}GingerOS Main Build System Engaged.${NC}"
-echo "Ready to assemble the next generation of speed."
-sleep 1
-
+# --- Build Sequence ---
+clear
 run_step "01_permissions" "chmod -R 777 ."
 run_step "02_host_reqs" "bash ./scripts/host/host-requirements-install.sh"
 run_step "03_version_check" "bash ./scripts/host/version-check.sh"
