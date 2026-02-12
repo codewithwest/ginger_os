@@ -21,6 +21,11 @@ SUBSTEPS_ORDER=()
 # --- Functions ---
 
 ui_init_dashboard() {
+    # Respect headless mode (for child processes)
+    if [ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]; then
+        return 0
+    fi
+
     # Optional override for UI_STEPS
     if [ $# -gt 0 ]; then
         UI_STEPS=("$@")
@@ -57,6 +62,13 @@ ui_set_substep() {
 
 ui_log() {
     local msg="$1"
+    
+    # In headless mode (child process), echo to stdout so parent sees it in logs
+    if [ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]; then
+        echo "$msg"
+        return
+    fi
+
     # Basic logging to file if set
     if [ -n "$LOG_FILE" ]; then
         echo "$msg" >> "$LOG_FILE"
@@ -94,6 +106,14 @@ get_spinner() {
 }
 
 ui_draw_dashboard() {
+    # Respect headless mode
+    if [ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]; then
+        # Just echo the current status to stdout/log so parent can read it
+        # But we must avoid flooding. ui_log handles the explicit messages.
+        # Here we do nothing to avoid ANSI corruption.
+        return 0
+    fi
+
     tput cup 0 0
     ui_draw_header
     

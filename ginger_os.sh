@@ -76,7 +76,7 @@ run_step() {
     : > "$LOG_FILE"
 
     # Start the worker in background
-    eval "$CMD" >> "$LOG_FILE" 2>&1 &
+    eval "GINGER_UI_HEADLESS=1 $CMD" >> "$LOG_FILE" 2>&1 &
     local PID=$!
 
     tput civis
