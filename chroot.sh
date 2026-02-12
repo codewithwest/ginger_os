@@ -14,6 +14,7 @@ mkdir -p $LFS/{dev,proc,sys,run}
 
 # Mount with safety checks
 mountpoint -q $LFS/dev || mount -v --bind /dev $LFS/dev
+mkdir -p $LFS/dev/pts
 mountpoint -q $LFS/dev/pts || mount -v --bind /dev/pts $LFS/dev/pts
 mountpoint -q $LFS/proc || mount -vt proc proc $LFS/proc
 mountpoint -q $LFS/sys || mount -vt sysfs sysfs $LFS/sys
