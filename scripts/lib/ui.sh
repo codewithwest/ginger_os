@@ -14,6 +14,12 @@ RIGHT_COL_WIDTH=55
 LOG_LINES=8
 
 # --- UI State ---
+UI_STEPS=()
+UI_CURRENT_STEP=0
+CURRENT_PKG="Waiting..."
+LOG_FILE=""
+SPIN_IDX=0
+
 # --- New Sub-step State ---
 declare -A SUBSTEP_STATUS
 SUBSTEPS_ORDER=()
@@ -110,11 +116,19 @@ ui_draw_header_buffer() {
     echo -ne "$buffer"
 }
 
+get_spinner() {
+    local chars="/-\|"
+    echo "${chars:$SPIN_IDX:1}"
+}
+
 ui_draw_dashboard() {
     # Respect headless mode
     if [ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]; then
         return 0
     fi
+    
+    # Increment spinner global state once per frame
+    SPIN_IDX=$(( (SPIN_IDX + 1) % 4 ))
 
     local term_lines=$(tput lines)
     local buffer=""
