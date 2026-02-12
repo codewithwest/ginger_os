@@ -56,34 +56,81 @@ if [ ! -f "$ROOTFS_TAR" ]; then
     ui_error "RootFS tarball not found at $ROOTFS_TAR. Please build GingerOS first."
 fi
 
-ui_log "Extracting binaries from RootFS tarball..."
-# Extract essential directories from the tarball
-tar -xzf "$ROOTFS_TAR" -C "$INITRD_WORK" --wildcards \
-    './bin/*' './sbin/*' './usr/bin/*' './usr/sbin/*' \
-    './lib/*' './lib64/*' './usr/lib/*' \
-    2>/dev/null || true
+# Create a temporary extraction directory
+TEMP_EXTRACT="$GINGER_ROOT/temp_rootfs_extract"
+sudo rm -rf "$TEMP_EXTRACT"
+mkdir -p "$TEMP_EXTRACT"
 
-# Ensure we have the critical binaries
-CRITICAL_BINS=(bash sh mount umount mkdir ls cp mv rm cat grep sed awk tar gzip)
+ui_log "Extracting minimal binaries from RootFS tarball..."
+# Extract ONLY the essential binaries we need (not entire directories)
+ESSENTIAL_TOOLS=(bash sh mount umount mkdir ls cp mv rm cat grep sed awk tar gzip blkid parted lsblk fdisk mke2fs mkfs.ext4 chroot findmnt sync)
+
+for tool in "${ESSENTIAL_TOOLS[@]}"; do
+    # Extract specific binary from tarball
+    tar -xzf "$ROOTFS_TAR" -C "$TEMP_EXTRACT" --wildcards \
+        "./bin/$tool" "./sbin/$tool" "./usr/bin/$tool" "./usr/sbin/$tool" \
+        2>/dev/null || true
+done
+
+# Copy extracted binaries to initrd
+if [ -d "$TEMP_EXTRACT/bin" ]; then
+    cp -av "$TEMP_EXTRACT/bin/"* "$INITRD_WORK/bin/" 2>/dev/null || true
+fi
+if [ -d "$TEMP_EXTRACT/sbin" ]; then
+    cp -av "$TEMP_EXTRACT/sbin/"* "$INITRD_WORK/bin/" 2>/dev/null || true
+fi
+if [ -d "$TEMP_EXTRACT/usr/bin" ]; then
+    cp -av "$TEMP_EXTRACT/usr/bin/"* "$INITRD_WORK/bin/" 2>/dev/null || true
+fi
+if [ -d "$TEMP_EXTRACT/usr/sbin" ]; then
+    cp -av "$TEMP_EXTRACT/usr/sbin/"* "$INITRD_WORK/bin/" 2>/dev/null || true
+fi
+
+# Verify critical binaries exist, fallback to host if needed
+CRITICAL_BINS=(bash sh mount mkdir)
 for bin in "${CRITICAL_BINS[@]}"; do
-    if [ ! -f "$INITRD_WORK/bin/$bin" ] && [ ! -f "$INITRD_WORK/usr/bin/$bin" ]; then
-        ui_log "Warning: $bin not found in tarball, attempting fallback..."
+    if [ ! -f "$INITRD_WORK/bin/$bin" ]; then
+        ui_log "Warning: $bin missing, using host binary..."
         FALLBACK=$(which "$bin" 2>/dev/null || true)
         if [ -n "$FALLBACK" ]; then
             cp -v "$FALLBACK" "$INITRD_WORK/bin/"
+        else
+            ui_error "Critical binary $bin not found!"
         fi
     fi
 done
 
-# Copy additional tools if they exist in the tarball
-EXTRA_TOOLS=(blkid parted lsblk fdisk udevadm wipefs mke2fs mkfs.ext4 grub-install grub-probe grub-mkconfig chroot findmnt)
-for tool in "${EXTRA_TOOLS[@]}"; do
-    # Check if already extracted
-    [ -f "$INITRD_WORK/bin/$tool" ] || [ -f "$INITRD_WORK/sbin/$tool" ] || [ -f "$INITRD_WORK/usr/bin/$tool" ] || [ -f "$INITRD_WORK/usr/sbin/$tool" ] && continue
+# Library dependency solver - only copy libraries that are actually needed
+ui_log "Resolving minimal library dependencies..."
+for file in "$INITRD_WORK/bin/"*; do
+    [ -f "$file" ] || continue
     
-    # Try to extract from tarball
-    tar -xzf "$ROOTFS_TAR" -C "$INITRD_WORK" --wildcards "*/$tool" 2>/dev/null || true
+    # Get list of required libraries
+    LIBS=$(ldd "$file" 2>/dev/null | grep -o '/[^ ]*' | grep '\.so' || true)
+    
+    for lib in $LIBS; do
+        LIB_BASENAME=$(basename "$lib")
+        TARGET_DIR="$INITRD_WORK/$(dirname "$lib" | sed 's|^/||')"
+        
+        # Skip if already copied
+        [ -f "$TARGET_DIR/$LIB_BASENAME" ] && continue
+        
+        mkdir -p "$TARGET_DIR"
+        
+        # Try to extract from tarball first
+        tar -xzf "$ROOTFS_TAR" -C "$TEMP_EXTRACT" --wildcards ".${lib}" 2>/dev/null || true
+        
+        if [ -f "$TEMP_EXTRACT$lib" ]; then
+            cp -Lv "$TEMP_EXTRACT$lib" "$TARGET_DIR/" 2>/dev/null || true
+        elif [ -f "$lib" ]; then
+            # Fallback to host library
+            cp -Lv "$lib" "$TARGET_DIR/" 2>/dev/null || true
+        fi
+    done
 done
+
+# Clean up temp extraction
+sudo rm -rf "$TEMP_EXTRACT"
 
 # Step 3: Packaging
 ui_step 3
