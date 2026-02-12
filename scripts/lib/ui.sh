@@ -91,29 +91,26 @@ ui_error() {
     exit 1
 }
 
-ui_draw_header_buffer() {
-    # Returns header content as string
-    local buffer=""
-    buffer+="${ELECTRIC_BLUE}${BOLD}\n"
+ui_draw_header_to_buffer() {
+    UI_BUFFER+="${ELECTRIC_BLUE}${BOLD}\n"
     
     local lines=$(tput lines)
     if [ "$lines" -lt 30 ]; then
         # Compact Header
-        buffer+="  GingerOS Build System v1.0\n"
-        buffer+="${NC}\e[K\n"
+        UI_BUFFER+="  GingerOS Build System v1.0\n"
+        UI_BUFFER+="${NC}\e[K\n"
     else
         # Full Header
-        buffer+="  _____ _                         ____   ____\n"
-        buffer+=" / ____(_)                       / __ \ / ____|\n"
-        buffer+="| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ \n"
-        buffer+="| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\\n"
-        buffer+="| |__| | | | | | (_| |  __/ |   | |__| |____) |\n"
-        buffer+=" \_____|_|_| |_|\__, |\___|_|    \____/|_____/ \n"
-        buffer+="                 __/ |                         \n"
-        buffer+="                |___/         v1.0             \n"
-        buffer+="${NC}\e[K\n"
+        UI_BUFFER+="  _____ _                         ____   ____\n"
+        UI_BUFFER+=" / ____(_)                       / __ \ / ____|\n"
+        UI_BUFFER+="| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ \n"
+        UI_BUFFER+="| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\\n"
+        UI_BUFFER+="| |__| | | | | | (_| |  __/ |   | |__| |____) |\n"
+        UI_BUFFER+=" \_____|_|_| |_|\__, |\___|_|    \____/|_____/ \n"
+        UI_BUFFER+="                 __/ |                         \n"
+        UI_BUFFER+="                |___/         v1.0             \n"
+        UI_BUFFER+="${NC}\e[K\n"
     fi
-    echo -ne "$buffer"
 }
 
 get_spinner() {
@@ -131,21 +128,18 @@ ui_draw_dashboard() {
     SPIN_IDX=$(( (SPIN_IDX + 1) % 4 ))
 
     local term_lines=$(tput lines)
-    local buffer=""
+    UI_BUFFER="" # Global buffer
     
     # 1. Build Header
-    buffer+=$(ui_draw_header_buffer)
+    ui_draw_header_to_buffer
     
-    buffer+="--------------------------------------------------------------------------------\e[K\n"
-    buffer+=$(printf "${BOLD} %-${LEFT_COL_WIDTH}s | %s${NC}\e[K\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS")
-    buffer+="--------------------------+-----------------------------------------------------\e[K\n"
+    UI_BUFFER+="--------------------------------------------------------------------------------\e[K\n"
+    # Use printf -v to print to variable if bash 4.3+, but let's stick to string append for compat
+    UI_BUFFER+=$(printf "${BOLD} %-${LEFT_COL_WIDTH}s | %s${NC}\e[K" "SYSTEM PROGRESS" "CURRENT PHASE STATUS")
+    UI_BUFFER+="\n"
+    UI_BUFFER+="--------------------------+-----------------------------------------------------\e[K\n"
 
     # 2. Build Table
-    # We need to calculate how many lines the table takes to reserve space for logs
-    # But since resizing logs is dynamic, we do a two-pass or just accurate accounting.
-    # Let's just build the table and see how tall it is.
-    
-    local table_buffer=""
     for i in "${!UI_STEPS[@]}"; do
         local marker=" [ ]"
         local style="${NC}"
@@ -169,7 +163,9 @@ ui_draw_dashboard() {
             fi
         fi
         
-        table_buffer+=$(printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %-${RIGHT_COL_WIDTH}b\e[K\n" "$marker ${UI_STEPS[$i]}" "$right_content")
+        # Append Line
+        UI_BUFFER+=$(printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %-${RIGHT_COL_WIDTH}b\e[K" "$marker ${UI_STEPS[$i]}" "$right_content")
+        UI_BUFFER+="\n"
         
         # Sub-steps
         if [ "$i" -eq "$UI_CURRENT_STEP" ] && [ ${#SUBSTEPS_ORDER[@]} -gt 1 ]; then
@@ -183,19 +179,18 @@ ui_draw_dashboard() {
                 [ "$status" == "done" ] && { sub_marker="[✓]"; sub_style="${LASER_GREEN}"; }
                 [ "$status" == "failed" ] && { sub_marker="[X]"; sub_style="${LASER_RED}"; }
 
-                table_buffer+=$(printf " %-${LEFT_COL_WIDTH}s | ${sub_style}%-${RIGHT_COL_WIDTH}b${NC}\e[K\n" "" "$sub_marker $sub")
+                UI_BUFFER+=$(printf " %-${LEFT_COL_WIDTH}s | ${sub_style}%-${RIGHT_COL_WIDTH}b${NC}\e[K" "" "$sub_marker $sub")
+                UI_BUFFER+="\n"
             done
         fi
     done
     
-    buffer+="$table_buffer"
-    buffer+="--------------------------+-----------------------------------------------------\e[K\n"
-    buffer+="${BOLD} LIVE OUTPUT:${NC}\e[K\n"
-    buffer+="--------------------------------------------------------------------------------\e[K\n"
+    UI_BUFFER+="--------------------------+-----------------------------------------------------\e[K\n"
+    UI_BUFFER+="${BOLD} LIVE OUTPUT:${NC}\e[K\n"
+    UI_BUFFER+="--------------------------------------------------------------------------------\e[K\n"
 
     # 3. Calculate Log Space
-    # Count current lines in buffer (approximate by newlines)
-    local current_line_count=$(echo -ne "$buffer" | wc -l)
+    local current_line_count=$(echo -ne "$UI_BUFFER" | wc -l)
     local available_lines=$((term_lines - current_line_count - 2)) # Reserve 1 for bottom border, 1 safety
     
     local target_log_lines=$LOG_LINES
@@ -205,26 +200,41 @@ ui_draw_dashboard() {
     # 4. Build Logs
     local lines_printed=0
     if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ] && [ "$target_log_lines" -gt 0 ]; then
-        # We need to capture exact lines
         local log_content=$(tail -n $target_log_lines "$LOG_FILE")
         while IFS= read -r line; do
             local clean_line=$(echo "$line" | tr -d '\r' | cut -c 1-76)
-            buffer+=$(printf "  %s\e[K\n" "$clean_line")
+            UI_BUFFER+=$(printf "  %s\e[K" "$clean_line")
+            UI_BUFFER+="\n"
             ((lines_printed++))
         done <<< "$log_content"
     fi
     # Fill filler
     while [ $lines_printed -lt $target_log_lines ]; do
-        buffer+="\e[K\n"
+        UI_BUFFER+="\e[K\n"
         ((lines_printed++))
     done
     
-    buffer+="--------------------------------------------------------------------------------\e[K"
+    # 5. Global Progress Bar (Footer)
+    local total_steps=${#UI_STEPS[@]}
+    local percent=0
+    if [ "$total_steps" -gt 0 ]; then
+        percent=$(( (UI_CURRENT_STEP * 100) / total_steps ))
+    fi
+    local filled=$(( percent / 4 ))
+    local empty=$(( 25 - filled ))
+    
+    # Construct progress bar string
+    local prog_bar=$(printf " Progress: [${LASER_GREEN}%s${NC}%s] %d%%\e[K" \
+           "$(printf '#%.0s' $(seq 1 $filled 2>/dev/null))" \
+           "$(printf ' %.0s' $(seq 1 $empty 2>/dev/null))" \
+           "$percent")
+    
+    UI_BUFFER+="$prog_bar\n"
+    UI_BUFFER+="--------------------------------------------------------------------------------\e[K"
 
     # 5. ATOMIC PRINT
-    # Hide cursor, move to 0,0, print buffer, clear rest of screen
     tput civis
     tput cup 0 0
-    echo -ne "$buffer"
+    echo -ne "$UI_BUFFER"
     tput ed
 }
