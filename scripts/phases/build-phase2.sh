@@ -1,44 +1,37 @@
 #!/bin/bash
 # GingerOS - Phase 2 Orchestrator
-# Spinner + live logs + horizontal package view
+# Runs inside the LFS user environment
 
 set -e
 set -o pipefail
 
+# Calculate script directory
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+PHASE2_TOOLS_DIR="$SCRIPT_DIR/../phase2-tools"
 
-# ------------------------------
-# Source UI + common functions
-# ------------------------------
-source "$SCRIPT_DIR/../lib/ui.sh"
-source "$SCRIPT_DIR/../lib/common.sh"
+# Collect scripts
+SCRIPTS=("$PHASE2_TOOLS_DIR"/*.sh)
 
-LOG_DIR="${GINGER_LOGS:-$SCRIPT_DIR/../logs}"
-mkdir -p "$LOG_DIR"
-
-
-# ------------------------------
-# Collect scripts and package names
-# ------------------------------
-SCRIPTS=("$SCRIPT_DIR/../phase2-tools"/*.sh)
-# ------------------------------
-# Build each package
-# ------------------------------
-# Simplified Phase 2 Orchestrator snippet:
-for i in "${!SCRIPTS[@]}"; do
-    PKG_NAME="${PKG_NAMES[$i]}"
+for script in "${SCRIPTS[@]}"; do
+    PKG_NAME=$(basename "$script" .sh)
     
-    echo "Building: $PKG_NAME (Temp Tools)"
+    echo "Building: $PKG_NAME (Temporary Tools)"
 
-    if [ -f "$LFS/var/lib/ginger/$PKG_NAME-temp.built" ]; then
+    # Check if already built
+    if [ -f "/mnt/lfs/var/lib/ginger/$PKG_NAME-temp.built" ]; then
+        echo "Package $PKG_NAME already built, skipping."
         continue
     fi
 
-    bash "${SCRIPTS[$i]}"
-    
-    if [ $? -eq 0 ]; then
-        touch "$LFS/var/lib/ginger/$PKG_NAME-temp.built"
+    # Run the build script
+    if bash "$script"; then
+        mkdir -p "/mnt/lfs/var/lib/ginger"
+        touch "/mnt/lfs/var/lib/ginger/$PKG_NAME-temp.built"
+        echo "Successfully built: $PKG_NAME"
     else
+        echo "Error: Failed to build $PKG_NAME"
         exit 1
     fi
 done
+
+echo "Phase 2 Cross Tools Build Complete."

@@ -52,7 +52,7 @@ while read -r url; do
     sleep 0.1 # Ensure UI has time to render and user sees the sequence
 done < <(grep -v '^#' wget-list)
 
-ui_log "Acquiring extra BLFS tools..."
+ui_log "Downloading extra BLFS tools..."
 extra_urls=(
     "https://files.libburnia-project.org/releases/libburn-1.5.6.tar.gz"
     "https://files.libburnia-project.org/releases/libisofs-1.5.6.tar.gz"
@@ -61,7 +61,7 @@ extra_urls=(
 
 for url in "${extra_urls[@]}"; do
     pkg=$(basename "$url")
-    ui_log "Acquiring extra: $pkg..."
+    ui_log "Downloading extra: $pkg..."
     wget -q -nc "$url"
 done
 

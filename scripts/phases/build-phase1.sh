@@ -1,25 +1,40 @@
 #!/bin/bash
-source "$SCRIPT_DIR/../lib/ui.sh"
+# GingerOS - Phase 1 Orchestrator
+# Runs inside the LFS user environment
 
-# Note: We don't call ui_draw_dashboard here anymore. 
-# We just print clean status lines that the Main Orchestrator will "catch".
+set -e
+set -o pipefail
 
-for i in "${!SCRIPTS[@]}"; do
-    PKG_NAME="${PKG_NAMES[$i]}"
+# Calculate script directory
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+PHASE1_TOOLS_DIR="$SCRIPT_DIR/../phase1-tools"
+
+# Collect scripts
+SCRIPTS=("$PHASE1_TOOLS_DIR"/*.sh)
+
+# Note: We just print status lines that the Main Orchestrator will log.
+# We don't use the full UI library here because the LFS user environment is minimal.
+
+for script in "${SCRIPTS[@]}"; do
+    PKG_NAME=$(basename "$script" .sh)
     
-    # The Main Orchestrator "sees" this echo and puts it in the table
     echo "Building: $PKG_NAME"
 
-    if [ -f "$LFS/var/lib/ginger/$PKG_NAME.built" ]; then
+    # Check if already built
+    if [ -f "/mnt/lfs/var/lib/ginger/$PKG_NAME.built" ]; then
+        echo "Package $PKG_NAME already built, skipping."
         continue
     fi
 
-    bash "${SCRIPTS[$i]}" > /dev/null 2>&1 # Internal logs handled by main runner
-    
-    if [ $? -eq 0 ]; then
-        touch "$LFS/var/lib/ginger/$PKG_NAME.built"
+    # Run the build script
+    if bash "$script"; then
+        mkdir -p "/mnt/lfs/var/lib/ginger"
+        touch "/mnt/lfs/var/lib/ginger/$PKG_NAME.built"
+        echo "Successfully built: $PKG_NAME"
     else
-        echo "Error: $PKG_NAME failed"
+        echo "Error: Failed to build $PKG_NAME"
         exit 1
     fi
 done
+
+echo "Phase 1 Toolchain Build Complete."
