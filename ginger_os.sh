@@ -144,6 +144,8 @@ run_step "11_phase2_toolchain" "bash scripts/host/run-as-lfs.sh $GINGER_OS_ROOT/
 # 12. Chroot Mounts
 run_step "12_chroot_mounts" "bash chroot.sh"
 
+sudo ls "$LFS/scripts"
+
 # 13. Phase 3 - System Tools
 run_step "13_phase3_system" "sudo chroot \"$LFS\" /bin/bash -c \"bash scripts/phases/build-phase3.sh\""
 

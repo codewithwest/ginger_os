@@ -11,6 +11,11 @@ case $(uname -m) in
   x86_64) chown --from lfs -R root:root $LFS/lib64 ;;
 esac
 
+if ! mountpoint -q "$LFS/scripts"; then
+    sudo mkdir -p "$LFS/scripts"
+    sudo mount --bind "$GINGER_OS_ROOT/scripts" "$LFS/scripts"
+fi
+
 # Create all necessary mount point directories first
 mkdir -p $LFS/{dev,proc,sys,run}
 mkdir -p $LFS/dev/{pts,shm}
