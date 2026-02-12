@@ -16,6 +16,7 @@ source "$SCRIPT_DIR/../lib/common.sh"
 LOG_DIR="${GINGER_LOGS:-$SCRIPT_DIR/../logs}"
 mkdir -p "$LOG_DIR"
 
+
 # ------------------------------
 # Collect scripts and package names
 # ------------------------------
@@ -30,6 +31,36 @@ ui_init_dashboard "Phase 2"
 
 ui_draw_header
 echo -e "${LASER_GREEN}${BOLD}Starting Phase 2: Temporary Tools...${NC}"
+
+# Draw dashboard + pogs + last LOG_LINES
+draw_phase2_dashboard() {
+    clear  # clear screen once per refresh
+    # Header / ASCII logo
+    echo -e "${ELECTRIC_BLUE}${BOLD}"
+    echo " _____ _                         ____   ____"
+    echo " / ____(_)                       / __ \ / ____|"
+    echo "| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ "
+    echo "| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\"
+    echo "| |__| | | | | | (_| |  __/ |   | |__| |____) |"
+    echo " \\_____|_|_| |_|\__, |\___|_|    \\____/|_____/"
+    echo "                 __/ |                         "
+    echo "                |___/         v1.0              "
+    echo -e "${NC}\n"
+
+    # Phase + pogs row
+    echo -n "SYSTEM PROGRESS        | CURRENT PHASE PACKAGES"
+    echo -e "\n-----------------------+---------------------------------------------------------------------------------"
+
+    # pogs row (single line)
+    printf "${ELECTRIC_BLUE}[▶] Phase 2${NC} | "
+    for pog in "${CURRENT_PHASE_POGS[@]}"; do
+        printf "%s " "$pog"
+    done
+    echo -e "\n-----------------------+---------------------------------------------------------------------------------\n"
+
+    # Last log lines
+    tail -n $LOG_LINES "$1"
+}
 
 # ------------------------------
 # Build each package
@@ -51,8 +82,9 @@ for i in "${!SCRIPTS[@]}"; do
             CURRENT_PHASE_POGS+=("[ ] ${PKG_NAMES[$j]}")
         fi
     done
-    ui_draw_dashboard
-    echo ""  # leave space for logs
+    draw_phase2_dashboard "$log_file"
+    sleep 0.3
+
 
     # Skip if already built
     if [ -f "$LFS/var/lib/ginger/$PKG_NAME.built" ] || [ -f "$LFS/var/lib/ginger/$PKG_NAME-temp.built" ]; then
