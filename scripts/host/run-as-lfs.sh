@@ -20,6 +20,8 @@ exec sudo runuser -u lfs -- env -i \
   LFS_TGT=$(uname -m)-lfs-linux-gnu \
   PATH=/mnt/lfs/tools/bin:/usr/bin \
   MAKEFLAGS=-j$(nproc) \
+  MOVE_TO_BUILD_DIR="${MOVE_TO_BUILD_DIR:-false}" \
+  GINGER_UI_MASTER_PID="${GINGER_UI_MASTER_PID:-}" \
   GINGER_ROOT="$GINGER_ROOT" \
   GINGER_SOURCES="$GINGER_ROOT/sources" \
   GINGER_LOGS="$GINGER_ROOT/logs" \
