@@ -195,7 +195,12 @@ ui_draw_full_dashboard() {
         fi
         
         local step_name="${UI_STEPS[$i]}"
-        buf+=$(printf "${style}  %-${col_left}s${NC} │ %-${col_right}s\e[K\n" "$marker $step_name" "$state")
+        buf+="${style}  $marker $step_name"
+        # Pad to column width
+        local padding=$((col_left - ${#marker} - ${#step_name} - 2))
+        [[ $padding -gt 0 ]] && buf+="$(printf ' %.0s' $(seq 1 $padding))"
+        buf+="${NC} │ $state\e[K
+"
     done
     
     # ========== SEPARATOR ==========
