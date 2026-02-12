@@ -61,36 +61,30 @@ TEMP_EXTRACT="$GINGER_ROOT/temp_rootfs_extract"
 sudo rm -rf "$TEMP_EXTRACT"
 mkdir -p "$TEMP_EXTRACT"
 
-ui_log "Extracting minimal binaries from RootFS tarball..."
-# Extract ONLY the essential binaries we need (not entire directories)
-ESSENTIAL_TOOLS=(bash sh mount umount mkdir ls cp mv rm cat grep sed awk tar gzip blkid parted lsblk fdisk mke2fs mkfs.ext4 chroot findmnt sync)
+ui_log "Extracting RootFS to temporary location (this may take a moment)..."
+# Extract the ENTIRE tarball ONCE (much faster than multiple extractions)
+tar -xzf "$ROOTFS_TAR" -C "$TEMP_EXTRACT" 2>/dev/null
 
+ui_log "Copying essential binaries..."
+# List of essential tools for the live environment
+ESSENTIAL_TOOLS=(bash sh mount umount mkdir ls cp mv rm cat grep sed awk tar gzip blkid parted lsblk fdisk mke2fs mkfs.ext4 chroot findmnt sync ln chmod chown)
+
+# Copy binaries from the extracted rootfs
 for tool in "${ESSENTIAL_TOOLS[@]}"; do
-    # Extract specific binary from tarball
-    tar -xzf "$ROOTFS_TAR" -C "$TEMP_EXTRACT" --wildcards \
-        "./bin/$tool" "./sbin/$tool" "./usr/bin/$tool" "./usr/sbin/$tool" \
-        2>/dev/null || true
+    # Search in common binary locations
+    for dir in bin sbin usr/bin usr/sbin; do
+        if [ -f "$TEMP_EXTRACT/$dir/$tool" ]; then
+            cp -v "$TEMP_EXTRACT/$dir/$tool" "$INITRD_WORK/bin/"
+            break
+        fi
+    done
 done
-
-# Copy extracted binaries to initrd
-if [ -d "$TEMP_EXTRACT/bin" ]; then
-    cp -av "$TEMP_EXTRACT/bin/"* "$INITRD_WORK/bin/" 2>/dev/null || true
-fi
-if [ -d "$TEMP_EXTRACT/sbin" ]; then
-    cp -av "$TEMP_EXTRACT/sbin/"* "$INITRD_WORK/bin/" 2>/dev/null || true
-fi
-if [ -d "$TEMP_EXTRACT/usr/bin" ]; then
-    cp -av "$TEMP_EXTRACT/usr/bin/"* "$INITRD_WORK/bin/" 2>/dev/null || true
-fi
-if [ -d "$TEMP_EXTRACT/usr/sbin" ]; then
-    cp -av "$TEMP_EXTRACT/usr/sbin/"* "$INITRD_WORK/bin/" 2>/dev/null || true
-fi
 
 # Verify critical binaries exist, fallback to host if needed
 CRITICAL_BINS=(bash sh mount mkdir)
 for bin in "${CRITICAL_BINS[@]}"; do
     if [ ! -f "$INITRD_WORK/bin/$bin" ]; then
-        ui_log "Warning: $bin missing, using host binary..."
+        ui_log "Warning: $bin missing from rootfs, using host binary..."
         FALLBACK=$(which "$bin" 2>/dev/null || true)
         if [ -n "$FALLBACK" ]; then
             cp -v "$FALLBACK" "$INITRD_WORK/bin/"
@@ -100,8 +94,8 @@ for bin in "${CRITICAL_BINS[@]}"; do
     fi
 done
 
-# Library dependency solver - only copy libraries that are actually needed
-ui_log "Resolving minimal library dependencies..."
+ui_log "Resolving library dependencies..."
+# Copy only the libraries that are actually needed
 for file in "$INITRD_WORK/bin/"*; do
     [ -f "$file" ] || continue
     
@@ -117,19 +111,17 @@ for file in "$INITRD_WORK/bin/"*; do
         
         mkdir -p "$TARGET_DIR"
         
-        # Try to extract from tarball first
-        tar -xzf "$ROOTFS_TAR" -C "$TEMP_EXTRACT" --wildcards ".${lib}" 2>/dev/null || true
-        
+        # Try to copy from extracted rootfs first
         if [ -f "$TEMP_EXTRACT$lib" ]; then
-            cp -Lv "$TEMP_EXTRACT$lib" "$TARGET_DIR/" 2>/dev/null || true
+            cp -L "$TEMP_EXTRACT$lib" "$TARGET_DIR/" 2>/dev/null || true
         elif [ -f "$lib" ]; then
             # Fallback to host library
-            cp -Lv "$lib" "$TARGET_DIR/" 2>/dev/null || true
+            cp -L "$lib" "$TARGET_DIR/" 2>/dev/null || true
         fi
     done
 done
 
-# Clean up temp extraction
+ui_log "Cleaning up temporary extraction..."
 sudo rm -rf "$TEMP_EXTRACT"
 
 # Step 3: Packaging
