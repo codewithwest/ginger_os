@@ -184,3 +184,33 @@ ui_password() {
     read -s $var_name
     echo ""
 }
+
+ui_step() {
+    UI_CURRENT_STEP=$1
+    ui_banner
+}
+
+ui_spinner() {
+    local pid=$1
+    local msg=$2
+    local delay=0.1
+    local spinstr='|/-\\'  # note the escaped backslash
+
+    while kill -0 "$pid" 2>/dev/null; do
+        local temp=${spinstr#?}
+        printf "\r ${ELECTRIC_BLUE}[%c] %s${NC}" "${spinstr:0:1}" "$msg"
+        spinstr=$temp${spinstr%"$temp"}
+        sleep "$delay"
+    done
+
+    wait "$pid"
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        echo -e "\r${LASER_GREEN}[✓] $msg completed successfully.${NC}"
+    else
+        echo -e "\r${LASER_RED}[✗] $msg failed!${NC}"
+    fi
+
+    return $exit_code
+}
