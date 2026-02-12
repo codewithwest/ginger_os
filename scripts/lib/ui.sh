@@ -176,3 +176,25 @@ run_step() {
         exit 1
     fi
 }
+
+
+# ------------------------------
+# Basic UI helpers
+# ------------------------------
+ui_log() {
+    echo -e "${LASER_GREEN}[INFO]${NC} $1"
+}
+
+ui_error() {
+    echo -e "${LASER_RED}[ERROR]${NC} $1"
+    exit 1
+}
+
+ui_confirm() {
+    local msg=$1
+    echo -ne "${LASER_GREEN}${BOLD}$msg (type 'yes'): ${NC}"
+    read CONFIRM
+    if [ "$CONFIRM" != "yes" ]; then
+        ui_error "Aborted by user."
+    fi
+}
