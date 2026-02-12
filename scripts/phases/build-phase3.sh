@@ -2,19 +2,17 @@
 # GingerOS - Phase 3 (Inside Chroot) Orchestrator
 # This script is meant to be run INSIDE the chroot environment.
 
-# We can't source common.sh easily from here because paths have changed.
-# But inside chroot, / is /mnt/lfs.
-# We expect common.sh to be at /scripts/../lib/common.sh (relative to host $LFS)
-
-# Re-define a simple log for inside chroot if common.sh isn't accessible
-log() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] [$1] $2"
-}
-
+# Inside chroot, we need to source the environment
+# The /scripts directory is bind-mounted from the host
+source /scripts/lib/common.sh
 source /scripts/lib/ui.sh
 
 set -e
 set -o pipefail
+
+# Log directory for build logs
+LOG_DIR="/var/log/ginger"
+mkdir -p "$LOG_DIR"
 
 ui_init_dashboard "Base Setup" "System Libs" "Core Utils" "Shell & Env" "Final Tools"
 ui_log "Inside Chroot: Starting Phase 3 (Final System Build)..."

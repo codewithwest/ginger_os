@@ -1,13 +1,14 @@
 #!/bin/bash
 # GingerOS - Main Build Orchestrator
 
-source "$(dirname "$(readlink -f "$0")")/../lib/ui.sh"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+source "$SCRIPT_DIR/../lib/ui.sh"
 
 set -e
 set -o pipefail
 
 # Collect package names for the dashboard
-SCRIPTS=(../phase2-tools/*.sh)
+SCRIPTS=("$SCRIPT_DIR/../phase2-tools"/*.sh)
 PKG_NAMES=()
 for s in "${SCRIPTS[@]}"; do
     PKG_NAMES+=($(basename "$s" .sh | cut -d'-' -f2-))
