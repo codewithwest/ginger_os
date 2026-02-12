@@ -99,68 +99,41 @@ ui_run_step() {
 # ------------------------------
 # Run a build step with dashboard, spinner, pogs, and logs
 # ------------------------------
+# In your main orchestrator script:
+
 run_step() {
     local STEP_NAME="$1"
     local CMD="$2"
     local STEP_FILE="$STATE_DIR/$STEP_NAME"
-    local LOG_FILE="$STATE_DIR/$STEP_NAME.log"
+    LOG_FILE="$STATE_DIR/$STEP_NAME.log"
 
-    IDX=$(get_step_index "$STEP_NAME")
-    UI_CURRENT_STEP="$IDX"
-
-    # Clear screen and draw dashboard
-    ui_draw_dashboard
-
-    if [ -f "$STEP_FILE" ]; then
-        ui_log "Step '$STEP_NAME' already completed."
-        return 0
-    fi
-
-    ui_log "Starting: $STEP_NAME"
-
-    # Create empty log
-    : > "$LOG_FILE"
+    UI_CURRENT_STEP=$(get_step_index "$STEP_NAME")
+    
+    if [ -f "$STEP_FILE" ]; then return 0; fi
 
     # Run command in background
-    bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
+    eval "$CMD" >> "$LOG_FILE" 2>&1 &
     local PID=$!
 
-    local spinstr='|/-\'
-    local start_time=$(date +%s)
-
-    # Live dashboard + logs
-    while kill -0 "$PID" 2>/dev/null; do
-        local now=$(date +%s)
-        local elapsed=$((now - start_time))
-        local min=$((elapsed / 60))
-        local sec=$((elapsed % 60))
-
-        # Build pogs from last lines of log
-        mapfile -t POGS < <(tail -n $LOG_LINES "$LOG_FILE" | awk '{print $1}')
-
-        # Draw dashboard with pogs
-        ui_update_phase_pogs "${POGS[@]}"
-
-        # Spinner
-        local frame=${spinstr:0:1}
-        spinstr=${spinstr:1}${frame}
-        tput cup 1 0
-        printf "${ELECTRIC_BLUE}[%c] %s | Elapsed: %02d:%02d${NC}\n" \
-               "$frame" "$STEP_NAME" "$min" "$sec"
-
+    tput civis # Hide cursor
+    while kill -0 $PID 2>/dev/null; do
+        # Extract the specific LFS package being built for the "Current Status" column
+        # We look for "Building", "Installing", or "Configuring" in the logs
+        CURRENT_PKG=$(tail -n 20 "$LOG_FILE" | grep -Ei "building|installing|checking|making" | tail -n 1 | sed 's/[^[:print:]]//g' | cut -c 1-50)
+        [ -z "$CURRENT_PKG" ] && CURRENT_PKG="Working..."
+        
+        ui_draw_dashboard
         sleep 0.2
     done
+    tput cnorm # Show cursor
 
-    wait "$PID"
+    wait $PID
     local RET=$?
-
-    # Mark step as done
-    touch "$STEP_FILE"
-
     if [ $RET -eq 0 ]; then
-        ui_log "Success: $STEP_NAME"
+        touch "$STEP_FILE"
     else
-        ui_error "Step '$STEP_NAME' failed. Check $LOG_FILE"
+        echo -e "${LASER_RED}Step failed. Log: $LOG_FILE${NC}"
+        exit 1
     fi
 }
 

@@ -24,37 +24,19 @@ get_phase3_idx() {
 }
 
 SCRIPTS=(/scripts/phase3-system/*.sh)
-
 for script in "${SCRIPTS[@]}"; do
-    SCRIPT_NAME=$(basename "$script" .sh)
-    PKG_NAME=$(echo "$SCRIPT_NAME" | cut -d'-' -f2-)
+    PKG_NAME=$(basename "$script" .sh | cut -d'-' -f2-)
 
-    IDX=$(get_phase3_idx "$SCRIPT_NAME")
-    ui_step "$IDX"
+    echo "Building: $PKG_NAME (Final System)"
 
     if [ -f "/var/lib/ginger/$PKG_NAME.built" ]; then
-        ui_log "$PKG_NAME already built. Skipping."
         continue
     fi
 
-    ui_log "Building $PKG_NAME..."
-    log_file="$LOG_DIR/$SCRIPT_NAME.log"
-    mkdir -p "$(dirname "$log_file")"
-
-    # Run build in background
-    bash "$script" > "$log_file" 2>&1 &
-    PID=$!
-
-    # Spinner + timer
-    ui_spinner $PID "$PKG_NAME"
-
-    RET=$?
-    if [ $RET -ne 0 ]; then
-        ui_error "Build failed: $PKG_NAME. Check $log_file"
+    bash "$script"
+    
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed $PKG_NAME"
+        exit 1
     fi
-
-    ui_log "Successfully installed $PKG_NAME"
 done
-
-ui_draw_header
-echo -e "${LASER_GREEN}${BOLD}PHASE 3 COMPLETE! YOUR SYSTEM IS ASSEMBLED.${NC}"
