@@ -182,7 +182,7 @@ ui_draw_full_dashboard() {
     for i in $(seq $start_idx $end_idx); do
         local marker=" [ ]"
         local style="${NC}"
-        local state=""
+        local state="Pending"
         
         if [[ $i -lt $UI_CURRENT_STEP ]]; then
             marker=" [✓]"
