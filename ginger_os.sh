@@ -5,7 +5,7 @@
 # Ensure we are in the script's directory or project root
 GINGER_OS_ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$GINGER_OS_ROOT"
-
+LOG_LINES=15
 # Source common and UI functions
 if [ -f "./scripts/lib/common.sh" ]; then
     source ./scripts/lib/common.sh
@@ -46,33 +46,37 @@ run_step() {
     local STEP_NAME="$1"
     local CMD="$2"
     local STEP_FILE="$STATE_DIR/$STEP_NAME"
-    
-    local IDX=$(get_step_index "$STEP_NAME")
-    ui_step "$IDX"
 
-    # For steps that require the filesystem to be mounted, ensure it is.
-    # We start requiring mounts after prepare_image (Step 04)
-    if [[ "$STEP_NAME" =~ ^(05|06|07|09|10|11|12|13|14) ]]; then
-        ensure_mounted
-    fi
+    local IDX=$(get_step_index "$STEP_NAME")
+    UI_CURRENT_STEP="$IDX"
+    ui_banner
 
     if [ -f "$STEP_FILE" ]; then
         ui_log "Step '$STEP_NAME' already completed. Skipping."
+        return 0
+    fi
+
+    ui_log "Starting: $STEP_NAME"
+
+    LOG_FILE="$STATE_DIR/$STEP_NAME.log"
+    : > "$LOG_FILE"  # Clear log file
+
+    # Run command in background
+    bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
+    local PID=$!
+
+    # Stream logs + spinner + timer
+    ui_run_step "$PID" "$STEP_NAME" "$LOG_FILE"
+    local RET=$?
+
+    if [ $RET -eq 0 ]; then
+        touch "$STEP_FILE"
+        ui_log "Success: $STEP_NAME"
     else
-        ui_log "Starting: $STEP_NAME"
-        
-        # Execute the command
-        eval "$CMD"
-        local RET=$?
-        
-        if [ $RET -eq 0 ]; then
-            touch "$STEP_FILE"
-            ui_log "Success: $STEP_NAME"
-        else
-            ui_error "Step '$STEP_NAME' failed. Build halted."
-        fi
+        ui_error "Step '$STEP_NAME' failed. Check $LOG_FILE"
     fi
 }
+
 
 # Ensure LFS is mounted if we are resuming
 ensure_mounted() {

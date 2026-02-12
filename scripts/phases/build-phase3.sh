@@ -42,11 +42,9 @@ for script in "${SCRIPTS[@]}"; do
     fi
 
     ui_log "Building $PKG_NAME..."
-    bash "$script" > "$LOG_DIR/$SCRIPT_NAME.log" 2>&1 &
     PID=$!
 
-    ui_spinner $PID "Compiling $PKG_NAME..."
-    wait $PID
+    ui_run_step "bash \"$script\"" "$PKG_NAME"
     RET=$?
 
     if [ $RET -ne 0 ]; then

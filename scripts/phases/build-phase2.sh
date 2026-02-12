@@ -31,8 +31,7 @@ for i in "${!SCRIPTS[@]}"; do
     fi
 
     ui_log "Building $PKG_NAME..."
-    (bash "$script" > "$GINGER_LOGS/$SCRIPT_NAME.log" 2>&1) &
-    ui_spinner $! "Compiling $PKG_NAME..."
+    ui_run_step "bash \"$script\"" "$PKG_NAME"
     
     if [ $? -ne 0 ]; then
         ui_error "Build failed: $PKG_NAME. Check $GINGER_LOGS/$SCRIPT_NAME.log"
