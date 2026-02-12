@@ -210,9 +210,10 @@ ui_draw_full_dashboard() {
     
     if [[ -f "$UI_LOG_FILE" ]]; then
         while IFS= read -r line; do
-            # Truncate long lines
-            local display_line="${line:0:$((term_w - 6))}"
-            buf+=$(printf "  ${DIM}▸${NC} %s\e[K\n" "$display_line")
+            # Truncate to fit terminal width minus padding
+            local max_len=$((term_w - 8))
+            local display_line="${line:0:$max_len}"
+            buf+=$(printf "  ${DIM}▸${NC} %-${max_len}s\\e[K\\n" "$display_line")
         done < <(tail -n "$log_h" "$UI_LOG_FILE" 2>/dev/null)
     else
         buf+="  ${DIM}(No logs yet)${NC}\e[K\n"
