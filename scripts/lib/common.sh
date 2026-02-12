@@ -26,14 +26,10 @@ log() {
     echo -e "${COLOR}[$(date +'%Y-%m-%d %H:%M:%S')] [$TYPE] $MSG\033[0m"
 }
 
-# Source environment - finding it relative to the script location
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../../config/env.sh"
-
 # Validate critical environment
 # Inside chroot, LFS should be empty/root, and LFS_TGT is not strictly required for native builds
-if [ -z "${LFS+x}" ]; then
-    log "ERROR" "LFS environment variable is not defined! Check ../../config/env.sh"
+if [[ -z "${LFS:-}" ]]; then
+    echo "ERROR: LFS environment variable is not defined!"
     exit 1
 fi
 
@@ -77,8 +73,10 @@ extract() {
     DIR_NAME=${DIR_NAME/-src/}
 
     log "PROCESS" "Extracting $ARCHIVE_NAME..."
-    mkdir -p "$GINGER_ROOT/build"
-    cd "$GINGER_ROOT/build"
+    # Build inside LFS sources to avoid permission issues on the host
+    local BUILD_BASE="$LFS/sources"
+    mkdir -p "$BUILD_BASE"
+    cd "$BUILD_BASE"
     
     # Clean up previous build directory
     rm -rf "$DIR_NAME"
