@@ -155,7 +155,31 @@ ui_draw_full_dashboard() {
     buf+=$(printf "${BOLD}  %-${col_left}s │ %-${col_right}s${NC}\e[K\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS")
     buf+="  $(printf '%.0s─' $(seq 1 $col_left))┼$(printf '%.0s─' $(seq 1 $((col_right + 2))))\e[K\n"
     
-    for i in "${!UI_STEPS[@]}"; do
+    # Show max 6 steps, centered around current step
+    local total_steps=${#UI_STEPS[@]}
+    local max_visible=6
+    local start_idx=0
+    local end_idx=$((total_steps - 1))
+    
+    if [[ $total_steps -gt $max_visible ]]; then
+        # Center around current step
+        start_idx=$((UI_CURRENT_STEP - 2))
+        end_idx=$((UI_CURRENT_STEP + 3))
+        
+        # Adjust if at beginning
+        if [[ $start_idx -lt 0 ]]; then
+            start_idx=0
+            end_idx=$((max_visible - 1))
+        fi
+        
+        # Adjust if at end
+        if [[ $end_idx -ge $total_steps ]]; then
+            end_idx=$((total_steps - 1))
+            start_idx=$((total_steps - max_visible))
+        fi
+    fi
+    
+    for i in $(seq $start_idx $end_idx); do
         local marker=" [ ]"
         local style="${NC}"
         local state=""
@@ -181,11 +205,8 @@ ui_draw_full_dashboard() {
     buf+="${BOLD}  LIVE OUTPUT:${NC}\e[K\n"
     buf+="  $(printf '%.0s─' $(seq 1 $((term_w - 6))))\e[K\n"
     
-    # Calculate available log lines
-    local header_lines=15
-    local log_h=$(( term_h - header_lines - ${#UI_STEPS[@]} ))
-    [[ $log_h -lt 3 ]] && log_h=3
-    [[ $log_h -gt 15 ]] && log_h=15
+    # Show max 10 log lines
+    local log_h=10
     
     if [[ -f "$UI_LOG_FILE" ]]; then
         while IFS= read -r line; do
