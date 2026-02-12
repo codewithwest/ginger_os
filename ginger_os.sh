@@ -67,9 +67,11 @@ run_step() {
     local PID=$!
 
     # Live log + spinner
-    ui_run_step "$PID" "$STEP_NAME" "$LOG_FILE"
-    local RET=$?
-
+    log_file="$GINGER_LOGS/$SCRIPT_NAME.log"
+    bash "$script" >"$log_file" 2>&1 &
+    PID=$!
+    ui_spinner $PID "$PKG_NAME"
+    RET=$?
     if [ $RET -eq 0 ]; then
         touch "$STEP_FILE"
         ui_log "Success: $STEP_NAME"

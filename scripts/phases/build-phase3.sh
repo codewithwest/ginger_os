@@ -1,5 +1,6 @@
 #!/bin/bash
-# GingerOS - Phase 3: Final System Build (Inside Chroot)
+# GingerOS - Phase 3 Orchestrator (Final System Build)
+# Must be run inside chroot
 
 source /scripts/lib/common.sh
 source /scripts/lib/ui.sh
@@ -11,16 +12,15 @@ LOG_DIR="/var/log/ginger"
 mkdir -p "$LOG_DIR"
 
 ui_init_dashboard "Base Setup" "System Libs" "Core Utils" "Shell & Env" "Final Tools"
-ui_log "Inside Chroot: Starting Phase 3 (Final System Build)..."
+ui_log "Starting Phase 3 (Final System Build)..."
 
-# Map script number to UI step
 get_phase3_idx() {
     local num=$(echo "$1" | cut -d'-' -f1 | sed 's/^0//')
-    if [ "$num" -le 10 ]; then echo 0       # Base Setup
-    elif [ "$num" -le 35 ]; then echo 1    # System Libs
-    elif [ "$num" -le 65 ]; then echo 2    # Core Utils
-    elif [ "$num" -le 85 ]; then echo 3    # Shell & Env
-    else echo 4                            # Final Tools
+    if [ "$num" -le 10 ]; then echo 0
+    elif [ "$num" -le 35 ]; then echo 1
+    elif [ "$num" -le 65 ]; then echo 2
+    elif [ "$num" -le 85 ]; then echo 3
+    else echo 4
     fi
 }
 
@@ -38,17 +38,18 @@ for script in "${SCRIPTS[@]}"; do
     fi
 
     ui_log "Building $PKG_NAME..."
-    LOG_FILE="$LOG_DIR/$SCRIPT_NAME.log"
-    mkdir -p "$(dirname "$LOG_FILE")"
+    log_file="$LOG_DIR/$SCRIPT_NAME.log"
 
-    bash "$script" > "$LOG_FILE" 2>&1 &
+    bash "$script" >"$log_file" 2>&1 &
     PID=$!
 
-    ui_spinner $PID "Compiling $PKG_NAME..."
+    ui_spinner $PID "$PKG_NAME"
+
     if [ $? -ne 0 ]; then
-        ui_error "Build failed: $PKG_NAME. Check $LOG_FILE"
+        ui_error "Build failed: $PKG_NAME. Check $log_file"
     fi
 
+    touch "/var/lib/ginger/$PKG_NAME.built"
     ui_log "Successfully installed $PKG_NAME"
 done
 
