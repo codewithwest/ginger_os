@@ -23,6 +23,7 @@ mountpoint -q $LFS/run || mount -vt tmpfs tmpfs $LFS/run
 if [ -h $LFS/dev/shm ]; then
   install -v -d -m 1777 $LFS$(realpath /dev/shm)
 else
+  mkdir -p $LFS/dev/shm
   mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
 fi
 
