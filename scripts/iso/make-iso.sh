@@ -87,20 +87,62 @@ for file in "$INITRD_WORK/bin/"*; do
     done
 done
 
+# CRITICAL: Ensure the dynamic linker is present
+ui_log "Ensuring dynamic linker is present..."
+DYNAMIC_LINKER="/lib64/ld-linux-x86-64.so.2"
+if [ -f "$DYNAMIC_LINKER" ]; then
+    mkdir -p "$INITRD_WORK/lib64"
+    cp -L "$DYNAMIC_LINKER" "$INITRD_WORK/lib64/" || ui_error "Failed to copy dynamic linker!"
+else
+    ui_error "Dynamic linker not found at $DYNAMIC_LINKER"
+fi
+
 # Step 3: Packaging
 ui_step 3
 ui_log "Creating Live Initrd and Payload..."
-# Create init script
+# Create init script with error handling
 cat << 'EOF' > "$INITRD_WORK/init"
 #!/bin/sh
-mount -vt proc proc /proc; mount -vt sysfs sysfs /sys; mount -vt devtmpfs devtmpfs /dev
-echo "GingerOS Installation Media Booted"
+# GingerOS Live Init - Minimal Boot Environment
+
+echo "=== GingerOS Installer Boot ==="
+echo "Mounting kernel filesystems..."
+
+mount -t proc proc /proc || echo "WARNING: Failed to mount /proc"
+mount -t sysfs sysfs /sys || echo "WARNING: Failed to mount /sys"
+mount -t devtmpfs devtmpfs /dev || echo "WARNING: Failed to mount /dev"
+
+echo "Kernel filesystems mounted."
+echo "Searching for installation media..."
+
 mkdir -p /mnt/iso
-for dev in /dev/sr* /dev/sd*; do mount -t iso9660 -o ro $dev /mnt/iso 2>/dev/null && break; done
-if [ -f /mnt/iso/installer/installer.sh ]; then
-    cd /mnt/iso/installer && /bin/bash installer.sh
+
+# Try to find and mount the ISO
+found=0
+for dev in /dev/sr0 /dev/sr1 /dev/sda /dev/sdb /dev/sdc; do
+    if [ -b "$dev" ]; then
+        echo "Trying $dev..."
+        if mount -t iso9660 -o ro "$dev" /mnt/iso 2>/dev/null; then
+            if [ -f /mnt/iso/installer/installer.sh ]; then
+                echo "Found GingerOS installer on $dev"
+                found=1
+                break
+            else
+                echo "No installer found on $dev, unmounting..."
+                umount /mnt/iso 2>/dev/null
+            fi
+        fi
+    fi
+done
+
+if [ "$found" -eq 1 ]; then
+    echo "Launching GingerOS installer..."
+    cd /mnt/iso/installer
+    exec /bin/bash /mnt/iso/installer/installer.sh
 else
-    /bin/bash
+    echo "ERROR: Could not find GingerOS installation media!"
+    echo "Dropping to rescue shell. Type 'exit' to reboot."
+    exec /bin/sh
 fi
 EOF
 chmod +x "$INITRD_WORK/init"
