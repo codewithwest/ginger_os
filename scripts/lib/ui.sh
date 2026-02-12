@@ -14,13 +14,64 @@ RIGHT_COL_WIDTH=55
 LOG_LINES=8
 
 # --- UI State ---
-UI_STEPS=()
-UI_CURRENT_STEP=0
-CURRENT_PKG="Waiting..."
-LOG_FILE=""
-SPIN_IDX=0
+# --- New Sub-step State ---
+declare -A SUBSTEP_STATUS
+SUBSTEPS_ORDER=()
 
 # --- Functions ---
+
+ui_init_dashboard() {
+    # Optional override for UI_STEPS
+    if [ $# -gt 0 ]; then
+        UI_STEPS=("$@")
+    fi
+    clear
+    tput civis
+    ui_draw_dashboard
+}
+
+ui_step() {
+    local step_idx=$1
+    UI_CURRENT_STEP=$step_idx
+    # Clear substeps for new major step
+    SUBSTEPS_ORDER=()
+    SUBSTEP_STATUS=()
+    ui_draw_dashboard
+}
+
+ui_init_substeps() {
+    SUBSTEPS_ORDER=("$@")
+    SUBSTEP_STATUS=()
+    for sub in "${SUBSTEPS_ORDER[@]}"; do
+        SUBSTEP_STATUS["$sub"]="pending"
+    done
+    ui_draw_dashboard
+}
+
+ui_set_substep() {
+    local sub_name="$1"
+    local status="$2"
+    SUBSTEP_STATUS["$sub_name"]="$status"
+    ui_draw_dashboard
+}
+
+ui_log() {
+    local msg="$1"
+    # Basic logging to file if set
+    if [ -n "$LOG_FILE" ]; then
+        echo "$msg" >> "$LOG_FILE"
+    fi
+    # Also update CURRENT_PKG for simple feedback if no substeps
+    CURRENT_PKG="$msg"
+    ui_draw_dashboard
+}
+
+ui_error() {
+    local msg="$1"
+    tput cnorm
+    echo -e "${LASER_RED}[ERROR] $msg${NC}"
+    exit 1
+}
 
 ui_draw_header() {
     echo -e "${ELECTRIC_BLUE}${BOLD}"
@@ -59,9 +110,49 @@ ui_draw_dashboard() {
             marker=" [✓]"; style="${LASER_GREEN}"; right_content="Completed"
         elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
             marker=" [$(get_spinner)]"; style="${ELECTRIC_BLUE}${BOLD}"
-            right_content=$(echo "$CURRENT_PKG" | cut -c 1-$RIGHT_COL_WIDTH)
+            
+            # --- Sub-step Rendering Logic ---
+            if [ ${#SUBSTEPS_ORDER[@]} -eq 0 ]; then
+                # Fallback to simple message
+                right_content=$(echo "$CURRENT_PKG" | cut -c 1-$RIGHT_COL_WIDTH)
+            else
+                # Render first sub-step here
+                local first_sub="${SUBSTEPS_ORDER[0]}"
+                local status="${SUBSTEP_STATUS[$first_sub]}"
+                local sub_marker="[ ]"
+                [ "$status" == "running" ] && sub_marker="[$(get_spinner)]"
+                [ "$status" == "done" ] && sub_marker="[✓]"
+                [ "$status" == "failed" ] && sub_marker="[X]"
+                
+                right_content="$sub_marker $first_sub"
+            fi
         fi
         printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %-${RIGHT_COL_WIDTH}b\e[K\n" "$marker ${UI_STEPS[$i]}" "$right_content"
+        
+        # --- Handle Extra Lines for Sub-steps ---
+        if [ "$i" -eq "$UI_CURRENT_STEP" ] && [ ${#SUBSTEPS_ORDER[@]} -gt 1 ]; then
+            for j in "${!SUBSTEPS_ORDER[@]}"; do
+                [ "$j" -eq 0 ] && continue # Skip first one (already printed)
+                
+                local sub="${SUBSTEPS_ORDER[$j]}"
+                local status="${SUBSTEP_STATUS[$sub]}"
+                local sub_marker="[ ]"
+                local sub_style="${NC}"
+                
+                if [ "$status" == "running" ]; then
+                     sub_marker="[$(get_spinner)]"
+                     sub_style="${BOLD}"
+                elif [ "$status" == "done" ]; then
+                     sub_marker="[✓]"
+                     sub_style="${LASER_GREEN}"
+                elif [ "$status" == "failed" ]; then
+                     sub_marker="[X]"
+                     sub_style="${LASER_RED}"
+                fi
+
+                printf " %-${LEFT_COL_WIDTH}s | ${sub_style}%-${RIGHT_COL_WIDTH}b${NC}\e[K\n" "" "$sub_marker $sub"
+            done
+        fi
     done
 
     echo -e "--------------------------+-----------------------------------------------------\e[K"
@@ -69,7 +160,7 @@ ui_draw_dashboard() {
     echo -e "--------------------------------------------------------------------------------\e[K"
     
     local lines_printed=0
-    if [ -f "$LOG_FILE" ]; then
+    if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
         while read -r line; do
             printf "  %-.76s\e[K\n" "$line"
             ((lines_printed++))
