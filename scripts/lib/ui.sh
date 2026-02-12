@@ -55,6 +55,7 @@ ui_banner() {
 # ------------------------------
 # Scrollable log viewer
 # ------------------------------
+
 ui_scroll_log() {
     local LOG_FILE="$1"
     local scroll_pos=0
@@ -110,48 +111,86 @@ ui_scroll_log() {
     stty sane
 }
 
+# Render the dashboard columns
+ui_draw_dashboard() {
+    clear
+    echo -e "${ELECTRIC_BLUE}${BOLD}GingerOS Build v1.0${NC}"
+    echo ""
+
+    # Calculate spacing
+    local left_width=25
+    local right_width=50
+
+    # Draw system progress (left column)
+    echo -e "${BOLD}SYSTEM PROGRESS:${NC}"
+    for i in "${!UI_STEPS[@]}"; do
+        local marker="[ ]"
+        if [ "$i" -lt "$UI_CURRENT_STEP" ]; then
+            marker="${LASER_GREEN}[✓]${NC}"
+        elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
+            marker="${ELECTRIC_BLUE}[▶]${NC}"
+        fi
+        printf "%-${left_width}s" "$marker ${UI_STEPS[$i]}"
+        # Right column only for current step
+        if [ "$i" -eq "$UI_CURRENT_STEP" ] && [ "${#CURRENT_PHASE_POGS[@]}" -gt 0 ]; then
+            for pog in "${CURRENT_PHASE_POGS[@]}"; do
+                printf "%s " "$pog"
+            done
+        fi
+        echo ""
+    done
+    echo ""
+}
+
+# ------------------------------
+# Update pogs for current phase
+# ------------------------------
+ui_update_phase_pogs() {
+    local pogs=("$@")
+    CURRENT_PHASE_POGS=()
+    for p in "${pogs[@]}"; do
+        if [[ "$p" =~ built ]]; then
+            CURRENT_PHASE_POGS+=("${LASER_GREEN}[✓] ${p}${NC}")
+        elif [[ "$p" =~ running ]]; then
+            CURRENT_PHASE_POGS+=("${ELECTRIC_BLUE}[▶] ${p}${NC}")
+        else
+            CURRENT_PHASE_POGS+=("[ ] $p")
+        fi
+    done
+    ui_draw_dashboard
+}
+
+
 # ------------------------------
 # Run a step with spinner, timer, and scrollable log
 # ------------------------------
-ui_run_step() {
+i_run_step() {
     local CMD="$1"
     local STEP_NAME="$2"
     local LOG_FILE="$3"
 
     : > "$LOG_FILE"
+
+    # Run the command in background
     bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
     local PID=$!
 
-    local spinstr='|/-\'
-    local start_time=$(date +%s)
-
+    # Update pogs while process runs
     while kill -0 "$PID" 2>/dev/null; do
-        ui_banner  # redraw dashboard with pogs
-
-        # spinner frame
-        local frame=${spinstr:0:1}
-        spinstr=${spinstr:1}${frame}
-
-        # elapsed time
-        local now=$(date +%s)
-        local elapsed=$((now - start_time))
-        local min=$((elapsed / 60))
-        local sec=$((elapsed % 60))
-
-        # print spinner + step + elapsed
-        printf "\r ${ELECTRIC_BLUE}[%c] %s | Elapsed: %02d:%02d${NC}" "$frame" "$STEP_NAME" "$min" "$sec"
-
-        # tail last $LOG_LINES
-        tail -n $LOG_LINES "$LOG_FILE"
-
-        sleep 0.1
-        tput cuu $((LOG_LINES + 1))  # move cursor back
+        # Parse log for "building" or "configuring" lines for pogs
+        mapfile -t POGS < <(tail -n "$LOG_LINES" "$LOG_FILE" | awk '{print $1}')
+        ui_update_phase_pogs "${POGS[@]}"
+        sleep 0.3
     done
 
     wait "$PID"
-    return $?
-}
+    local RET=$?
 
+    # Mark step pog as complete
+    ui_update_phase_pogs "${POGS[@]/%/[✓]}"
+
+    return $RET
+}
 
 # ------------------------------
 # Wrapper to run steps with logs and timer
