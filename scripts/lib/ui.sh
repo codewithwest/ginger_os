@@ -64,13 +64,26 @@ ui_spinner() {
     local msg=$2
     local delay=0.1
     local spinstr='|/-\'
-    while [ "$(ps -p $pid -o state= 2>/dev/null)" ]; do
+
+    # Spinner loop
+    while kill -0 "$pid" 2>/dev/null; do
         local temp=${spinstr#?}
-        printf "\r ${ELECTRIC_BLUE}[%c] $msg${NC}" "$spinstr"
-        local spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
+        printf "\r ${ELECTRIC_BLUE}[%c] %s${NC}" "$spinstr" "$msg"
+        spinstr=$temp${spinstr%"$temp"}
+        sleep "$delay"
     done
-    echo -e "\n${LASER_GREEN}[✓] Task Complete!${NC}"
+
+    # Wait for process and capture REAL exit code
+    wait "$pid"
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        echo -e "\r${LASER_GREEN}[✓] $msg completed successfully.${NC}"
+    else
+        echo -e "\r${LASER_RED}[✗] $msg failed!${NC}"
+    fi
+
+    return $exit_code
 }
 
 ui_confirm() {
