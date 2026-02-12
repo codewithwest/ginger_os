@@ -21,16 +21,15 @@ echo "" > "$LOG_FILE"
 clear
 
 ui_draw_dashboard() {
-    # Reset cursor to top-left to prevent flickering
     tput cup 0 0
     
     # 1. Header
-    echo -e "${ELECTRIC_BLUE}${BOLD} GINGER_OS v1.0 | LFS BUILD DASHBOARD ${NC}"
-    echo -e "--------------------------------------------------------------------------------"
+    echo -e "${ELECTRIC_BLUE}${BOLD} GINGER_OS v1.0 | LFS BUILD DASHBOARD ${NC}\e[K"
+    echo -e "--------------------------------------------------------------------------------\e[K"
 
     # 2. Table Headers
-    printf "${BOLD} %-${LEFT_COL_WIDTH}s | %s${NC}\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS"
-    echo -e "--------------------------+-----------------------------------------------------"
+    printf "${BOLD} %-${LEFT_COL_WIDTH}s | %s${NC}\e[K\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS"
+    echo -e "--------------------------+-----------------------------------------------------\e[K"
 
     # 3. Two-Column Body
     for i in "${!UI_STEPS[@]}"; do
@@ -45,27 +44,37 @@ ui_draw_dashboard() {
         elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
             marker=" [▶]"
             style="${ELECTRIC_BLUE}${BOLD}"
-            right_content="${ELECTRIC_BLUE}${CURRENT_PKG}${NC}"
+            # Truncate right_content to ensure it doesn't wrap and break the table
+            right_content=$(echo "$CURRENT_PKG" | cut -c 1-$RIGHT_COL_WIDTH)
         fi
 
-        # Use printf to force column alignment
-        printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %b\n" "$marker ${UI_STEPS[$i]}" "$right_content"
+        # \e[K clears the rest of the line to prevent "ghost" characters
+        printf "${style} %-${LEFT_COL_WIDTH}s${NC} | %-${RIGHT_COL_WIDTH}b\e[K\n" "$marker ${UI_STEPS[$i]}" "$right_content"
     done
 
     # 4. Logs Footer
-    echo -e "--------------------------+-----------------------------------------------------"
-    echo -e "${BOLD} LIVE OUTPUT:${NC}"
-    echo -e "--------------------------------------------------------------------------------"
+    echo -e "--------------------------+-----------------------------------------------------\e[K"
+    echo -e "${BOLD} LIVE OUTPUT:${NC}\e[K"
+    echo -e "--------------------------------------------------------------------------------\e[K"
     
-    # Ensure the log area is always the same height to prevent jumping
+    # Fill log area
+    local lines_printed=0
     if [ -s "$LOG_FILE" ]; then
-        tail -n $LOG_LINES "$LOG_FILE" | sed 's/^/  /'
-    else
-        for l in $(seq 1 $LOG_LINES); do echo ""; done
+        # Process logs to ensure no line is wider than the terminal
+        while read -r line; do
+            printf "  %-.75s\e[K\n" "$line"
+            ((lines_printed++))
+        done < <(tail -n $LOG_LINES "$LOG_FILE")
     fi
-    echo -e "--------------------------------------------------------------------------------"
-}
 
+    # Fill remaining empty log lines so the bottom border doesn't jump up and down
+    while [ $lines_printed -lt $LOG_LINES ]; do
+        echo -e "\e[K"
+        ((lines_printed++))
+    done
+    
+    echo -e "--------------------------------------------------------------------------------\e[K"
+}
 # --- Simulation Logic ---
 simulate_build() {
     for i in "${!UI_STEPS[@]}"; do
