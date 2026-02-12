@@ -220,4 +220,7 @@ ui_draw_dashboard() {
     while [ $lines_printed -lt $target_log_lines ]; do echo -e "\e[K"; ((lines_printed++)); done
     
     echo -e "--------------------------------------------------------------------------------\e[K"
+    
+    # CRITICAL: Clear potentially lingering lines from previous taller frames
+    tput ed
 }
