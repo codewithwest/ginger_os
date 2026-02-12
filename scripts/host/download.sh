@@ -12,7 +12,6 @@ source "${SCRIPT_DIR}/../../config/env.sh"
 source "${SCRIPT_DIR}/../lib/common.sh"
 source "${SCRIPT_DIR}/../lib/ui.sh"
 
-ui_init_dashboard "Environment" "Fetching Lists" "Verification" "Download" "Final Check"
 ui_step 0
 
 
