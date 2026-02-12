@@ -46,56 +46,26 @@ cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 
 # Step 2: Initrd
 ui_step 2
-ui_log "Assembling Live Environment..."
+ui_log "Assembling Minimal Live Environment..."
 sudo rm -rf "$INITRD_WORK"
 mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sbin,sys,tmp,var,root}
 
-# Check for the rootfs tarball
-ROOTFS_TAR="$GINGER_ROOT/gingeros-base-rootfs.tar.gz"
-if [ ! -f "$ROOTFS_TAR" ]; then
-    ui_error "RootFS tarball not found at $ROOTFS_TAR. Please build GingerOS first."
-fi
+ui_log "Using host system binaries for minimal boot environment..."
+# Essential tools needed ONLY to boot and mount the ISO
+# We use the host system binaries since we only need them for initial boot
+ESSENTIAL_TOOLS=(bash sh mount umount mkdir ls cat grep sed awk)
 
-# Create a temporary extraction directory
-TEMP_EXTRACT="$GINGER_ROOT/temp_rootfs_extract"
-sudo rm -rf "$TEMP_EXTRACT"
-mkdir -p "$TEMP_EXTRACT"
-
-ui_log "Extracting RootFS to temporary location (this may take a moment)..."
-# Extract the ENTIRE tarball ONCE (much faster than multiple extractions)
-tar -xzf "$ROOTFS_TAR" -C "$TEMP_EXTRACT" 2>/dev/null
-
-ui_log "Copying essential binaries..."
-# List of essential tools for the live environment
-ESSENTIAL_TOOLS=(bash sh mount umount mkdir ls cp mv rm cat grep sed awk tar gzip blkid parted lsblk fdisk mke2fs mkfs.ext4 chroot findmnt sync ln chmod chown)
-
-# Copy binaries from the extracted rootfs
 for tool in "${ESSENTIAL_TOOLS[@]}"; do
-    # Search in common binary locations
-    for dir in bin sbin usr/bin usr/sbin; do
-        if [ -f "$TEMP_EXTRACT/$dir/$tool" ]; then
-            cp -v "$TEMP_EXTRACT/$dir/$tool" "$INITRD_WORK/bin/"
-            break
-        fi
-    done
-done
-
-# Verify critical binaries exist, fallback to host if needed
-CRITICAL_BINS=(bash sh mount mkdir)
-for bin in "${CRITICAL_BINS[@]}"; do
-    if [ ! -f "$INITRD_WORK/bin/$bin" ]; then
-        ui_log "Warning: $bin missing from rootfs, using host binary..."
-        FALLBACK=$(which "$bin" 2>/dev/null || true)
-        if [ -n "$FALLBACK" ]; then
-            cp -v "$FALLBACK" "$INITRD_WORK/bin/"
-        else
-            ui_error "Critical binary $bin not found!"
-        fi
+    TOOL_PATH=$(which "$tool" 2>/dev/null || true)
+    if [ -n "$TOOL_PATH" ] && [ -f "$TOOL_PATH" ]; then
+        cp -v "$TOOL_PATH" "$INITRD_WORK/bin/"
+    else
+        ui_error "Critical tool $tool not found on host system!"
     fi
 done
 
 ui_log "Resolving library dependencies..."
-# Copy only the libraries that are actually needed
+# Copy only the libraries needed by our minimal binaries
 for file in "$INITRD_WORK/bin/"*; do
     [ -f "$file" ] || continue
     
@@ -111,18 +81,11 @@ for file in "$INITRD_WORK/bin/"*; do
         
         mkdir -p "$TARGET_DIR"
         
-        # Try to copy from extracted rootfs first
-        if [ -f "$TEMP_EXTRACT$lib" ]; then
-            cp -L "$TEMP_EXTRACT$lib" "$TARGET_DIR/" 2>/dev/null || true
-        elif [ -f "$lib" ]; then
-            # Fallback to host library
+        if [ -f "$lib" ]; then
             cp -L "$lib" "$TARGET_DIR/" 2>/dev/null || true
         fi
     done
 done
-
-ui_log "Cleaning up temporary extraction..."
-sudo rm -rf "$TEMP_EXTRACT"
 
 # Step 3: Packaging
 ui_step 3
