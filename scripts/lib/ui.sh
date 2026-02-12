@@ -219,13 +219,6 @@ ui_draw_full_dashboard() {
     printf "%b" "$buf"
     tput ed
 }
-    
-    # ========== ATOMIC RENDER ==========
-    # Move to top-left, print buffer, clear to end of screen
-    tput cup 0 0
-    printf "%b" "$buf"
-    tput ed
-}
 
 # ============================================================================
 # MINIMAL STREAM MODE (for narrow terminals)
