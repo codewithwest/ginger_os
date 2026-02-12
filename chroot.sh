@@ -10,11 +10,13 @@ chown --from lfs -R root:root $LFS/{usr,var,etc,tools}
 case $(uname -m) in
   x86_64) chown --from lfs -R root:root $LFS/lib64 ;;
 esac
+
+# Create all necessary mount point directories first
 mkdir -p $LFS/{dev,proc,sys,run}
+mkdir -p $LFS/dev/{pts,shm}
 
 # Mount with safety checks
 mountpoint -q $LFS/dev || mount -v --bind /dev $LFS/dev
-mkdir -p $LFS/dev/pts
 mountpoint -q $LFS/dev/pts || mount -v --bind /dev/pts $LFS/dev/pts
 mountpoint -q $LFS/proc || mount -vt proc proc $LFS/proc
 mountpoint -q $LFS/sys || mount -vt sysfs sysfs $LFS/sys
@@ -23,8 +25,7 @@ mountpoint -q $LFS/run || mount -vt tmpfs tmpfs $LFS/run
 if [ -h $LFS/dev/shm ]; then
   install -v -d -m 1777 $LFS$(realpath /dev/shm)
 else
-  mkdir -p $LFS/dev/shm
-  mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
+  mountpoint -q $LFS/dev/shm || mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
 fi
 
 # Ensure scripts, config, and sources are accessible inside chroot
