@@ -9,6 +9,9 @@ if [ -z "$SCRIPT" ]; then
   exit 1
 fi
 
+# Determine GINGER_ROOT from the script location
+GINGER_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
+
 exec sudo runuser -u lfs -- env -i \
   HOME=/home/lfs \
   TERM=${TERM:-xterm} \
@@ -17,4 +20,8 @@ exec sudo runuser -u lfs -- env -i \
   LFS_TGT=$(uname -m)-lfs-linux-gnu \
   PATH=/mnt/lfs/tools/bin:/usr/bin \
   MAKEFLAGS=-j$(nproc) \
+  GINGER_ROOT="$GINGER_ROOT" \
+  GINGER_SOURCES="$GINGER_ROOT/sources" \
+  GINGER_LOGS="$GINGER_ROOT/logs" \
+  GINGER_SCRIPTS="$GINGER_ROOT/scripts" \
   bash "$SCRIPT" "$@"
