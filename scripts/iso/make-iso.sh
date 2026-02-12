@@ -50,27 +50,39 @@ ui_log "Assembling Live Environment..."
 sudo rm -rf "$INITRD_WORK"
 mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sbin,sys,tmp,var,root}
 
-# Tools List (Consolidated)
-TOOLS=(bash sh ls cat cp mv mkdir rm ln chmod chown chgrp grep sed awk tee head tail sort uniq wc cut tr xgettext xargs basename dirname find mount umount findmnt blkid parted lsblk fdisk udevadm wipefs mke2fs mkfs.ext4 id whoami sleep sync uname hostname dmesg ps top kill mktemp readlink realpath tar gzip bzip2 xz md5sum grub-install grub-probe grub-mkconfig sudo chroot mountpoint find vi nano)
+# Check for the rootfs tarball
+ROOTFS_TAR="$GINGER_ROOT/gingeros-base-rootfs.tar.gz"
+if [ ! -f "$ROOTFS_TAR" ]; then
+    ui_error "RootFS tarball not found at $ROOTFS_TAR. Please build GingerOS first."
+fi
 
-for tool in "${TOOLS[@]}"; do
-    FILE=$(sudo find "$LFS/bin" "$LFS/sbin" "$LFS/usr/bin" "$LFS/usr/sbin" -name "$tool" 2>/dev/null | head -n 1) || true
-    [ -z "$FILE" ] && FILE=$(which "$tool" 2>/dev/null) || true
-    if [ -n "$FILE" ] && [ -f "$FILE" ]; then
-        cp -v "$FILE" "$INITRD_WORK/bin/"
+ui_log "Extracting binaries from RootFS tarball..."
+# Extract essential directories from the tarball
+tar -xzf "$ROOTFS_TAR" -C "$INITRD_WORK" --wildcards \
+    './bin/*' './sbin/*' './usr/bin/*' './usr/sbin/*' \
+    './lib/*' './lib64/*' './usr/lib/*' \
+    2>/dev/null || true
+
+# Ensure we have the critical binaries
+CRITICAL_BINS=(bash sh mount umount mkdir ls cp mv rm cat grep sed awk tar gzip)
+for bin in "${CRITICAL_BINS[@]}"; do
+    if [ ! -f "$INITRD_WORK/bin/$bin" ] && [ ! -f "$INITRD_WORK/usr/bin/$bin" ]; then
+        ui_log "Warning: $bin not found in tarball, attempting fallback..."
+        FALLBACK=$(which "$bin" 2>/dev/null || true)
+        if [ -n "$FALLBACK" ]; then
+            cp -v "$FALLBACK" "$INITRD_WORK/bin/"
+        fi
     fi
 done
 
-# Library Solver
-ui_log "Solving binary dependencies..."
-for file in "$INITRD_WORK/bin/"*; do
-    [ -f "$file" ] || continue
-    LIBS=$(ldd "$file" 2>/dev/null | awk '{print $3}' | grep '^/' || true)
-    for lib in $LIBS; do
-        target_dir="$INITRD_WORK/$(dirname "$lib" | sed 's|^/||')"
-        mkdir -p "$target_dir"
-        [ -f "$LFS$lib" ] && cp -nv "$LFS$lib" "$target_dir/" 2>/dev/null || cp -nv "$lib" "$target_dir/" 2>/dev/null || true
-    done
+# Copy additional tools if they exist in the tarball
+EXTRA_TOOLS=(blkid parted lsblk fdisk udevadm wipefs mke2fs mkfs.ext4 grub-install grub-probe grub-mkconfig chroot findmnt)
+for tool in "${EXTRA_TOOLS[@]}"; do
+    # Check if already extracted
+    [ -f "$INITRD_WORK/bin/$tool" ] || [ -f "$INITRD_WORK/sbin/$tool" ] || [ -f "$INITRD_WORK/usr/bin/$tool" ] || [ -f "$INITRD_WORK/usr/sbin/$tool" ] && continue
+    
+    # Try to extract from tarball
+    tar -xzf "$ROOTFS_TAR" -C "$INITRD_WORK" --wildcards "*/$tool" 2>/dev/null || true
 done
 
 # Step 3: Packaging

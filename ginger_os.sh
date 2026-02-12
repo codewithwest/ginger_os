@@ -145,11 +145,11 @@ run_step "11_phase2_toolchain" "bash scripts/host/run-as-lfs.sh $GINGER_OS_ROOT/
 run_step "12_chroot_mounts" "bash chroot.sh"
 
 # 13. Phase 3 - System Tools
-run_step "13_phase3_system" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/phases/build-phase3.sh\""
+run_step "13_phase3_system" "sudo chroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=\"$TERM\" MAKEFLAGS=\"-j$(nproc)\" PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin /tools/bin/bash scripts/phases/build-phase3.sh"
 
 
 # 14. Kernel
-run_step "14_kernel" "sudo chroot "$LFS" /bin/bash -c \"bash scripts/phase4-boot/01-kernel.sh\""
+run_step "14_kernel" "sudo chroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=\"$TERM\" MAKEFLAGS=\"-j$(nproc)\" PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin /bin/bash scripts/phase4-boot/01-kernel.sh"
 
 # 15. GRUB & Finalize
 run_step "15_grub" "bash scripts/phase4-boot/02-grub.sh"
