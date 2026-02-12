@@ -27,11 +27,12 @@ trap 'tput cnorm; echo -e "${NC}"; exit' INT TERM
 ui_init_dashboard() {
     [[ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]] && return 0
     [[ $# -gt 0 ]] && UI_STEPS=("$@")
+    
+    printf "\e[?7l" # DISABLE line wrapping (Prevents shredding if window is small)
     clear
     tput civis
     ui_draw_dashboard
 }
-
 # ... (ui_step, ui_init_substeps, ui_set_substep remain the same) ...
 
 ui_log() {
