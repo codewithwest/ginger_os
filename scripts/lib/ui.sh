@@ -15,7 +15,9 @@ DIM='\033[2m'
 NC='\033[0m'
 
 # State files
-UI_STATE_FILE="/tmp/ginger_ui_state.$$"
+# Use a master PID to ensure all sub-scripts share the same UI session
+export GINGER_UI_MASTER_PID="${GINGER_UI_MASTER_PID:-$$}"
+UI_STATE_FILE="/tmp/ginger_ui_state.${GINGER_UI_MASTER_PID}"
 UI_LOG_FILE="${UI_LOG_FILE:-build.log}"
 UI_MONITOR_PID=""
 
@@ -38,26 +40,29 @@ MIN_WIDTH=80
 # ============================================================================
 
 ui_cleanup() {
-    # Stop background monitor if running
-    if [[ -n "$UI_MONITOR_PID" ]] && kill -0 "$UI_MONITOR_PID" 2>/dev/null; then
-        kill "$UI_MONITOR_PID" 2>/dev/null
-        wait "$UI_MONITOR_PID" 2>/dev/null
+    # Only the master process should stop the monitor and clean up
+    if [[ "$$" == "$GINGER_UI_MASTER_PID" ]]; then
+        # Stop background monitor if running
+        if [[ -n "$UI_MONITOR_PID" ]] && kill -0 "$UI_MONITOR_PID" 2>/dev/null; then
+            kill "$UI_MONITOR_PID" 2>/dev/null
+            wait "$UI_MONITOR_PID" 2>/dev/null
+        fi
+        
+        # Clean up state file
+        rm -f "$UI_STATE_FILE" 2>/dev/null
+        
+        # Restore terminal state
+        tput cnorm 2>/dev/null          # Show cursor
+        printf "\e[?7h" 2>/dev/null     # Re-enable line wrap
+        printf "${NC}" 2>/dev/null      # Reset colors
+        
+        # Move cursor to bottom and print newline for clean exit
+        tput cup "$(tput lines)" 0 2>/dev/null
+        echo
     fi
-    
-    # Restore terminal state
-    tput cnorm 2>/dev/null          # Show cursor
-    printf "\e[?7h" 2>/dev/null     # Re-enable line wrap
-    printf "${NC}" 2>/dev/null      # Reset colors
-    
-    # Clean up state file
-    rm -f "$UI_STATE_FILE" 2>/dev/null
-    
-    # Move cursor to bottom and print newline for clean exit
-    tput cup "$(tput lines)" 0 2>/dev/null
-    echo
 }
 
-trap 'ui_cleanup; exit' INT TERM EXIT
+trap 'ui_cleanup' EXIT
 
 # ============================================================================
 # TERMINAL WIDTH DETECTION
@@ -297,6 +302,11 @@ ui_init() {
     # Initialize UI with step names
     # Usage: ui_init "Step 1" "Step 2" "Step 3"
     
+    # If we are a subscript and UI is already active, don't re-init steps
+    if [[ "$$" != "$GINGER_UI_MASTER_PID" ]] && [[ -f "$UI_STATE_FILE" ]]; then
+        return 0
+    fi
+    
     UI_STEPS=("$@")
     UI_CURRENT_STEP=0
     UI_STATUS_MSG=""
@@ -308,11 +318,9 @@ ui_init() {
     ui_save_state
     
     # Start background monitor only if not already running
-    # We check for a monitor process owned by the current user session
     if ! pgrep -f "ui_monitor" >/dev/null; then
         ui_monitor &
         UI_MONITOR_PID=$!
-        # Give monitor time to start
         sleep 0.2
     fi
 }
