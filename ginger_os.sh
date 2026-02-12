@@ -47,25 +47,26 @@ run_step() {
     local CMD="$2"
     local STEP_FILE="$STATE_DIR/$STEP_NAME"
 
-    local IDX=$(get_step_index "$STEP_NAME")
+    local IDX
+    IDX=$(get_step_index "$STEP_NAME")
     UI_CURRENT_STEP="$IDX"
     ui_banner
 
     if [ -f "$STEP_FILE" ]; then
-        ui_log "Step '$STEP_NAME' already completed. Skipping."
+        echo -e "${LASER_GREEN}[INFO]${NC} Step '$STEP_NAME' already completed."
         return 0
     fi
 
     ui_log "Starting: $STEP_NAME"
 
     LOG_FILE="$STATE_DIR/$STEP_NAME.log"
-    : > "$LOG_FILE"  # Clear log file
+    : > "$LOG_FILE"
 
-    # Run command in background
+    # Run command
     bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
     local PID=$!
 
-    # Stream logs + spinner + timer
+    # Live log + spinner
     ui_run_step "$PID" "$STEP_NAME" "$LOG_FILE"
     local RET=$?
 
