@@ -68,8 +68,6 @@ ui_run_step() {
     local start_time=$(date +%s)
 
     while kill -0 "$PID" 2>/dev/null; do
-        ui_banner  # redraw dashboard with pogs
-
         # spinner frame
         local frame=${spinstr:0:1}
         spinstr=${spinstr:1}${frame}
@@ -98,6 +96,9 @@ ui_run_step() {
 # ------------------------------
 # Run a build step idempotently
 # ------------------------------
+# ------------------------------
+# Run a build step with dashboard, spinner, pogs, and logs
+# ------------------------------
 run_step() {
     local STEP_NAME="$1"
     local CMD="$2"
@@ -106,7 +107,9 @@ run_step() {
 
     IDX=$(get_step_index "$STEP_NAME")
     UI_CURRENT_STEP="$IDX"
-    ui_banner
+
+    # Clear screen and draw dashboard
+    ui_draw_dashboard
 
     if [ -f "$STEP_FILE" ]; then
         ui_log "Step '$STEP_NAME' already completed."
@@ -115,16 +118,52 @@ run_step() {
 
     ui_log "Starting: $STEP_NAME"
 
-    ui_run_step "$CMD" "$STEP_NAME" "$LOG_FILE"
+    # Create empty log
+    : > "$LOG_FILE"
+
+    # Run command in background
+    bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
+    local PID=$!
+
+    local spinstr='|/-\'
+    local start_time=$(date +%s)
+
+    # Live dashboard + logs
+    while kill -0 "$PID" 2>/dev/null; do
+        local now=$(date +%s)
+        local elapsed=$((now - start_time))
+        local min=$((elapsed / 60))
+        local sec=$((elapsed % 60))
+
+        # Build pogs from last lines of log
+        mapfile -t POGS < <(tail -n $LOG_LINES "$LOG_FILE" | awk '{print $1}')
+
+        # Draw dashboard with pogs
+        ui_update_phase_pogs "${POGS[@]}"
+
+        # Spinner
+        local frame=${spinstr:0:1}
+        spinstr=${spinstr:1}${frame}
+        tput cup 1 0
+        printf "${ELECTRIC_BLUE}[%c] %s | Elapsed: %02d:%02d${NC}\n" \
+               "$frame" "$STEP_NAME" "$min" "$sec"
+
+        sleep 0.2
+    done
+
+    wait "$PID"
     local RET=$?
 
+    # Mark step as done
+    touch "$STEP_FILE"
+
     if [ $RET -eq 0 ]; then
-        touch "$STEP_FILE"
         ui_log "Success: $STEP_NAME"
     else
         ui_error "Step '$STEP_NAME' failed. Check $LOG_FILE"
     fi
 }
+
 
 # ------------------------------
 # Main Build Pipeline
