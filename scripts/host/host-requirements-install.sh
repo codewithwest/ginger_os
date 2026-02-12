@@ -13,8 +13,8 @@ source "${SCRIPT_DIR}/../../config/env.sh"
 source "${SCRIPT_DIR}/../lib/common.sh"
 source "${SCRIPT_DIR}/../lib/ui.sh"
 
-# Set log file location
-export UI_LOG_FILE="${GINGER_LOGS}/host-requirements.log"
+# Set log file location if not already defined by orchestrator
+export UI_LOG_FILE="${UI_LOG_FILE:-${GINGER_LOGS}/host-requirements.log}"
 
 # ============================================================================
 # SUDO KEEPALIVE

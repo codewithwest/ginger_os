@@ -307,12 +307,14 @@ ui_init() {
     # Save initial state
     ui_save_state
     
-    # Start background monitor
-    ui_monitor &
-    UI_MONITOR_PID=$!
-    
-    # Give monitor time to start
-    sleep 0.2
+    # Start background monitor only if not already running
+    # We check for a monitor process owned by the current user session
+    if ! pgrep -f "ui_monitor" >/dev/null; then
+        ui_monitor &
+        UI_MONITOR_PID=$!
+        # Give monitor time to start
+        sleep 0.2
+    fi
 }
 
 ui_step() {
