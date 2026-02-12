@@ -82,7 +82,7 @@ check_width() {
 ui_save_state() {
     cat > "$UI_STATE_FILE" <<EOF
 UI_CURRENT_STEP=$UI_CURRENT_STEP
-UI_STATUS_MSG=$UI_STATUS_MSG
+UI_STATUS_MSG=$(printf '%q' "$UI_STATUS_MSG")
 UI_STEPS=(${UI_STEPS[@]@Q})
 EOF
 }
@@ -113,13 +113,18 @@ ui_draw_full_dashboard() {
     # Build entire dashboard as single string buffer
     local buf=""
     
-    # ========== HEADER ==========
+    # ========== HEADER WITH ASCII ART ==========
     buf+="${ELECTRIC_BLUE}${BOLD}"
-    buf+="  ╔════════════════════════════════════════════════════════════╗\e[K\n"
-    buf+="  ║           🌶️  GingerOS Build System v2.0 🌶️              ║\e[K\n"
-    buf+="  ║        Process-Safe Terminal UI - LFS 12.4              ║\e[K\n"
-    buf+="  ╚════════════════════════════════════════════════════════════╝\e[K\n"
+    buf+="\e[K\n"
+    buf+="   ██████╗ ██╗███╗   ██╗ ██████╗ ███████╗██████╗  ██████╗ ███████╗\e[K\n"
+    buf+="  ██╔════╝ ██║████╗  ██║██╔════╝ ██╔════╝██╔══██╗██╔═══██╗██╔════╝\e[K\n"
+    buf+="  ██║  ███╗██║██╔██╗ ██║██║  ███╗█████╗  ██████╔╝██║   ██║███████╗\e[K\n"
+    buf+="  ██║   ██║██║██║╚██╗██║██║   ██║██╔══╝  ██╔══██╗██║   ██║╚════██║\e[K\n"
+    buf+="  ╚██████╔╝██║██║ ╚████║╚██████╔╝███████╗██║  ██║╚██████╔╝███████║\e[K\n"
+    buf+="   ╚═════╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝\e[K\n"
     buf+="${NC}"
+    buf+="${LASER_GREEN}        🌶️  Process-Safe Build System v1.0 - LFS 12.4 🌶️${NC}\e[K\n"
+    buf+="\e[K\n"
     
     # ========== PROGRESS BAR ==========
     local total_steps=${#UI_STEPS[@]}
@@ -144,37 +149,37 @@ ui_draw_full_dashboard() {
     buf+="]\e[K\n"
     
     # ========== SEPARATOR ==========
-    buf+="$(printf '  %.0s─' $(seq 1 $((term_w - 4))))\e[K\n"
+    buf+="  $(printf '%.0s─' $(seq 1 $((term_w - 6))))\e[K\n"
     
-    # ========== STEP TABLE ==========
-    buf+=$(printf "${BOLD}  %-${col_left}s │ %s${NC}\e[K\n" "PROCESS" "STATUS")
-    buf+="$(printf '  %.0s─' $(seq 1 $((term_w - 4))))\e[K\n"
+    # ========== STEP TABLE (2-COLUMN LAYOUT) ==========
+    buf+=$(printf "${BOLD}  %-${col_left}s │ %-${col_right}s${NC}\e[K\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS")
+    buf+="  $(printf '%.0s─' $(seq 1 $col_left))┼$(printf '%.0s─' $(seq 1 $((col_right + 2))))\e[K\n"
     
     for i in "${!UI_STEPS[@]}"; do
-        local marker="  [ ]"
+        local marker=" [ ]"
         local style="${NC}"
-        local state="Pending"
+        local state=""
         
         if [[ $i -lt $UI_CURRENT_STEP ]]; then
-            marker="  [✓]"
+            marker=" [✓]"
             style="${LASER_GREEN}"
             state="Completed"
         elif [[ $i -eq $UI_CURRENT_STEP ]]; then
-            marker="  [$s]"
+            marker=" [▶]"
             style="${ELECTRIC_BLUE}${BOLD}"
             state="${UI_STATUS_MSG:-Processing...}"
         fi
         
         local step_name="${UI_STEPS[$i]}"
-        buf+=$(printf "${style}%-${col_left}s${NC} │ %-${col_right}s\e[K\n" "$marker $step_name" "$state")
+        buf+=$(printf "${style}  %-${col_left}s${NC} │ %-${col_right}s\e[K\n" "$marker $step_name" "$state")
     done
     
     # ========== SEPARATOR ==========
-    buf+="$(printf '  %.0s─' $(seq 1 $((term_w - 4))))\e[K\n"
+    buf+="  $(printf '%.0s─' $(seq 1 $col_left))┼$(printf '%.0s─' $(seq 1 $((col_right + 2))))\e[K\n"
     
     # ========== LIVE LOGS ==========
-    buf+="${BOLD}  📋 LIVE LOGS:${NC}\e[K\n"
-    buf+="$(printf '  %.0s─' $(seq 1 $((term_w - 4))))\e[K\n"
+    buf+="${BOLD}  LIVE OUTPUT:${NC}\e[K\n"
+    buf+="  $(printf '%.0s─' $(seq 1 $((term_w - 6))))\e[K\n"
     
     # Calculate available log lines
     local header_lines=15
