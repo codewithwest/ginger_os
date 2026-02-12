@@ -112,12 +112,10 @@ ui_draw_full_dashboard() {
     local col_right=$(( term_w - col_left - 8 ))
     [[ $col_right -lt 20 ]] && col_right=20
     
-    # Build entire dashboard as single string buffer
     local buf=""
     
-    # ========== HEADER WITH LOGO (Adaptive) ==========
-    # Require at least 32 lines of height to show the big logo
-    if [[ $term_h -ge 32 ]]; then
+    # ========== HEADER WITH LOGO ==========
+    if [[ $term_h -ge 30 ]]; then
         buf+="${ELECTRIC_BLUE}${BOLD}"
         buf+="  _____ _                         ____   ____\e[K\n"
         buf+=" / ____(_)                       / __ \ / ____|\e[K\n"
@@ -129,7 +127,7 @@ ui_draw_full_dashboard() {
         buf+="                |___/         v1.0             \e[K\n"
         buf+="${NC}"
     fi
-    buf+="${LASER_GREEN}        🌶️  GingerOS Build System v1.0 - LFS 12.4 🌶️${NC}\e[K\n"
+    buf+="${LASER_GREEN}  🌶️  GingerOS Build System v1.0 - LFS 12.4 🌶️${NC}\e[K\n"
     
     # ========== PROGRESS BAR ==========
     local total_steps=${#UI_STEPS[@]}
@@ -138,10 +136,14 @@ ui_draw_full_dashboard() {
     
     buf+="\e[K\n"
     buf+="${BOLD}  Progress: [Step $((UI_CURRENT_STEP + 1))/$total_steps] $progress_pct%${NC}\e[K\n"
-    local bar_width=$(( term_w - 6 ))
-    local fill_width=$(( (progress_pct * bar_width) / 100 ))
-    buf+="  [${LASER_GREEN}$(printf '%*s' "$fill_width" | tr ' ' '━')${NC}"
-    buf+="$(printf '%*s' "$(( bar_width - fill_width ))" | tr ' ' '─')]\e[K\n"
+    
+    local bar_width=50
+    buf+="  ["
+    local filled=$(( (progress_pct * bar_width) / 100 ))
+    for ((i=0; i<bar_width; i++)); do
+        if [[ $i -lt $filled ]]; then buf+="${LASER_GREEN}█${NC}"; else buf+="${DIM}░${NC}"; fi
+    done
+    buf+="]\e[K\n"
     
     # ========== SEPARATOR ==========
     buf+="  $(printf '%.0s─' $(seq 1 $((term_w - 6))))\e[K\n"
@@ -150,18 +152,17 @@ ui_draw_full_dashboard() {
     buf+=$(printf "${BOLD}  %-${col_left}s │ %-${col_right}s${NC}\e[K\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS")
     buf+="  $(printf '%.0s─' $(seq 1 $col_left))┼$(printf '%.0s─' $(seq 1 $((col_right + 2))))\e[K\n"
     
-    # Dynamic Step Visibility (Adaptive based on height)
-    local max_steps=6
-    [[ $term_h -lt 28 ]] && max_steps=4
-    [[ $term_h -lt 20 ]] && max_steps=2
-    
+    # Visible steps
     local start_idx=0
-    if [[ ${#UI_STEPS[@]} -gt $max_steps ]]; then
-        start_idx=$(( UI_CURRENT_STEP - (max_steps / 2) ))
+    local max_visible=6
+    [[ $term_h -lt 25 ]] && max_visible=4
+    
+    if [[ ${#UI_STEPS[@]} -gt $max_visible ]]; then
+        start_idx=$(( UI_CURRENT_STEP - (max_visible / 2) ))
         [[ $start_idx -lt 0 ]] && start_idx=0
-        [[ $(( start_idx + max_steps )) -gt ${#UI_STEPS[@]} ]] && start_idx=$(( ${#UI_STEPS[@]} - max_steps ))
+        [[ $(( start_idx + max_visible )) -gt ${#UI_STEPS[@]} ]] && start_idx=$(( ${#UI_STEPS[@]} - max_visible ))
     fi
-    local end_idx=$(( start_idx + max_steps - 1 ))
+    local end_idx=$(( start_idx + max_visible - 1 ))
     [[ $end_idx -ge ${#UI_STEPS[@]} ]] && end_idx=$(( ${#UI_STEPS[@]} - 1 ))
 
     for i in $(seq $start_idx $end_idx); do
@@ -180,51 +181,44 @@ ui_draw_full_dashboard() {
         fi
         
         local step_name="${UI_STEPS[$i]}"
-        # Truncate step name to fit column
-        local max_step_name=$((col_left - 8))
-        [[ ${#step_name} -gt $max_step_name ]] && step_name="${step_name:0:$((max_step_name-3))}..."
-        
-        local row=$(printf "  $marker %-${max_step_name}s" "$step_name")
-        buf+="${style}${row}${NC} │ $state\e[K
-"
+        local row=$(printf "  $marker %-$((col_left - 8))s" "${step_name:0:$((col_left - 8))}")
+        buf+="${style}${row}${NC} │ $state\e[K\n"
     done
     
     # ========== SEPARATOR ==========
     buf+="  $(printf '%.0s─' $(seq 1 $col_left))┼$(printf '%.0s─' $(seq 1 $((col_right + 2))))\e[K\n"
     
-    # ========== LIVE LOGS (Adaptive Height) ==========
+    # ========== LIVE LOGS ==========
     buf+="${BOLD}  LIVE OUTPUT:${NC}\e[K\n"
     buf+="  $(printf '%.0s─' $(seq 1 $((term_w - 6))))\e[K\n"
     
-    # Calculate how many lines are left for logs
-    # Base lines: Progress(4) + Sep(1) + TableHeader(2) + VisibleSteps + Sep(1) + LogHeader(2) + VersionLine(1)
+    # Calculate log height
     local lines_used=$(( 4 + 1 + 2 + (end_idx - start_idx + 1) + 1 + 2 + 1 ))
-    [[ $term_h -ge 32 ]] && lines_used=$((lines_used + 9)) # Add logo space
-    
+    [[ $term_h -ge 30 ]] && lines_used=$((lines_used + 9))
     local log_h=$(( term_h - lines_used - 2 ))
     [[ $log_h -lt 3 ]] && log_h=3
-    [[ $log_h -gt 15 ]] && log_h=15
+    [[ $log_h -gt 10 ]] && log_h=10
     
     local target_log="$UI_LOG_FILE"
     local prefix="  ${DIM}▸${NC} "
-    
-    if [[ -n "${UI_ACTIVE_LOG:-}" && -f "$UI_ACTIVE_LOG" ]]; then
-        target_log="$UI_ACTIVE_LOG"
-        prefix="  ${LASER_GREEN}⚙${NC} "
-    fi
+    [[ -n "${UI_ACTIVE_LOG:-}" && -f "$UI_ACTIVE_LOG" ]] && { target_log="$UI_ACTIVE_LOG"; prefix="  ${LASER_GREEN}⚙${NC} "; }
     
     if [[ -f "$target_log" ]]; then
         while IFS= read -r line; do
             local max_len=$((term_w - 8))
             local display_line="${line:0:$max_len}"
             display_line="${display_line//%/%%}"
-            buf+="$prefix$display_line\e[K
-"
+            buf+="$prefix$display_line\e[K\n"
         done < <(tail -n "$log_h" "$target_log" 2>/dev/null)
     else
-        buf+="  ${DIM}(No output yet)${NC}\e[K
-"
+        buf+="  ${DIM}(No output yet)${NC}\e[K\n"
     fi
+    
+    # ========== ATOMIC RENDER ==========
+    tput cup 0 0
+    printf "%b" "$buf"
+    tput ed
+}
     
     # ========== ATOMIC RENDER ==========
     # Move to top-left, print buffer, clear to end of screen
