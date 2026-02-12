@@ -92,7 +92,8 @@ check_extra "libisofs-1.5.6.tar.gz" "9f996b317f622802f12d28d27891709f"
 check_extra "libisoburn-1.5.6.tar.gz" "efb19f7f718f0791f717b2c6094995ec"
 
 if [ -n "$FAILED_FILES" ]; then
-    ui_error "Integrity check failed. Bad files:$FAILED_FILES"
+    ui_error "Integrity check failed for:$FAILED_FILES"
+    exit 1
 fi
 
 ui_log "Source acquisition complete."

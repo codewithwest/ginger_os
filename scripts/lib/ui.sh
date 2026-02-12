@@ -331,6 +331,16 @@ ui_status() {
     ui_save_state
 }
 
+ui_error() {
+    # Log an error and update status with error message
+    # Usage: ui_error "Something went wrong"
+    
+    local msg="$1"
+    ui_log "ERROR: $msg"
+    UI_STATUS_MSG="ERROR: $msg"
+    ui_save_state
+}
+
 ui_finish() {
     # Mark current step as complete and stop UI
     
