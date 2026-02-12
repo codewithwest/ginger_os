@@ -1,11 +1,21 @@
 #!/bin/bash
 # GingerOS Build Script - Automated & Fail-proof
-# This script manages the entire build process with state tracking to allow resuming.
+# This script manages the entire build process with state tracking, spinner, and live logs.
 
-# Ensure we are in the script's directory or project root
+set -e
+set -o pipefail
+
+# ------------------------------
+# Paths and initialization
+# ------------------------------
 GINGER_OS_ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 cd "$GINGER_OS_ROOT"
-LOG_LINES=15
+
+STATE_DIR="$GINGER_OS_ROOT/.build_state"
+mkdir -p "$STATE_DIR"
+
+LOG_LINES=15  # number of log lines to show in dashboard
+
 # Source common and UI functions
 if [ -f "./scripts/lib/common.sh" ]; then
     source ./scripts/lib/common.sh
@@ -15,14 +25,15 @@ else
     exit 1
 fi
 
-# Define the build roadmap for the dashboard
-ui_init_dashboard "Prep" "Host Tools" "Environment" "Download" "Phase 1" "Phase 2" "Chroot" "Phase 3" "Kernel" "Finalize" "Teardown"
+# ------------------------------
+# Dashboard setup
+# ------------------------------
+ui_init_dashboard "Prep" "Host Tools" "Environment" "Download" \
+                  "Phase 1" "Phase 2" "Chroot" "Phase 3" "Kernel" "Finalize" "Teardown"
 
-# State directory for tracking progress
-STATE_DIR="$GINGER_OS_ROOT/.build_state"
-mkdir -p "$STATE_DIR"
-
-# Mapping specific step numbers to dashboard indices
+# ------------------------------
+# Map step names to dashboard indices
+# ------------------------------
 get_step_index() {
     case $1 in
         01*|02*|03*) echo 0 ;; # Prep
@@ -41,33 +52,70 @@ get_step_index() {
     esac
 }
 
-# Function to run a step idempotently
+# ------------------------------
+# Run a step with spinner + live logs
+# ------------------------------
+ui_run_step() {
+    local CMD="$1"
+    local STEP_NAME="$2"
+    local LOG_FILE="$3"
+
+    : > "$LOG_FILE"
+    bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
+    local PID=$!
+
+    local spinstr='|/-\'
+    local start_time=$(date +%s)
+
+    while kill -0 "$PID" 2>/dev/null; do
+        ui_banner  # redraw dashboard with pogs
+
+        # spinner frame
+        local frame=${spinstr:0:1}
+        spinstr=${spinstr:1}${frame}
+
+        # elapsed time
+        local now=$(date +%s)
+        local elapsed=$((now - start_time))
+        local min=$((elapsed / 60))
+        local sec=$((elapsed % 60))
+
+        # print spinner + step + elapsed
+        printf "\r ${ELECTRIC_BLUE}[%c] %s | Elapsed: %02d:%02d${NC}\n" \
+               "$frame" "$STEP_NAME" "$min" "$sec"
+
+        # show last LOG_LINES from log
+        tail -n $LOG_LINES "$LOG_FILE"
+
+        sleep 0.2
+        tput cuu $((LOG_LINES + 2))  # move cursor back
+    done
+
+    wait "$PID"
+    return $?
+}
+
+# ------------------------------
+# Run a build step idempotently
+# ------------------------------
 run_step() {
-    local STEP_NAME="$1"   # e.g., "11_phase2_toolchain"
-    local CMD="$2"         # full bash command
+    local STEP_NAME="$1"
+    local CMD="$2"
     local STEP_FILE="$STATE_DIR/$STEP_NAME"
     local LOG_FILE="$STATE_DIR/$STEP_NAME.log"
 
-    local IDX
     IDX=$(get_step_index "$STEP_NAME")
     UI_CURRENT_STEP="$IDX"
     ui_banner
 
     if [ -f "$STEP_FILE" ]; then
-        echo -e "${LASER_GREEN}[INFO]${NC} Step '$STEP_NAME' already completed."
+        ui_log "Step '$STEP_NAME' already completed."
         return 0
     fi
 
     ui_log "Starting: $STEP_NAME"
 
-    : > "$LOG_FILE"
-
-    # Run the command in background and log output
-    bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
-    local PID=$!
-
-    # Show spinner while command runs
-    ui_spinner $PID "$STEP_NAME"
+    ui_run_step "$CMD" "$STEP_NAME" "$LOG_FILE"
     local RET=$?
 
     if [ $RET -eq 0 ]; then
@@ -78,96 +126,34 @@ run_step() {
     fi
 }
 
-
-
-# Ensure LFS is mounted if we are resuming
-ensure_mounted() {
-    # Part 1: Ensure LFS base is mounted
-    if ! mountpoint -q "$LFS"; then
-        ui_log "LFS is not mounted. Re-mounting image..."
-        IMAGE_PATH="$GINGER_ROOT/ginger_os.img"
-        if [ -f "$IMAGE_PATH" ]; then
-            LOOP_DEV=$(sudo losetup -j "$IMAGE_PATH" | cut -d: -f1 | head -n 1)
-            if [ -z "$LOOP_DEV" ]; then
-                LOOP_DEV=$(sudo losetup -fP --show "$IMAGE_PATH")
-            fi
-            [ -d "$LFS" ] || sudo mkdir -p "$LFS"
-            sudo mount "${LOOP_DEV}p1" "$LFS"
-            
-            if id lfs >/dev/null 2>&1; then
-                sudo chown -v lfs:lfs "$LFS"
-            fi
-            ui_log "Successfully re-mounted $LFS"
-        else
-            ui_error "Disk image not found at $IMAGE_PATH. Cannot resume build."
-        fi
-    fi
-
-    # Part 2: Ensure chroot mounts are present
-    if [[ "$STEP_NAME" =~ ^(12|13|14) ]] && [[ "$STEP_NAME" != "12_chroot_mounts" ]]; then
-        if ! mountpoint -q "$LFS/proc"; then
-            ui_log "Chroot mounts missing. Running chroot.sh..."
-            sudo bash chroot.sh
-        fi
-    fi
-}
-
+# ------------------------------
+# Main Build Pipeline
+# ------------------------------
 ui_draw_header
 echo -e "${ELECTRIC_BLUE}GingerOS Main Build System Engaged.${NC}"
 echo "Ready to assemble the next generation of speed."
 sleep 1
 
-# 1. Permissions
 run_step "01_permissions" "chmod -R 777 ."
-
-# 2. Host Requirements (Creates 'lfs' user)
 run_step "02_host_reqs" "bash ./scripts/host/host-requirements-install.sh"
-
-# 3. Version Check
 run_step "03_version_check" "bash ./scripts/host/version-check.sh"
-
-# 4. Prepare Image
 run_step "04_prepare_image" "bash ./scripts/image/prepare-image.sh"
-
-# 5. Download Sources
 run_step "05_download_sources" "bash ./scripts/host/download.sh"
-
-# 6. Host Setup
 run_step "06_host_setup" "bash ./scripts/host/setup-host.sh"
-
-# 7. Update Directory
 run_step "07_update_dir" "bash ./scripts/host/update-dir.sh"
-
-# 9. Setup LFS User Environment
 run_step "09_setup_lfs_env" "bash scripts/host/run-as-lfs.sh $GINGER_OS_ROOT/scripts/phases/setup-lfs-user-env.sh"
-
-# 10. Phase 1 - Temporary Toolchain
 run_step "10_phase1_toolchain" "bash scripts/host/run-as-lfs.sh $GINGER_OS_ROOT/scripts/phases/build-phase1.sh"
-
-# 11. Phase 2 - Temporary System
 run_step "11_phase2_toolchain" "bash scripts/host/run-as-lfs.sh $GINGER_OS_ROOT/scripts/phases/build-phase2.sh"
-
-# 12. Chroot Mounts
 run_step "12_chroot_mounts" "bash chroot.sh"
-
 sudo ls "$LFS/scripts"
-
-# 13. Phase 3 - System Tools
 run_step "13_phase3_system" "sudo chroot \"$LFS\" /bin/bash -c \"bash scripts/phases/build-phase3.sh\""
-
-
-# 14. Kernel
 run_step "14_kernel" "sudo chroot \"$LFS\" /bin/bash -c \"bash scripts/phases/build-phase4.sh\""
-
-# 15. GRUB & Finalize
 run_step "15_grub" "bash scripts/phase4-boot/02-grub.sh"
-
-# 16. Teardown
 run_step "16_teardown" "bash scripts/image/teardown.sh"
 
 ui_draw_header
 echo -e "${LASER_GREEN}${BOLD}--------------------------------------------------"
-echo "    GINGEROS CORE BUILD COMPLETED SUCCESSFULY     "
+echo "    GINGEROS CORE BUILD COMPLETED SUCCESSFULLY     "
 echo -e "--------------------------------------------------${NC}"
 echo -e "\nYou are now ready to run 'sudo bash scripts/iso/make-iso.sh'\n"
 

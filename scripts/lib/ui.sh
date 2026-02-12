@@ -113,38 +113,44 @@ ui_scroll_log() {
 # Run a step with spinner, timer, and scrollable log
 # ------------------------------
 ui_run_step() {
-    local PID=$1
+    local CMD="$1"
     local STEP_NAME="$2"
     local LOG_FILE="$3"
-    local START_TIME=$(date +%s)
+
+    : > "$LOG_FILE"
+    bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
+    local PID=$!
+
     local spinstr='|/-\'
-    local scroll_pid
+    local start_time=$(date +%s)
 
-    # Launch scrolling in background
-    ui_scroll_log "$LOG_FILE" &
-    scroll_pid=$!
-
-    # Spinner loop
     while kill -0 "$PID" 2>/dev/null; do
-        local temp=${spinstr#?}
-        spinstr=$temp${spinstr%"$temp"}
-        local NOW=$(date +%s)
-        local ELAPSED=$((NOW - START_TIME))
-        printf "\r ${ELECTRIC_BLUE}[%c] %s | Elapsed: %02d:%02d${NC}" \
-            "$spinstr" "$STEP_NAME" $((ELAPSED/60)) $((ELAPSED%60))
+        ui_banner  # redraw dashboard with pogs
+
+        # spinner frame
+        local frame=${spinstr:0:1}
+        spinstr=${spinstr:1}${frame}
+
+        # elapsed time
+        local now=$(date +%s)
+        local elapsed=$((now - start_time))
+        local min=$((elapsed / 60))
+        local sec=$((elapsed % 60))
+
+        # print spinner + step + elapsed
+        printf "\r ${ELECTRIC_BLUE}[%c] %s | Elapsed: %02d:%02d${NC}" "$frame" "$STEP_NAME" "$min" "$sec"
+
+        # tail last $LOG_LINES
+        tail -n $LOG_LINES "$LOG_FILE"
+
         sleep 0.1
+        tput cuu $((LOG_LINES + 1))  # move cursor back
     done
 
     wait "$PID"
-    local RET=$?
-
-    # Kill scroll viewer
-    kill $scroll_pid 2>/dev/null
-    wait $scroll_pid 2>/dev/null
-
-    echo ""  # leave space after log
-    return $RET
+    return $?
 }
+
 
 # ------------------------------
 # Wrapper to run steps with logs and timer
