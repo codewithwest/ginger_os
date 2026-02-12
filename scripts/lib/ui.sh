@@ -33,17 +33,18 @@ ui_draw_header() {
 }
 
 ui_draw_status() {
-    echo -e "${BOLD}SYSTEM PROGRESS:${NC}"
+    local line=""
     for i in "${!UI_STEPS[@]}"; do
         if [ "$i" -lt "$UI_CURRENT_STEP" ]; then
-            echo -e " ${LASER_GREEN}[✓] ${UI_STEPS[$i]}${NC}"
+            line+=" ${LASER_GREEN}[✓] ${UI_STEPS[$i]}${NC} "
         elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
-            echo -e " ${ELECTRIC_BLUE}[▶] ${UI_STEPS[$i]}${NC}"
+            line+=" ${ELECTRIC_BLUE}[▶] ${UI_STEPS[$i]}${NC} "
         else
-            echo -e " [ ] ${UI_STEPS[$i]}"
+            line+=" [ ] ${UI_STEPS[$i]} "
         fi
     done
-    echo -e ""
+    echo -e "$line"
+    echo ""  # empty line before logs
 }
 
 ui_banner() {
