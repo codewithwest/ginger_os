@@ -1,5 +1,5 @@
 #!/bin/bash
-# GingerOS UI Library - Stable v1.2
+# GingerOS UI Library - Resilient v1.3
 
 ELECTRIC_BLUE='\033[38;5;39m'
 LASER_GREEN='\033[38;5;118m'
@@ -7,126 +7,81 @@ LASER_RED='\033[38;5;196m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-LEFT_COL_WIDTH=25
-RIGHT_COL_WIDTH=55
-LOG_LINES=8
-
+# State
 UI_STEPS=()
 UI_CURRENT_STEP=0
-CURRENT_PKG="Waiting..."
-LOG_FILE=""
+LOG_FILE="build.log"
+SPIN_CHARS='/-\|'
 SPIN_IDX=0
-declare -A SUBSTEP_STATUS
-SUBSTEPS_ORDER=()
 
-# Track last draw time to prevent "flicker flooding"
-LAST_DRAW=0
-
-trap 'tput cnorm; echo -e "${NC}"; exit' INT TERM
+# Cleanup on exit
+trap 'tput cnorm; printf "\e[?7h"; echo -e "${NC}"; exit' INT TERM
 
 ui_init_dashboard() {
-    [[ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]] && return 0
-    [[ $# -gt 0 ]] && UI_STEPS=("$@")
-    
-    printf "\e[?7l" # DISABLE line wrapping (Prevents shredding if window is small)
-    clear
+    UI_STEPS=("$@")
+    printf "\e[?7l" # Disable line wrap to prevent shredding
     tput civis
+    clear
     ui_draw_dashboard
 }
-# ... (ui_step, ui_init_substeps, ui_set_substep remain the same) ...
+
+ui_step() { UI_CURRENT_STEP=$1; ui_draw_dashboard; }
 
 ui_log() {
-    local msg="$1"
-    [[ -n "$LOG_FILE" ]] && echo "$msg" >> "$LOG_FILE"
-    CURRENT_PKG="$msg"
-    
-    # THROTTLE: Only redraw if 0.05 seconds have passed OR if it's a critical update
-    # This stops the "shredding" during fast apt-get output
-    local now=$(date +%s%N)
-    if (( now - LAST_DRAW > 50000000 )); then
-        ui_draw_dashboard
-        LAST_DRAW=$now
-    fi
-}
-
-ui_draw_header() {
-    local term_w=$(tput cols)
-    # If the terminal is too narrow, skip the ASCII art entirely to prevent shredding
-    if [ "$term_w" -lt 85 ]; then
-        UI_BUFFER+="${ELECTRIC_BLUE}${BOLD}  GingerOS Build System v1.0${NC}\e[K\n"
-        return
-    fi
-
-    # Using -e with a limit to ensure no wrap
-    UI_BUFFER+="${ELECTRIC_BLUE}${BOLD}"
-    UI_BUFFER+="  _____ _                         ____   ____\e[K\n"
-    UI_BUFFER+=" / ____(_)                       / __ \ / ____|\e[K\n"
-    UI_BUFFER+="| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ \e[K\n"
-    UI_BUFFER+="| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\\e[K\n"
-    UI_BUFFER+="| |__| | | | | | (_| |  __/ |   | |__| |____) |\e[K\n"
-    UI_BUFFER+=" \_____|_|_| |_|\__, |\___|_|    \____/|_____/ \e[K\n"
-    UI_BUFFER+="                 __/ |                         \e[K\n"
-    UI_BUFFER+="                |___/         v1.0             \e[K\n"
-    UI_BUFFER+="${NC}"
+    [[ -n "$1" ]] && echo "$1" >> "$LOG_FILE"
+    ui_draw_dashboard
 }
 
 ui_draw_dashboard() {
-    [[ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]] && return 0
-    
     SPIN_IDX=$(( (SPIN_IDX + 1) % 4 ))
-    local term_h=$(tput lines)
+    local s="${SPIN_CHARS:SPIN_IDX:1}"
     local term_w=$(tput cols)
-    local s=$(local chars='/-\|'; echo -n "${chars:SPIN_IDX:1}")
+    local term_h=$(tput lines)
+    local col_left=25
+    local col_right=$(( term_w - col_left - 8 ))
     
-    UI_BUFFER=""
-    ui_draw_header
-
-    # Ensure separators don't exceed window width
-    local sep="--------------------------------------------------------------------------------"
-    local short_sep="${sep:0:$((term_w - 2))}"
+    # 1. Build Buffer in memory
+    local buf=""
     
-    UI_BUFFER+="${short_sep}\e[K\n"
-    UI_BUFFER+=$(printf "${BOLD} %-25.25s | %s${NC}\e[K\n" "SYSTEM PROGRESS" "CURRENT PHASE STATUS")
-    UI_BUFFER+="--------------------------+-----------------------------------------------------\e[K\n"
+    # Header - Only show ASCII if window is wide enough
+    if [ "$term_w" -gt 80 ]; then
+        buf+="${ELECTRIC_BLUE}${BOLD}"
+        buf+="  GingerOS Build System v1.0\e[K\n"
+        buf+="  [ Step $((UI_CURRENT_STEP + 1)) of ${#UI_STEPS[@]} ]\e[K\n"
+    else
+        buf+="${ELECTRIC_BLUE}${BOLD} >> GINGER OS BUILD [${s}]\e[K\n"
+    fi
+    
+    buf+="${NC}$(printf '%.0s-' $(seq 1 $term_w))\e[K\n"
+    buf+=$(printf "${BOLD} %-${col_left}s | %s${NC}\e[K\n" "PROCESS" "STATUS")
+    buf+="$(printf '%.0s-' $(seq 1 $term_w))\e[K\n"
 
-    # Steps (added .25 and .55 to printf to FORCE truncation)
+    # 2. Draw Steps
     for i in "${!UI_STEPS[@]}"; do
-        local marker=" [ ]" style="${NC}" right=""
+        local marker=" [ ]" style="${NC}" state="Pending"
         if [ "$i" -lt "$UI_CURRENT_STEP" ]; then
-            marker=" [✓]"; style="${LASER_GREEN}"; right="Completed"
+            marker=" [✓]"; style="${LASER_GREEN}"; state="Done"
         elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
-            marker=" [$s]"; style="${ELECTRIC_BLUE}${BOLD}"
-            # Truncate right-side content to prevent wrapping
-            right="${CURRENT_PKG:0:50}"
+            marker=" [$s]"; style="${ELECTRIC_BLUE}${BOLD}"; state="Processing..."
         fi
-        UI_BUFFER+=$(printf "${style} %-25.25s${NC} | %-50.50b\e[K\n" "$marker ${UI_STEPS[$i]}" "$right")
+        buf+=$(printf "${style} %-${col_left}s${NC} | %-${col_right}s\e[K\n" "$marker ${UI_STEPS[$i]}" "$state")
     done
 
-    UI_BUFFER+="${short_sep}\e[K\n"
-    UI_BUFFER+="${BOLD} LIVE OUTPUT:${NC}\e[K\n"
-    UI_BUFFER+="${short_sep}\e[K\n"
+    buf+="$(printf '%.0s-' $(seq 1 $term_w))\e[K\n"
+    buf+="${BOLD} LIVE LOGS:${NC}\e[K\n"
 
-    # Logs - strictly limited to 76 chars
-    local lp=0
-    if [[ -f "$LOG_FILE" ]]; then
-        while IFS= read -r line; do
-            local clean="${line//$'\r'/}"
-            UI_BUFFER+=$(printf "  %-76.76s\e[K\n" "$clean")
-            ((lp++))
-        done < <(tail -n "$LOG_LINES" "$LOG_FILE" 2>/dev/null)
-    fi
-    for ((p=lp; p<LOG_LINES; p++)); do UI_BUFFER+="\e[K\n"; done
-
-    UI_BUFFER+="${short_sep}\e[K\n"
+    # 3. Dynamic Logs (fills remaining height)
+    local log_h=$(( term_h - ${#UI_STEPS[@]} - 10 ))
+    [[ $log_h -lt 3 ]] && log_h=3
     
-    # Progress Bar
-    local pct=0; [[ ${#UI_STEPS[@]} -gt 0 ]] && pct=$(( (UI_CURRENT_STEP * 100) / ${#UI_STEPS[@]} ))
-    local f=$(( pct / 4 )); local e=$(( 25 - f ))
-    local bar=""; for ((i=0; i<f; i++)); do bar+="#"; done; for ((i=0; i<e; i++)); do bar+=" "; done
-    UI_BUFFER+=$(printf " Progress: [${LASER_GREEN}%-25.25s${NC}] %d%%\e[K" "$bar" "$pct")
+    if [ -f "$LOG_FILE" ]; then
+        while IFS= read -r line; do
+            buf+=$(printf "  > %-${col_right}s\e[K\n" "${line:0:$((term_w-5))}")
+        done < <(tail -n "$log_h" "$LOG_FILE")
+    fi
 
-    # DRAW ATOMICALLY
+    # 4. Atomic Update
     tput cup 0 0
-    echo -ne "$UI_BUFFER"
+    echo -ne "$buf"
     tput ed
 }
