@@ -43,9 +43,10 @@ get_step_index() {
 
 # Function to run a step idempotently
 run_step() {
-    local STEP_NAME="$1"
-    local CMD="$2"
+    local STEP_NAME="$1"   # e.g., "11_phase2_toolchain"
+    local CMD="$2"         # full bash command
     local STEP_FILE="$STATE_DIR/$STEP_NAME"
+    local LOG_FILE="$STATE_DIR/$STEP_NAME.log"
 
     local IDX
     IDX=$(get_step_index "$STEP_NAME")
@@ -59,19 +60,16 @@ run_step() {
 
     ui_log "Starting: $STEP_NAME"
 
-    LOG_FILE="$STATE_DIR/$STEP_NAME.log"
     : > "$LOG_FILE"
 
-    # Run command
+    # Run the command in background and log output
     bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
     local PID=$!
 
-    # Live log + spinner
-    log_file="$GINGER_LOGS/$SCRIPT_NAME.log"
-    bash "$script" >"$log_file" 2>&1 &
-    PID=$!
-    ui_spinner $PID "$PKG_NAME"
-    RET=$?
+    # Show spinner while command runs
+    ui_spinner $PID "$STEP_NAME"
+    local RET=$?
+
     if [ $RET -eq 0 ]; then
         touch "$STEP_FILE"
         ui_log "Success: $STEP_NAME"
@@ -79,6 +77,7 @@ run_step() {
         ui_error "Step '$STEP_NAME' failed. Check $LOG_FILE"
     fi
 }
+
 
 
 # Ensure LFS is mounted if we are resuming

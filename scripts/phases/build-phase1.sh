@@ -1,6 +1,6 @@
 #!/bin/bash
-# GingerOS - Phase 1 Orchestrator (Cross Toolchain)
-# Run on the host system
+# GingerOS - Phase 1 Orchestrator
+# Pure bash spinner + logs
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 source "$SCRIPT_DIR/../lib/ui.sh"
@@ -8,8 +8,8 @@ source "$SCRIPT_DIR/../lib/ui.sh"
 set -e
 set -o pipefail
 
-GINGER_LOGS="$SCRIPT_DIR/../logs/phase1"
-mkdir -p "$GINGER_LOGS"
+LOG_DIR="$GINGER_LOGS"
+mkdir -p "$LOG_DIR"
 
 # Collect scripts and package names
 SCRIPTS=("$SCRIPT_DIR/../phase1-tools"/*.sh)
@@ -21,6 +21,7 @@ done
 ui_init_dashboard "${PKG_NAMES[@]}"
 ui_log "Starting Phase 1: Cross Toolchain..."
 
+# Loop through packages
 for i in "${!SCRIPTS[@]}"; do
     script="${SCRIPTS[$i]}"
     SCRIPT_NAME=$(basename "$script" .sh)
@@ -34,19 +35,24 @@ for i in "${!SCRIPTS[@]}"; do
     fi
 
     ui_log "Building $PKG_NAME..."
-    log_file="$GINGER_LOGS/$SCRIPT_NAME.log"
+    log_file="$LOG_DIR/$SCRIPT_NAME.log"
+    mkdir -p "$(dirname "$log_file")"
 
-    # Start build in background
-    bash "$script" >"$log_file" 2>&1 &
+    # Run the package build in background
+    bash "$script" > "$log_file" 2>&1 &
     PID=$!
 
-    # Spinner with elapsed timer
+    # Spinner + timer
     ui_spinner $PID "$PKG_NAME"
 
-    if [ $? -ne 0 ]; then
+    # Check exit status
+    RET=$?
+    if [ $RET -ne 0 ]; then
         ui_error "Build failed: $PKG_NAME. Check $log_file"
     fi
 
-    touch "$LFS/var/lib/ginger/$PKG_NAME.built"
     ui_log "Successfully installed $PKG_NAME"
 done
+
+ui_draw_header
+echo -e "${LASER_GREEN}${BOLD}PHASE 1 COMPLETE!${NC}"
