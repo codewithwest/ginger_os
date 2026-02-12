@@ -83,6 +83,7 @@ ui_save_state() {
     cat > "$UI_STATE_FILE" <<EOF
 UI_CURRENT_STEP=$UI_CURRENT_STEP
 UI_STATUS_MSG=$(printf '%q' "$UI_STATUS_MSG")
+UI_ACTIVE_LOG=$(printf '%q' "${UI_ACTIVE_LOG:-}")
 UI_STEPS=(${UI_STEPS[@]@Q})
 EOF
 }
@@ -115,13 +116,14 @@ ui_draw_full_dashboard() {
     
     # ========== HEADER WITH ASCII ART ==========
     buf+="${ELECTRIC_BLUE}${BOLD}"
-    buf+="\e[K\n"
-    buf+="   ██████╗ ██╗███╗   ██╗ ██████╗ ███████╗██████╗  ██████╗ ███████╗\e[K\n"
-    buf+="  ██╔════╝ ██║████╗  ██║██╔════╝ ██╔════╝██╔══██╗██╔═══██╗██╔════╝\e[K\n"
-    buf+="  ██║  ███╗██║██╔██╗ ██║██║  ███╗█████╗  ██████╔╝██║   ██║███████╗\e[K\n"
-    buf+="  ██║   ██║██║██║╚██╗██║██║   ██║██╔══╝  ██╔══██╗██║   ██║╚════██║\e[K\n"
-    buf+="  ╚██████╔╝██║██║ ╚████║╚██████╔╝███████╗██║  ██║╚██████╔╝███████║\e[K\n"
-    buf+="   ╚═════╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝\e[K\n"
+    buf+="  _____ _                         ____   ____\e[K\n"
+    buf+=" / ____(_)                       / __ \ / ____|\e[K\n"
+    buf+="| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ \e[K\n"
+    buf+="| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\\\ \e[K\n"
+    buf+="| |__| | | | | | (_| |  __/ |   | |__| |____) |\e[K\n"
+    buf+=" \_____|_|_| |_|\__, |\___|_|    \____/|_____/ \e[K\n"
+    buf+="                 __/ |                         \e[K\n"
+    buf+="                |___/         v1.0             \e[K\n"
     buf+="${NC}"
     buf+="${LASER_GREEN}        🌶️  Process-Safe Build System v1.0 - LFS 12.4 🌶️${NC}\e[K\n"
     buf+="\e[K\n"
@@ -212,17 +214,25 @@ ui_draw_full_dashboard() {
     
     # Show max 10 log lines
     local log_h=10
+    local target_log="$UI_LOG_FILE"
+    local prefix="  ${DIM}▸${NC} "
     
-    if [[ -f "$UI_LOG_FILE" ]]; then
+    # If there's an active command log, show that instead (live compiler output)
+    if [[ -n "${UI_ACTIVE_LOG:-}" && -f "$UI_ACTIVE_LOG" ]]; then
+        target_log="$UI_ACTIVE_LOG"
+        prefix="  ${LASER_GREEN}⚙${NC} " # Gear icon for active processes
+    fi
+    
+    if [[ -f "$target_log" ]]; then
         while IFS= read -r line; do
             # Truncate to fit terminal width minus padding
             local max_len=$((term_w - 8))
             local display_line="${line:0:$max_len}"
-            buf+="  ${DIM}▸${NC} $display_line\e[K
+            buf+="$prefix$display_line\e[K
 "
-        done < <(tail -n "$log_h" "$UI_LOG_FILE" 2>/dev/null)
+        done < <(tail -n "$log_h" "$target_log" 2>/dev/null)
     else
-        buf+="  ${DIM}(No logs yet)${NC}\e[K
+        buf+="  ${DIM}(No output yet)${NC}\e[K
 "
     fi
     

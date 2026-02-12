@@ -42,18 +42,28 @@ run_step() {
     local STEP_NAME="$2"
     local CMD="$3"
     
-    LOG_FILE="$STATE_DIR/$STEP_ID.log"
+    LOG_FILE="$GINGER_OS_ROOT/.build_state/$STEP_ID.log"
+    mkdir -p "$GINGER_OS_ROOT/.build_state"
     
-    ui_status "$STEP_NAME - Running..."
+    ui_status "$STEP_NAME"
     ui_log "Starting $STEP_NAME..."
+    
+    # Set the record for the UI monitor to show live output from this log
+    UI_ACTIVE_LOG="$LOG_FILE"
+    ui_save_state
     
     # Ensure log is fresh
     : > "$LOG_FILE"
 
     # Run command with output to log
+    # Using a subshell to ensure environment variables translate correctly
     if eval "$CMD" >> "$LOG_FILE" 2>&1; then
+        UI_ACTIVE_LOG="" # Clear active log display
+        ui_save_state
         ui_log "$STEP_NAME completed successfully"
     else
+        UI_ACTIVE_LOG=""
+        ui_save_state
         ui_log "ERROR: $STEP_NAME failed! Check log: $LOG_FILE"
         exit 1
     fi
