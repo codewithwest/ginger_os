@@ -213,10 +213,12 @@ ui_draw_full_dashboard() {
             # Truncate to fit terminal width minus padding
             local max_len=$((term_w - 8))
             local display_line="${line:0:$max_len}"
-            buf+=$(printf "  ${DIM}▸${NC} %-${max_len}s\\e[K\\n" "$display_line")
+            buf+="  ${DIM}▸${NC} $display_line\e[K
+"
         done < <(tail -n "$log_h" "$UI_LOG_FILE" 2>/dev/null)
     else
-        buf+="  ${DIM}(No logs yet)${NC}\e[K\n"
+        buf+="  ${DIM}(No logs yet)${NC}\e[K
+"
     fi
     
     # ========== ATOMIC RENDER ==========
