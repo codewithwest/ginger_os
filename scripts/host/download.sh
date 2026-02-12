@@ -47,8 +47,9 @@ current=0
 while read -r url; do
     current=$((current + 1))
     pkg=$(basename "$url")
-    ui_log "[$current/$total] Acquiring $pkg..."
+    ui_log "[$current/$total] Downloading: $pkg (Sequential Mode)..."
     wget -4 -q -nc --continue --tries=5 --timeout=20 "$url"
+    sleep 0.1 # Ensure UI has time to render and user sees the sequence
 done < <(grep -v '^#' wget-list)
 
 ui_log "Acquiring extra BLFS tools..."

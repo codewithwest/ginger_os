@@ -86,6 +86,8 @@ ui_error() {
 }
 
 ui_draw_header() {
+    # Move to top-left
+    tput cup 0 0
     echo -e "${ELECTRIC_BLUE}${BOLD}"
     echo "  _____ _                         ____   ____"
     echo " / ____(_)                       / __ \ / ____|"
@@ -108,13 +110,12 @@ get_spinner() {
 ui_draw_dashboard() {
     # Respect headless mode
     if [ "${GINGER_UI_HEADLESS:-0}" -eq 1 ]; then
-        # Just echo the current status to stdout/log so parent can read it
-        # But we must avoid flooding. ui_log handles the explicit messages.
-        # Here we do nothing to avoid ANSI corruption.
         return 0
     fi
 
-    tput cup 0 0
+    # Hide cursor to prevent flicker
+    tput civis
+    
     ui_draw_header
     
     echo -e "--------------------------------------------------------------------------------\e[K"
@@ -181,11 +182,21 @@ ui_draw_dashboard() {
     
     local lines_printed=0
     if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
+        # Use tac to show newest lines or stick to tail? User wants live output. 
+        # Tail is correct.
+        # Clean non-printable chars to avoid graphical glitches
         while read -r line; do
-            printf "  %-.76s\e[K\n" "$line"
+            # Format: Truncate to 76 chars, clean unicode/ansi if needed (but we want color from logs if any)
+            # Just ensure no wrapping
+            # Strip ANSI codes for length calc? No, that's complex in bash.
+            # Just strict truncation for safety.
+            local clean_line=$(echo "$line" | tr -d '\r' | cut -c 1-76)
+            printf "  %s\e[K\n" "$clean_line"
             ((lines_printed++))
         done < <(tail -n $LOG_LINES "$LOG_FILE")
     fi
     while [ $lines_printed -lt $LOG_LINES ]; do echo -e "\e[K"; ((lines_printed++)); done
     echo -e "--------------------------------------------------------------------------------\e[K"
+    
+    # Don't restore cursor immediately, keep it hidden until exit
 }
