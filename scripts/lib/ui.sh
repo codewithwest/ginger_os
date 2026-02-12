@@ -1,196 +1,121 @@
-# ------------------------------
-# Pure Bash Live Dashboard + Scrollable Logs
-# ------------------------------
-LOG_LINES=15  # visible log box height
-SCROLL_STEP=1 # lines per up/down key press
+#!/bin/bash
+# GingerOS UI - Table + live logs
 
-# ANSI color shortcuts
+# Colors
 ELECTRIC_BLUE='\033[38;5;39m'
 LASER_GREEN='\033[38;5;118m'
 RED='\033[0;31m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-ui_init_dashboard() {
-    UI_STEPS=($@)
-    UI_CURRENT_STEP=0
-}
-# ------------------------------
-# Draw the dashboard header + progress
-# ------------------------------
+# Max log lines shown
+LOG_LINES=15
+
+# State
+UI_STEPS=()
+CURRENT_STEP=0
+CURRENT_PHASE_POGS=()
+
+# ASCII header
 ui_draw_header() {
     clear
     echo -e "${ELECTRIC_BLUE}${BOLD}"
     echo "  _____ _                         ____   ____"
-    echo " / ____(_)                       / __ \ / ____|"
+    echo " / ____(_)                       / __ \\ / ____|"
     echo "| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ "
-    echo "| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\"
+    echo "| | |_ | | '_ \\ / _\` |/ _ \\ '__|| |  | |\\___ \\"
     echo "| |__| | | | | | (_| |  __/ |   | |__| |____) |"
-    echo " \_____|_|_| |_|\__, |\___|_|    \____/|_____/ "
+    echo " \\_____|_|_| |_|\\__, |\\___|_|    \\____/|_____/"
     echo "                 __/ |                         "
     echo "                |___/         v1.0             "
-    echo -e "${NC}"
+    echo -e "${NC}\n"
 }
 
-ui_draw_status() {
-    local line=""
-    for i in "${!UI_STEPS[@]}"; do
-        if [ "$i" -lt "$UI_CURRENT_STEP" ]; then
-            line+=" ${LASER_GREEN}[✓] ${UI_STEPS[$i]}${NC} "
-        elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
-            line+=" ${ELECTRIC_BLUE}[▶] ${UI_STEPS[$i]}${NC} "
-        else
-            line+=" [ ] ${UI_STEPS[$i]} "
-        fi
-    done
-    echo -e "$line"
-    echo ""  # empty line before logs
+# Initialize dashboard
+ui_init_dashboard() {
+    UI_STEPS=("$@")
 }
 
-ui_banner() {
-    ui_draw_header
-    ui_draw_status
-}
-
-# ------------------------------
-# Scrollable log viewer
-# ------------------------------
-
-ui_scroll_log() {
-    local LOG_FILE="$1"
-    local scroll_pos=0
-    local total_lines
-    total_lines=$(wc -l < "$LOG_FILE")
-    local key
-
-    # Enable raw mode for arrow key detection
-    stty -echo -icanon time 0 min 0
-
-    while true; do
-        tput cup $((UI_CURRENT_STEP + 12)) 0
-        tput ed  # clear to end of screen
-
-        # Determine slice of log to show
-        local start=$scroll_pos
-        local end=$((scroll_pos + LOG_LINES))
-        if [ $end -gt $total_lines ]; then
-            end=$total_lines
-            start=$((end - LOG_LINES))
-            [ $start -lt 0 ] && start=0
-        fi
-
-        # Print log lines with highlighting
-        sed -n "$((start + 1)),$((end))p" "$LOG_FILE" | while IFS= read -r line; do
-            if [[ "$line" =~ [Ee]rror|[Ff]ailed ]]; then
-                echo -e "${RED}${line}${NC}"
-            else
-                echo "$line"
-            fi
-        done
-
-        # Read user input (non-blocking)
-        read -rsn1 key 2>/dev/null
-        case "$key" in
-            $'\x1b') # escape sequence
-                read -rsn2 key
-                case "$key" in
-                    '[A') scroll_pos=$((scroll_pos - SCROLL_STEP)) ;; # Up
-                    '[B') scroll_pos=$((scroll_pos + SCROLL_STEP)) ;; # Down
-                esac
-                ;;
-        esac
-
-        # Clamp scroll position
-        [ $scroll_pos -lt 0 ] && scroll_pos=0
-        [ $scroll_pos -gt $((total_lines - LOG_LINES)) ] && scroll_pos=$((total_lines - LOG_LINES))
-
-        sleep 0.05
-    done
-
-    # Restore terminal
-    stty sane
-}
-
-# Render the dashboard columns
-ui_draw_dashboard() {
-    clear
-    echo -e "${ELECTRIC_BLUE}${BOLD}GingerOS Build v1.0${NC}"
-    echo ""
-
-    # Calculate spacing
-    local left_width=25
+# Draw the table
+ui_draw_table() {
+    local left_width=20
     local right_width=50
 
-    # Draw system progress (left column)
-    echo -e "${BOLD}SYSTEM PROGRESS:${NC}"
+    echo -e "${BOLD}SYSTEM PROGRESS${NC} | ${BOLD}PHASE PACKAGES${NC}"
+    echo -e "--------------------+--------------------------------------------------"
+
+    local max_rows=${#CURRENT_PHASE_POGS[@]}
     for i in "${!UI_STEPS[@]}"; do
-        local marker="[ ]"
-        if [ "$i" -lt "$UI_CURRENT_STEP" ]; then
-            marker="${LASER_GREEN}[✓]${NC}"
-        elif [ "$i" -eq "$UI_CURRENT_STEP" ]; then
-            marker="${ELECTRIC_BLUE}[▶]${NC}"
+        local step_marker="[ ]"
+        if [ "$i" -lt "$CURRENT_STEP" ]; then
+            step_marker="${LASER_GREEN}[✓]${NC}"
+        elif [ "$i" -eq "$CURRENT_STEP" ]; then
+            step_marker="${ELECTRIC_BLUE}[▶]${NC}"
         fi
-        printf "%-${left_width}s" "$marker ${UI_STEPS[$i]}"
-        # Right column only for current step
-        if [ "$i" -eq "$UI_CURRENT_STEP" ] && [ "${#CURRENT_PHASE_POGS[@]}" -gt 0 ]; then
-            for pog in "${CURRENT_PHASE_POGS[@]}"; do
-                printf "%s " "$pog"
-            done
+
+        # Grab the package for this row (if exists)
+        local pkg=""
+        if [ $i -eq $CURRENT_STEP ] && [ $i -lt $max_rows ]; then
+            pkg="${CURRENT_PHASE_POGS[$i]}"
         fi
-        echo ""
+
+        printf "%-${left_width}s | %s\n" "$step_marker ${UI_STEPS[$i]}" "$pkg"
     done
     echo ""
 }
 
-# ------------------------------
-# Update pogs for current phase
-# ------------------------------
+# Update packages (pogs) in current phase
 ui_update_phase_pogs() {
     local pogs=("$@")
     CURRENT_PHASE_POGS=()
     for p in "${pogs[@]}"; do
         if [[ "$p" =~ built ]]; then
-            CURRENT_PHASE_POGS+=("${LASER_GREEN}[✓] ${p}${NC}")
+            CURRENT_PHASE_POGS+=("${LASER_GREEN}[✓] $p${NC}")
         elif [[ "$p" =~ running ]]; then
-            CURRENT_PHASE_POGS+=("${ELECTRIC_BLUE}[▶] ${p}${NC}")
+            CURRENT_PHASE_POGS+=("${ELECTRIC_BLUE}[▶] $p${NC}")
         else
             CURRENT_PHASE_POGS+=("[ ] $p")
         fi
     done
-    ui_draw_dashboard
+    ui_draw_header
+    ui_draw_table
 }
 
-
-# ------------------------------
-# Run a step with spinner, timer, and scrollable log
-# ------------------------------
-i_run_step() {
+# Run a command with live log and update pogs
+ui_run_step() {
     local CMD="$1"
     local STEP_NAME="$2"
     local LOG_FILE="$3"
 
     : > "$LOG_FILE"
 
-    # Run the command in background
+    # Run command in background
     bash -c "$CMD" > >(tee -a "$LOG_FILE") 2>&1 &
     local PID=$!
 
-    # Update pogs while process runs
+    # Spinner + live log
+    local spinstr='|/-\\'
+    local delay=0.1
     while kill -0 "$PID" 2>/dev/null; do
-        # Parse log for "building" or "configuring" lines for pogs
+        # Last LOG_LINES for pog updates
         mapfile -t POGS < <(tail -n "$LOG_LINES" "$LOG_FILE" | awk '{print $1}')
         ui_update_phase_pogs "${POGS[@]}"
-        sleep 0.3
+
+        local temp=${spinstr#?}
+        printf "\r ${ELECTRIC_BLUE}[%c] %s${NC}" "${spinstr:0:1}" "$STEP_NAME"
+        spinstr=$temp${spinstr%"$temp"}
+        sleep "$delay"
     done
 
     wait "$PID"
     local RET=$?
 
-    # Mark step pog as complete
+    # Final update
     ui_update_phase_pogs "${POGS[@]/%/[✓]}"
-
+    echo ""
     return $RET
 }
+
 
 # ------------------------------
 # Wrapper to run steps with logs and timer
