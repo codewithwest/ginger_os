@@ -148,7 +148,9 @@ extract() {
     if [[ -n "$DIR_NAME" && "$DIR_NAME" != "/" && "$DIR_NAME" != "." ]]; then
         # Only remove if pattern is sufficiently specific (length > 2)
         if [[ ${#DIR_NAME} -gt 2 ]]; then
-             rm -rf "${DIR_NAME%-*}"* || true
+             # IMPORTANT: Only remove DIRECTORIES to avoid deleting the source tarball
+             # which often shares the same name prefix.
+             find . -maxdepth 1 -type d -name "${DIR_NAME%-*}*" -exec rm -rf {} + || true
         fi
     fi
     
@@ -199,9 +201,11 @@ extract() {
 }
 
 cleanup() {
-    if [ -n "${GINGER_CURRENT_BUILD_DIR:-}" ] && [ -d "$GINGER_CURRENT_BUILD_DIR" ]; then
-        log "PROCESS" "Cleaning up build directory: $GINGER_CURRENT_BUILD_DIR"
-        rm -rf "$GINGER_CURRENT_BUILD_DIR"
+    if [ -n "${GINGER_CURRENT_BUILD_DIR:-}" ]; then
+        if [ -d "$GINGER_CURRENT_BUILD_DIR" ]; then
+            log "PROCESS" "Cleaning up build directory: $GINGER_CURRENT_BUILD_DIR"
+            rm -rf "$GINGER_CURRENT_BUILD_DIR"
+        fi
         unset GINGER_CURRENT_BUILD_DIR
     fi
 }

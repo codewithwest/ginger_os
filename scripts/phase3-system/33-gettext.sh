@@ -14,5 +14,5 @@ make install
 
 chmod -v 0755 /usr/lib/preloadable_libintl.so
 
-cd .. && rm -rf "gettext-"*
+cleanup
 mark_built "$PKG_NAME"
