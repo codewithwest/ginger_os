@@ -38,8 +38,8 @@ log() {
 }
 
 # Validate critical environment
-# Inside chroot, LFS should be empty/root, and LFS_TGT is not strictly required for native builds
-if [[ -z "${LFS:-}" ]]; then
+# Inside chroot, LFS is often set to "" (empty string) to represent root.
+if [ -z "${LFS+x}" ]; then
     echo "ERROR: LFS environment variable is not defined!"
     exit 1
 fi
