@@ -5,7 +5,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.align import Align
 from rich.columns import Columns
-from .constants import LOGO, LASER_GREEN, LASER_RED
+from .constants import LOGO, LASER_GREEN, LASER_RED, ELECTRIC_BLUE, LASER_BLUE, GINGER_BLUE
 
 def create_layout() -> Layout:
     layout = Layout()
@@ -40,15 +40,15 @@ def format_time(seconds):
     return f"{mins:02d}:{secs:02d}"
 
 def update_ui(layout: Layout, engine):
-    # Header
     layout["header"].update(Panel(
         Align.center(
             Columns([
-                Text(LOGO, style="bold #00FFFF"), # Laser Blue/Cyan
-                Text("\n\n🌶️ GingerOS Build System\nLFS 12.4 Automata\nCyberpunk Edition", style="bold #39FF14", justify="center") # Laser Green
+                # Use GINGER_BLUE and LASER_GREEN constants
+                Text(LOGO, style=f"bold {GINGER_BLUE}"),
+                Text("\n\n🌶️ GingerOS Build System\nLFS 12.4 Automata\nCyberpunk Edition", style=f"bold {LASER_GREEN}", justify="center")
             ])
         ),
-        border_style="#00BFFF" # Laser Blue Border
+        border_style=LASER_BLUE
     ))
     
     # Roadmap
