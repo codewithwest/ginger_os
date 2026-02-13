@@ -60,6 +60,7 @@ ESSENTIAL_TOOLS=(
     grub-install grub-mkconfig find basename 
     tee sleep which clear ps kill tput 
     readlink dirname touch du df
+    head tail sort uniq
 )
 
 # Create essential system directory structure
@@ -163,10 +164,16 @@ if [ "$found" -eq 1 ]; then
     export TERM=linux
     clear
     cd /mnt/iso/installer
-    /bin/bash /mnt/iso/installer/installer.sh
-    
-    echo "Installation process finished."
-    echo "You can now reboot or power off."
+    if /bin/bash /mnt/iso/installer/installer.sh; then
+        echo "--------------------------------------------------"
+        echo "   INSTALLATION SUCCESSFUL! YOU CAN REBOOT NOW   "
+        echo "--------------------------------------------------"
+    else
+        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        echo "   INSTALLATION FAILED! CHECK /tmp/ginger_build.log"
+        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    fi
+    echo "Dropping to rescue shell. Type 'reboot' or 'poweroff'."
     exec /bin/sh
 else
     echo "ERROR: Could not find GingerOS installation media!"

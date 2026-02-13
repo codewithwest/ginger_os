@@ -68,8 +68,15 @@ echo -e "${RED}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!${NC}"
 ui_confirm "Are you absolutely sure you want to proceed?"
 
 # --- INSTALLATION ---
-TARBALL=$(find . -name "gingeros-base-rootfs.tar.gz" | head -n 1)
-[ -z "$TARBALL" ] && ui_error "RootFS tarball not found!"
+TARBALL=$(find . -maxdepth 1 -name "gingeros-base-rootfs.tar.gz" | head -n 1)
+if [ -z "$TARBALL" ]; then
+    ui_draw_header
+    echo -e "${RED}${BOLD}ERROR: GingerOS RootFS tarball not found!${NC}"
+    echo "This ISO does not contain the system payload (gingeros-base-rootfs.tar.gz)."
+    echo "Please ensure you have completed Phase 4 and the finalize-system.sh script"
+    echo "successfully before building the ISO."
+    exit 1
+fi
 
 # Step 0: Prep
 ui_step 0
