@@ -80,10 +80,10 @@ for url in "${extra_urls[@]}"; do
 done
 
 log "INFO" "Final manifest verification..."
-if grep -v '^#' md5sums | xargs -P "$(nproc)" -I {} sh -c "echo '{}' | md5sum -c --status" 2>/dev/null; then
+if grep -v '^#' md5sums | md5sum -c --quiet; then
     log "INFO" "Source acquisition complete and verified."
     mark_built "05_download_sources"
 else
-    log "ERROR" "Some packages failed checksum verification. Check your logs/05_download_sources.log"
+    log "ERROR" "Checksum verification FAILED for the above packages."
     exit 1
 fi
