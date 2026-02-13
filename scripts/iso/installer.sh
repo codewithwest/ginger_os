@@ -140,7 +140,15 @@ sudo mount --bind /dev "$MNT/dev"
 sudo mount --bind /proc "$MNT/proc"
 sudo mount --bind /sys "$MNT/sys"
 
-KERNEL_IMG=$(ls "$MNT/boot/vmlinuz-"* | head -n 1 | xargs basename)
+# Detect kernel and optional initrd
+KERNEL_IMG=$(ls "$MNT/boot/vmlinuz-"* 2>/dev/null | head -n 1 | xargs basename || echo "")
+INITRD_IMG=$(ls "$MNT/boot/initrd.img"* 2>/dev/null | head -n 1 | xargs basename || echo "")
+
+if [ -z "$KERNEL_IMG" ]; then
+    ui_log "WARNING: No kernel found in /boot! Boot will likely fail."
+fi
+
+# Generate professional grub.cfg
 cat << EOF | sudo tee "$MNT/boot/grub/grub.cfg" >/dev/null
 set default=0
 set timeout=5
@@ -148,12 +156,19 @@ insmod part_msdos
 insmod ext2
 search --no-floppy --fs-uuid --set=root $NEW_UUID
 menuentry 'GingerOS' {
-    linux /boot/$KERNEL_IMG root=UUID=$NEW_UUID rw console=tty0
+    linux /boot/$KERNEL_IMG root=/dev/sda1 root=UUID=$NEW_UUID rw console=tty0
+    $( [ -n "$INITRD_IMG" ] && echo "initrd /boot/$INITRD_IMG" )
 }
 EOF
 
+# Find and run grub-install with logging
 GRUB_BIN=$(find "$MNT/usr/sbin" "$MNT/usr/bin" -name "grub-install" | head -n 1)
-sudo chroot "$MNT" "${GRUB_BIN#$MNT}" --target=i386-pc "$TARGET_DEV" >/dev/null 2>&1
+if [ -n "$GRUB_BIN" ]; then
+    ui_log "Running grub-install..."
+    sudo chroot "$MNT" "${GRUB_BIN#$MNT}" --target=i386-pc "$TARGET_DEV" || ui_error "GRUB installation failed!"
+else
+    ui_error "grub-install not found in the target system!"
+fi
 
 # --- FINISH ---
 sudo umount "$MNT/dev" "$MNT/proc" "$MNT/sys" 2>/dev/null || true
