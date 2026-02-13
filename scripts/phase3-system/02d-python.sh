@@ -3,7 +3,7 @@
 source "/scripts/lib/common.sh"
 PKG_NAME="python-bridge"
 check_built "$PKG_NAME" && exit 0
-extract "python"
+extract "Python"
 
 ./configure --prefix=/usr       \
             --enable-shared     \
