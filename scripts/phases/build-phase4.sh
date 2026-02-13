@@ -11,26 +11,27 @@ echo "Inside Chroot: Starting Phase 4 (Kernel & Boot)..."
 SCRIPTS=(/scripts/phase4-boot/*.sh)
 
 for script in "${SCRIPTS[@]}"; do
-    PKG_NAME=$(basename "$script" .sh | cut -d'-' -f2-)
+    SCRIPT_PKG_NAME=$(grep -E "^PKG_NAME=" "$script" | cut -d'"' -f2 || echo "")
+    FILE_PKG_NAME=$(basename "$script" .sh | cut -d'-' -f2-)
     
-    echo "GINGER_PKG: $PKG_NAME"
-    echo "Building: $PKG_NAME (Boot Components)"
-
     # Skip if already built
-    if [ -f "/var/lib/ginger/$PKG_NAME.built" ]; then
-        echo "$PKG_NAME already built, skipping."
+    if [ -f "/var/lib/ginger/${FILE_PKG_NAME}.built" ] || \
+       [ -n "$SCRIPT_PKG_NAME" -a -f "/var/lib/ginger/${SCRIPT_PKG_NAME}.built" ]; then
         continue
     fi
+
+    echo "GINGER_PKG: $FILE_PKG_NAME"
+    echo "Building: $FILE_PKG_NAME (Boot Components)"
 
     # Execute
     if bash "$script"; then
         mkdir -p "/var/lib/ginger"
-        touch "/var/lib/ginger/$PKG_NAME.built"
-        echo "Successfully built: $PKG_NAME"
+        touch "/var/lib/ginger/${FILE_PKG_NAME}.built"
+        echo "Successfully built: ${FILE_PKG_NAME}"
         # Safe cleanup: only folders, preserve archives
         find /sources -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
     else
-        echo "Error: Failed to build $PKG_NAME"
+        echo "Error: Failed to build ${FILE_PKG_NAME}"
         exit 1
     fi
 done

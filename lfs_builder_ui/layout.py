@@ -25,7 +25,7 @@ def create_layout() -> Layout:
     )
     
     layout["body"].split_column(
-        Layout(name="status", size=7),
+        Layout(name="status", size=5),
         Layout(name="logs")
     )
     
@@ -44,11 +44,11 @@ def update_ui(layout: Layout, engine):
     layout["header"].update(Panel(
         Align.center(
             Columns([
-                Text(LOGO, style="bold bright_cyan"),
-                Text("\n\n🌶️ GingerOS Build System\nLFS 12.4 Automata\nCyberpunk Edition", style="bold bright_green", justify="center")
+                Text(LOGO, style="bold #00FFFF"), # Laser Blue/Cyan
+                Text("\n\n🌶️ GingerOS Build System\nLFS 12.4 Automata\nCyberpunk Edition", style="bold #39FF14", justify="center") # Laser Green
             ])
         ),
-        border_style="bright_blue"
+        border_style="#00BFFF" # Laser Blue Border
     ))
     
     # Roadmap

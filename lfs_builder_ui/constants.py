@@ -10,10 +10,12 @@ os.makedirs(STATE_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Colors & Style
-ELECTRIC_BLUE = "#268bd2"
-LASER_GREEN = "#859900"
-LASER_RED = "#dc322f"
-LASER_YELLOW = "#b58900"
+ELECTRIC_BLUE = "#00E5FF"
+LASER_GREEN = "#39FF14"
+LASER_RED = "#FF003C"
+LASER_YELLOW = "#FFFB00"
+LASER_BLUE = "#00BFFF"
+GINGER_BLUE = "#00FFFF"
 
 # ASCII Logo
 LOGO = """
@@ -24,5 +26,5 @@ LOGO = """
 | |__| | | | | | (_| |  __/ |   | |__| |____) |
  \\_____|_|_| |_|\\__, |\\___|_|    \\____/|_____/ 
                  __/ |                         
-                |___/         v1.0 [Python]
+                |___/         v1.1 [Phase-Checked]
 """

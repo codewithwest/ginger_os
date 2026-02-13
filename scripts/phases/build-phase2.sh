@@ -13,26 +13,28 @@ PHASE2_TOOLS_DIR="$SCRIPT_DIR/../phase2-tools"
 SCRIPTS=("$PHASE2_TOOLS_DIR"/*.sh)
 
 for script in "${SCRIPTS[@]}"; do
-    PKG_NAME=$(basename "$script" .sh)
+    SCRIPT_PKG_NAME=$(grep -E "^PKG_NAME=" "$script" | cut -d'"' -f2 || echo "")
+    FILE_PKG_NAME=$(basename "$script" .sh)
     
-    echo "GINGER_PKG: $PKG_NAME"
-    echo "Building: $PKG_NAME (Temporary Tools)"
-
-    # Check if already built
-    if [ -f "/mnt/lfs/var/lib/ginger/$PKG_NAME-temp.built" ]; then
-        echo "Package $PKG_NAME already built, skipping."
+    # Check both names for consistency (noting Phase 2 often uses -temp suffix)
+    if [ -f "/mnt/lfs/var/lib/ginger/${FILE_PKG_NAME}-temp.built" ] || \
+       [ -n "$SCRIPT_PKG_NAME" -a -f "/mnt/lfs/var/lib/ginger/${SCRIPT_PKG_NAME}-temp.built" ] || \
+       [ -n "$SCRIPT_PKG_NAME" -a -f "/mnt/lfs/var/lib/ginger/${SCRIPT_PKG_NAME}.built" ]; then
         continue
     fi
+    
+    echo "GINGER_PKG: ${FILE_PKG_NAME}"
+    echo "Building: ${FILE_PKG_NAME} (Temporary Tools)"
 
     # Run the build script
     if bash "$script"; then
         mkdir -p "/mnt/lfs/var/lib/ginger"
-        touch "/mnt/lfs/var/lib/ginger/$PKG_NAME-temp.built"
-        echo "Successfully built: $PKG_NAME"
+        touch "/mnt/lfs/var/lib/ginger/${FILE_PKG_NAME}-temp.built"
+        echo "Successfully built: ${FILE_PKG_NAME}"
         # Cleanup sources to save space
         find /mnt/lfs/sources -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
     else
-        echo "Error: Failed to build $PKG_NAME"
+        echo "Error: Failed to build ${FILE_PKG_NAME}"
         exit 1
     fi
 done
