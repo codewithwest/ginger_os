@@ -9,30 +9,48 @@ source "${SCRIPT_DIR}/../lib/common.sh"
 
 IMAGE_PATH="${GINGER_ROOT}/ginger_os.img"
 
-log "INFO" "Creating 12GB sparse disk image..."
-# Use truncate instead of dd to create a sparse file (takes almost 0 space until used)
-[ -f "$IMAGE_PATH" ] && rm "$IMAGE_PATH"
-truncate -s 12G "$IMAGE_PATH"
+if [ ! -f "$IMAGE_PATH" ]; then
+    log "INFO" "Creating 12GB sparse disk image..."
+    truncate -s 12G "$IMAGE_PATH"
 
-log "INFO" "Partitioning image..."
-# Create a single primary bootable partition
-sudo parted -s "$IMAGE_PATH" mklabel msdos
-sudo parted -s "$IMAGE_PATH" mkpart primary ext4 1MiB 100%
-sudo parted -s "$IMAGE_PATH" set 1 boot on
+    log "INFO" "Partitioning image..."
+    sudo parted -s "$IMAGE_PATH" mklabel msdos
+    sudo parted -s "$IMAGE_PATH" mkpart primary ext4 1MiB 100%
+    sudo parted -s "$IMAGE_PATH" set 1 boot on
+    NEEDS_FORMAT=true
+else
+    log "INFO" "Disk image already exists, skipping creation."
+    NEEDS_FORMAT=false
+fi
 
-log "INFO" "Setting up loopback device..."
-# Find next available loop device
-LOOP_DEV=$(sudo losetup -fP --show "$IMAGE_PATH")
+log "INFO" "Checking loopback device..."
+# Check if image is already mapped to a loop device
+LOOP_DEV=$(sudo losetup -j "$IMAGE_PATH" | cut -d: -f1 | head -n1)
 
-# echo "$LOOP_DEV" > "$GINGER_ROOT/.loopdev"
+if [ -z "$LOOP_DEV" ]; then
+    log "INFO" "Setting up loopback device..."
+    LOOP_DEV=$(sudo losetup -fP --show "$IMAGE_PATH")
+else
+    log "INFO" "Using existing loopback device: $LOOP_DEV"
+    # Ensure partitions are scanned
+    sudo partprobe "$LOOP_DEV"
+fi
 
-log "INFO" "Formatting partition..."
-sudo mkfs.ext4 "${LOOP_DEV}p1"
+if [ "$NEEDS_FORMAT" = true ]; then
+    log "INFO" "Formatting partition..."
+    sudo mkfs.ext4 "${LOOP_DEV}p1"
+fi
 
 log "INFO" "Mounting to $LFS..."
 [ -d "$LFS" ] || sudo mkdir -p "$LFS"
-sudo mount "${LOOP_DEV}p1" "$LFS"
-sudo chown -v lfs:lfs "$LFS"
+
+if mountpoint -q "$LFS"; then
+    log "INFO" "$LFS is already mounted."
+else
+    sudo mount "${LOOP_DEV}p1" "$LFS"
+    sudo chown -v lfs:lfs "$LFS"
+fi
+
 if ! mountpoint -q "$LFS"; then
     log "ERROR" "Failed to mount LFS filesystem at $LFS"
     exit 1

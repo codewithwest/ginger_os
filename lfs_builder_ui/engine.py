@@ -351,16 +351,24 @@ class GingerEngine:
         # 4. Dynamic state checks
         if step.id == "04_prepare_image":
             # Check if image is already mounted to LFS
+            # CRITICAL FAILSAFE: Even if marker exists, if it's NOT mounted, we should NOT skip
             try:
                 result = subprocess.run(["mountpoint", "-q", "/mnt/lfs"], capture_output=True)
-                return result.returncode == 0
+                is_mounted = result.returncode == 0
+                if not is_mounted:
+                    return False
+                return True # Marker exists AND is mounted
             except: return False
             
         if step.id == "12_chroot_mounts":
             # Check if chroot special filesystems are mounted
+            # FAILSAFE: If marker exists but mounts are gone, do NOT skip
             try:
                 result = subprocess.run(["grep", "-q", "/mnt/lfs/proc", "/proc/mounts"], capture_output=True)
-                return result.returncode == 0
+                is_mounted = result.returncode == 0
+                if not is_mounted:
+                    return False
+                return True # Marker exists AND chroot is mounted
             except: return False
 
         return False
@@ -382,6 +390,42 @@ class GingerEngine:
             self.logs.pop(0)
         with open(MASTER_LOG, "a") as f:
             f.write(log_entry + "\n")
+
+    def _ensure_lfs_mounted(self):
+        """
+        Verify that /mnt/lfs is mounted. If not, automatically run
+        the idempotent prepare-image step to recover the environment.
+        
+        Returns:
+            bool: True if mounted (or successfully re-mounted), False otherwise.
+        """
+        try:
+            result = subprocess.run(["mountpoint", "-q", "/mnt/lfs"], capture_output=True)
+            if result.returncode == 0:
+                return True
+            
+            # Mount lost! Attempt automatic recovery.
+            self.log("WARN: LFS partition (/mnt/lfs) is NOT mounted!", "yellow")
+            self.log("Attempting automated mount recovery...", "bold cyan")
+            
+            # Find the "prepare-image" step
+            prepare_step = next((s for s in self.steps if s.id == "04_prepare_image"), None)
+            if not prepare_step:
+                self.log("ERROR: Could not find Recovery Step (04_prepare_image)!", "bold red")
+                return False
+                
+            # Run the idempotent script directly
+            # We don't use _execute_step here to avoid recursion/state mess
+            proc = subprocess.run(prepare_step.command, shell=True, cwd=GINGER_ROOT, capture_output=True, text=True)
+            if proc.returncode == 0:
+                self.log("✅ Mount recovered successfully.", "bold green")
+                return True
+            else:
+                self.log(f"❌ Automated recovery failed: {proc.stderr}", "bold red")
+                return False
+        except Exception as e:
+            self.log(f"!!! Error during mount check: {str(e)}", "bold red")
+            return False
 
     def _verify_chroot_ready(self):
         """Verify chroot filesystems are mounted."""
@@ -417,12 +461,41 @@ class GingerEngine:
         self.logs = []  # Clear previous logs for this run
         self.aborted = False
         
+        # Verify mount and chroot for dependent phases
+        # Steps 07 (Host Setup) through 16 (Teardown) require the LFS disk to be mounted
+        try:
+            step_num = int(step.id.split('_')[0])
+            if step_num >= 7 and step_num <= 16:
+                if not self._ensure_lfs_mounted():
+                    self.log(f"ERROR: Step {step.name} cannot proceed without LFS mount.", "bold red")
+                    step.status = "failed"
+                    return
+        except (ValueError, IndexError):
+            pass # Non-standard step ID, skip auto-mount check
+
         # Verify chroot for system phases
         if step.id in ["13_phase3_system", "14_kernel"]:
             if not self._verify_chroot_ready():
-                self.log("ERROR: Chroot not mounted. Please run 'Mount Chroot' step first.", "bold red")
-                step.status = "failed"
-                return
+                self.log("WARN: Chroot environments are NOT mounted!", "yellow")
+                self.log("Attempting automated chroot recovery...", "bold cyan")
+                
+                # Find the "chroot-mounts" step
+                mount_step = next((s for s in self.steps if s.id == "12_chroot_mounts"), None)
+                if mount_step:
+                    # Run it once
+                    proc = subprocess.run(mount_step.command, shell=True, cwd=GINGER_ROOT, capture_output=True, text=True)
+                    if proc.returncode == 0:
+                        self.log("✅ Chroot recovered successfully.", "bold green")
+                    else:
+                        self.log(f"❌ Chroot recovery failed: {proc.stderr}", "bold red")
+                        step.status = "failed"
+                        return
+                
+                # Re-verify after attempt
+                if not self._verify_chroot_ready():
+                    self.log("ERROR: Chroot still not ready. Please run 'Mount Chroot' step manually.", "bold red")
+                    step.status = "failed"
+                    return
         
         self.current_pkg = ""
         self.pkg_start_time = None

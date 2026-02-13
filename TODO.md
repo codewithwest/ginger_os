@@ -17,6 +17,11 @@
   - Ensure build directories are cleaned up on error
   - File: `scripts/lib/common.sh`
 
+- [x] **Build Failsafes**: Automated Mount & Chroot Recovery
+  - Automatically re-mounts /mnt/lfs if lost during build
+  - Automatically restores chroot virtual filesystems if missing for phase 3/4
+  - Files: `lfs_builder_ui/engine.py`, `scripts/image/prepare-image.sh`
+
 - [x] **Deprecated Test Operator**: Replace `-a` with `&&` in phase scripts
   - Files: `scripts/phases/build-phase1.sh`, `build-phase2.sh`
 
