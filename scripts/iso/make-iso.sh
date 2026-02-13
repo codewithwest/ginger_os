@@ -54,7 +54,7 @@ sudo rm -rf "$INITRD_WORK"
 # Essential tools needed for a functional Live environment and Installer
 # We pull these from the host system to ensure they matching the architecture
 ESSENTIAL_TOOLS=(
-    bash id sh mount umount mkdir ls cat grep sed awk 
+    bash id sh mount umount mkdir ls cat grep sed awk rm
     parted mkfs.ext4 mke2fs tar lsblk blkid 
     useradd chpasswd groupadd chown chmod 
     grub-install grub-mkconfig find basename 
@@ -112,10 +112,11 @@ else
     exit 1
 fi
 
-# Copy xterm-256color terminfo for professional UI support
+# Copy xterm-256color and linux terminfo for professional UI support
 mkdir -p "$INITRD_WORK/usr/share/terminfo/x"
-TERMINFO_FILE="/usr/share/terminfo/x/xterm-256color"
-[ -f "$TERMINFO_FILE" ] && cp -v "$TERMINFO_FILE" "$INITRD_WORK/usr/share/terminfo/x/"
+mkdir -p "$INITRD_WORK/usr/share/terminfo/l"
+[ -f "/usr/share/terminfo/x/xterm-256color" ] && cp -v "/usr/share/terminfo/x/xterm-256color" "$INITRD_WORK/usr/share/terminfo/x/"
+[ -f "/usr/share/terminfo/l/linux" ] && cp -v "/usr/share/terminfo/l/linux" "$INITRD_WORK/usr/share/terminfo/l/"
 
 # Step 4: Packaging
 echo "__GINGER_PKG_MARKER__: Packaging"

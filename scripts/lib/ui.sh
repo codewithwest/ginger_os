@@ -347,7 +347,12 @@ ui_init_dashboard() {
     fi
 
     # Start monitor
-    ui_monitor > /dev/tty 2>&1 &
+    # Force output to /dev/tty or /dev/console to prevent UI leaking into step logs
+    local out_dev="/dev/tty"
+    [ ! -e "$out_dev" ] && out_dev="/dev/console"
+    [ ! -e "$out_dev" ] && out_dev="/dev/stdout"
+
+    ui_monitor > "$out_dev" 2>&1 &
     UI_MONITOR_PID=$!
     echo "$UI_MONITOR_PID" > "$pi_file"
     
