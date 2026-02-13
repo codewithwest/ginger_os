@@ -498,6 +498,14 @@ def main():
     tui = GingerTUI(dry_run=args.dry_run)
     
     if args.web:
+        try:
+            import fastapi
+            import uvicorn
+        except ImportError:
+            print("\nError: Web UI dependencies missing.")
+            print("Please install them with: pip install fastapi uvicorn")
+            sys.exit(1)
+
         from lfs_builder_ui.server import start_server
         web_thread = threading.Thread(
             target=start_server, 
