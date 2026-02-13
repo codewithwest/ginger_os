@@ -77,7 +77,7 @@ class GingerTUI:
         
         if self.executing_step is not None:
             elapsed = time.time() - self.current_start_time
-            stats_text.append("🚀 EXECUTION IN PROGRESS\n", style="bold bright_red blink")
+            stats_text.append("🚀 EXECUTION IN PROGRESS\n", style="bold bright_green blink")
             # stats_text.append(f"Running: {self.engine.steps[self.executing_step].name}\n", style="bold bright_white") # Removed per user request
             stats_text.append(f"Time: {self.format_time(elapsed)}\n\n", style="bold bright_yellow")
             stats_text.append("⚠️  PLEASE WAIT - SYSTEM BUSY", style="bold bright_red")

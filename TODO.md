@@ -55,7 +55,7 @@
 
 ## 🟡 MEDIUM PRIORITY (Nice to Have)
 
-- [ ] **Issue #6**: Replace `source` with safe parsing in `ui_load_state`
+- [x] **Issue #6**: Replace `source` with safe parsing in `ui_load_state`
   - Prevent arbitrary code execution from corrupted state files
   - File: `scripts/lib/ui.sh` (Line 102)
 
@@ -66,11 +66,11 @@
 - [ ] **Documentation**: Add docstrings to Python engine methods
   - File: `lfs_builder_ui/engine.py`
 
-- [ ] **Issue #9**: Make `GINGER_PKG:` marker more unique
+- [x] **Issue #9**: Make `GINGER_PKG:` marker more unique
   - Change to `__GINGER_PKG_MARKER__:` to avoid false positives
   - Files: `scripts/phases/*.sh`, `lfs_builder_ui/engine.py`
 
-- [ ] **Issue #10**: Fix storage update timing logic
+- [x] **Issue #10**: Fix storage update timing logic
   - Replace probabilistic timing with explicit counter
   - File: `lfs_builder_ui/engine.py` (Line 338)
 

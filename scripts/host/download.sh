@@ -13,20 +13,20 @@ source "${SCRIPT_DIR}/../../config/env.sh"
 source "${SCRIPT_DIR}/../lib/common.sh"
 
 # 1. Prepare directory
-echo "GINGER_PKG: Directory Preparation"
+echo "__GINGER_PKG_MARKER__: Directory Preparation"
 log "INFO" "Preparing sources directory..."
 mkdir -p "$GINGER_SOURCES"
 chmod a+wt "$GINGER_SOURCES"
 cd "$GINGER_SOURCES"
 
 # 2. Get list and checksums
-echo "GINGER_PKG: Fetching Package Lists"
+echo "__GINGER_PKG_MARKER__: Fetching Package Lists"
 log "INFO" "Fetching package lists for LFS ${LFS_VERSION}..."
 wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/wget-list"
 wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/md5sums"
 
 # 3. Pre-Download Checksum Verification
-echo "GINGER_PKG: Pre-download Check"
+echo "__GINGER_PKG_MARKER__: Pre-download Check"
 log "INFO" "Performing pre-download checksum verification..."
 # If all standard packages match, we might skip the whole thing
 if grep -v '^#' md5sums | xargs -P "$(nproc)" -I {} sh -c "echo '{}' | md5sum -c --status" 2>/dev/null; then
@@ -39,7 +39,7 @@ if grep -v '^#' md5sums | xargs -P "$(nproc)" -I {} sh -c "echo '{}' | md5sum -c
 fi
 
 # 4. Download packages sequentially
-echo "GINGER_PKG: Downloading Packages"
+echo "__GINGER_PKG_MARKER__: Downloading Packages"
 log "INFO" "Verifying all manifest packages exist locally..."
 
 total=$(grep -v '^#' wget-list | wc -l)
@@ -57,7 +57,7 @@ while read -r url; do
     pkg=$(basename "$url")
     
     if [ ! -f "$pkg" ] || [ ! -s "$pkg" ]; then
-        echo "GINGER_PKG: $pkg [$current/$total]"
+        echo "__GINGER_PKG_MARKER__: $pkg [$current/$total]"
         log "PROCESS" "Missing: $pkg. Downloading..."
         if ! wget -4 --continue --progress=bar:force:noscroll --tries=3 --timeout=15 "$url"; then
             log "ERROR" "Failed to download $pkg"
@@ -76,7 +76,7 @@ fi
 # ---------------------------------------------------------------------
 # Extra Tools Verification
 # ---------------------------------------------------------------------
-echo "GINGER_PKG: BLFS Tools"
+echo "__GINGER_PKG_MARKER__: BLFS Tools"
 for url in "${extra_urls[@]}"; do
     pkg=$(basename "$url")
     if [ ! -f "$pkg" ] || [ ! -s "$pkg" ]; then

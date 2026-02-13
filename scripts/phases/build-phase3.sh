@@ -30,7 +30,7 @@ for script in "${SCRIPTS[@]}"; do
         continue
     fi
 
-    echo "GINGER_PKG: $FILE_PKG_NAME"
+    echo "__GINGER_PKG_MARKER__: $FILE_PKG_NAME"
     echo "Building: $FILE_PKG_NAME (Final System)"
 
     if bash "$script"; then

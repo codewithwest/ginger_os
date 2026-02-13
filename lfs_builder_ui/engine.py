@@ -445,8 +445,10 @@ class GingerEngine:
                         
                         if clean_line:
                             # Periodically update storage info (non-blocking if possible)
-                            if time.time() % 3 < 0.1:
+                            if not hasattr(self, 'last_storage_update'): self.last_storage_update = 0
+                            if time.time() - self.last_storage_update > 3.0:
                                 self._update_storage()
+                                self.last_storage_update = time.time()
                             
                             # Log to TUI panel (NO PRINT!)
                             # Special handling for useful keywords
@@ -465,12 +467,12 @@ class GingerEngine:
                             self.log(clean_line, style)
 
                             # Package tracking
-                            if clean_line.startswith("GINGER_PKG:"):
+                            if clean_line.startswith("__GINGER_PKG_MARKER__:"):
                                 if self.current_pkg and self.pkg_start_time:
                                     duration = time.time() - self.pkg_start_time
                                     step.packages_completed.append((self.current_pkg, duration))
                                 
-                                pkg_name = clean_line.replace("GINGER_PKG:", "").strip()
+                                pkg_name = clean_line.replace("__GINGER_PKG_MARKER__:", "").strip()
                                 self.current_pkg = pkg_name
                                 self.pkg_start_time = time.time()
                                 self.log(f"Building Package: {pkg_name}", "bold cyan")

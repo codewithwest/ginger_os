@@ -22,7 +22,7 @@ trap cleanup EXIT
 # --- BUILD PROCESS ---
 
 # Step 0: Cleanup
-echo "GINGER_PKG: Preparation"
+echo "__GINGER_PKG_MARKER__: Preparation"
 echo "Preparing build arena..."
 cleanup
 mkdir -p "$ISO_DIR/boot/grub" "$ISO_DIR/installer"
@@ -35,14 +35,14 @@ if [ "$FREE_BLOCKS" -lt 5000000 ]; then
 fi
 
 # Step 1: Environment
-echo "GINGER_PKG: Environment"
+echo "__GINGER_PKG_MARKER__: Environment"
 echo "Collecting Kernel..."
 KERNEL_IMG=$(ls "$GINGER_ROOT/vmlinuz-"* 2>/dev/null | head -n 1)
 [ -z "$KERNEL_IMG" ] && { echo "Kernel not found!"; exit 1; }
 cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 
 # Step 2: Initrd
-echo "GINGER_PKG: Initrd"
+echo "__GINGER_PKG_MARKER__: Initrd"
 echo "Assembling Minimal Live Environment..."
 sudo rm -rf "$INITRD_WORK"
 mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sbin,sys,tmp,var,root}
@@ -97,7 +97,7 @@ else
 fi
 
 # Step 4: Packaging
-echo "GINGER_PKG: Packaging"
+echo "__GINGER_PKG_MARKER__: Packaging"
 echo "Creating Live Initrd and Payload..."
 # Create init script with error handling
 cat << 'EOF' > "$INITRD_WORK/init"
@@ -158,7 +158,7 @@ cp "$INITRD_WORK/root/.bashrc" "$INITRD_WORK/.bashrc" 2>/dev/null || true
 [ -f "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" ] && cp "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/"
 
 # Step 4: ISO Build
-echo "GINGER_PKG: ISO Build"
+echo "__GINGER_PKG_MARKER__: ISO Build"
 echo "Generating final ISO..."
 cat << EOF > "$ISO_DIR/boot/grub/grub.cfg"
 set default=0

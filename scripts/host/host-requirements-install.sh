@@ -22,7 +22,7 @@ mkdir -p "$(dirname "$UI_LOG_FILE")"
 # ============================================================================
 
 sudo -v
-echo "GINGER_PKG: Configure Host Shell"
+echo "__GINGER_PKG_MARKER__: Configure Host Shell"
 echo "Ensuring /bin/sh is bash..."
 sudo ln -sf bash /bin/sh
 
@@ -45,7 +45,7 @@ wait_for_apt_lock() {
 # STEP 1: UPDATE PACKAGE CACHE
 # ============================================================================
 
-echo "GINGER_PKG: Update Package Cache"
+echo "__GINGER_PKG_MARKER__: Update Package Cache"
 echo "Refreshing package database..."
 export DEBIAN_FRONTEND=noninteractive
 wait_for_apt_lock
@@ -57,7 +57,7 @@ echo "Apt-get update finished."
 # STEP 2: INSTALL BUILD TOOLS
 # ============================================================================
 
-echo "GINGER_PKG: Install Build Tools"
+echo "__GINGER_PKG_MARKER__: Install Build Tools"
 echo "Installing essential build tools..."
 wait_for_apt_lock
 sudo apt-get install -y -qq build-essential bison gawk m4 texinfo >> "$UI_LOG_FILE" 2>&1 || { echo "ERROR: Failed to install core build tools"; exit 1; }
@@ -66,7 +66,7 @@ sudo apt-get install -y -qq build-essential bison gawk m4 texinfo >> "$UI_LOG_FI
 # STEP 3: INSTALL LFS DEPENDENCIES
 # ============================================================================
 
-echo "GINGER_PKG: Install LFS Dependencies"
+echo "__GINGER_PKG_MARKER__: Install LFS Dependencies"
 echo "Installing LFS-specific dependencies..."
 wait_for_apt_lock
 sudo apt-get install -y -qq \
@@ -78,7 +78,7 @@ sudo apt-get install -y -qq \
 # STEP 4: CREATE LFS USER
 # ============================================================================
 
-echo "GINGER_PKG: Create LFS User"
+echo "__GINGER_PKG_MARKER__: Create LFS User"
 if ! id lfs >/dev/null 2>&1; then
     echo "Creating lfs group and user"
     sudo groupadd lfs >> "$UI_LOG_FILE" 2>&1 || true
@@ -112,7 +112,7 @@ sudo chown -R lfs:lfs /home/lfs >> "$UI_LOG_FILE" 2>&1
 # STEP 5: VERIFY INSTALLATION
 # ============================================================================
 
-echo "GINGER_PKG: Verify Installation"
+echo "__GINGER_PKG_MARKER__: Verify Installation"
 echo "Verifying installation..."
 {
     echo "=== Tool Versions ==="

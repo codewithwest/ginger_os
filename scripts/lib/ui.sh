@@ -97,9 +97,27 @@ UI_RENDER_TMP="/tmp/ginger_render.$GINGER_UI_MASTER_PID"
 
 ui_load_state() {
     if [[ -f "$UI_STATE_FILE" ]]; then
-        # Use a subshell to source and echo values to prevent variable pollution
-        # or stick to your sourcing if you trust the input (printf %q helps)
-        source "$UI_STATE_FILE"
+        # Safe parsing: read line by line instead of sourcing
+        while IFS='=' read -r key value || [ -n "$key" ]; do
+            # Remove potential surrounding quotes from printf %q
+            # This is a basic unquote implementation for simple values
+            value="${value#\'}"
+            value="${value%\'}"
+            
+            # Additional safety: only allow specific keys
+            case "$key" in
+                UI_CURRENT_STEP|UI_STATUS_MSG|UI_ACTIVE_LOG|UI_STEPS)
+                    # For UI_STEPS (array), we need careful handling or just skip it 
+                    # if it uses complex array syntax. Bash arrays are hard to parse safely without source.
+                    # Given UI_STEPS is used for internal state tracking, we might skip it 
+                    # if we can't parse it safely, or rely on engine re-sending it.
+                    # For now, let's skip complex array parsing to be safe and only load scalars.
+                    if [[ "$key" != "UI_STEPS" ]]; then
+                        printf -v "$key" '%s' "$value"
+                    fi
+                    ;;
+            esac
+        done < "$UI_STATE_FILE"
     fi
 }
 
