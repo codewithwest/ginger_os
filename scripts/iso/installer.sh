@@ -98,8 +98,13 @@ ui_step 2
 MNT="/mnt/gingeros_install"
 sudo mkdir -p "$MNT"
 sudo mount "$PART" "$MNT"
-sudo tar --xattrs --acls -C "$MNT" -xpf "$TARBALL" &
-ui_spinner $! "Deploying GingerOS files..."
+
+# Read file count for progress bar
+TOTAL_FILES=$(cat "${SCRIPT_DIR}/file_count.txt" 2>/dev/null || echo "10000")
+ui_log "Deploying GingerOS files (Total: $TOTAL_FILES)..."
+
+# Run tar with verbose output piped to progress bar
+sudo tar --xattrs --acls -C "$MNT" -xvzpf "$TARBALL" | ui_progress_bar "$TOTAL_FILES" "Deploying RootFS"
 
 # Step 3: Sync
 ui_step 3

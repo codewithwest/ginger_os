@@ -192,7 +192,12 @@ cp "$GINGER_ROOT/scripts/lib/bash_config.sh" "$ISO_DIR/installer/"
 # Apply bash config to Live environment
 write_bash_config "$INITRD_WORK/root/.bashrc" "root" "true"
 cp "$INITRD_WORK/root/.bashrc" "$INITRD_WORK/.bashrc" 2>/dev/null || true
-[ -f "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" ] && cp "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/"
+
+if [ -f "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" ]; then
+    cp "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/"
+    echo "Calculating file count for progress bar..."
+    tar -tzf "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" | wc -l > "$ISO_DIR/installer/file_count.txt"
+fi
 
 # Step 4: ISO Build
 echo "__GINGER_PKG_MARKER__: ISO Build"

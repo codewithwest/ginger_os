@@ -461,7 +461,7 @@ ui_draw_header() {
     echo "| |__| | | | | | (_| |  __/ |   | |__| |____) |"
     echo " \_____|_|_| |_|\__, |\___|_|    \____/|_____/ "
     echo "                 __/ |                         "
-    echo "                |___/         Installer        "
+    echo "                |___/         Installer v1.0.0 "
     echo -e "${NC}"
 }
 
@@ -475,6 +475,34 @@ ui_spinner() {
         i=$(( (i+1) % 10 ))
         printf "\r${ELECTRIC_BLUE}${spin:$i:1}${NC} $msg..."
         sleep 0.1
+    done
+    tput cnorm
+    echo -e " [${LASER_GREEN}DONE${NC}]"
+}
+
+ui_progress_bar() {
+    # Real-time progress bar reading from a pipe
+    # Usage: cmd | ui_progress_bar <total> "Status Message"
+    local total=$1
+    local msg=$2
+    local count=0
+    local last_pct=-1
+    
+    tput civis
+    while read -r line; do
+        count=$((count + 1))
+        local pct=$((count * 100 / total))
+        
+        # Only redraw if percentage changed to save CPU
+        if [ "$pct" -ne "$last_pct" ]; then
+            local filled=$((pct / 4)) # 25 blocks wide
+            local bar=$(printf "%${filled}s" | tr ' ' '━')
+            local empty=$(printf "%$((25 - filled))s" | tr ' ' ' ')
+            
+            # Draw the bar
+            printf "\r${ELECTRIC_BLUE}${BOLD}▸ %-25s${NC} ${pct}%% [${LASER_GREEN}${bar}${NC}${empty}]" "$msg"
+            last_pct=$pct
+        fi
     done
     tput cnorm
     echo -e " [${LASER_GREEN}DONE${NC}]"
