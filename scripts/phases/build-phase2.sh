@@ -29,6 +29,8 @@ for script in "${SCRIPTS[@]}"; do
         mkdir -p "/mnt/lfs/var/lib/ginger"
         touch "/mnt/lfs/var/lib/ginger/$PKG_NAME-temp.built"
         echo "Successfully built: $PKG_NAME"
+        # Cleanup sources to save space
+        find /mnt/lfs/sources -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
     else
         echo "Error: Failed to build $PKG_NAME"
         exit 1

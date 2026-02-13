@@ -78,20 +78,30 @@ extract() {
     mkdir -p "$BUILD_BASE"
     cd "$BUILD_BASE"
     
-    # Clean up previous build directory
-    rm -rf "$DIR_NAME"
+    # Clean up previous build directory if it exists
+    # We use a broad shell glob to catch variations (e.g., binutils-2.43.1 vs binutils-2.43)
+    rm -rf "${DIR_NAME%-*}"* || true
     
     # Extract
     tar -xf "$GINGER_SOURCES/$ARCHIVE_NAME"
     
-    # Some archives extract to a directory slightly different than the filename
-    # but 99% match. We'll try to find the directory if cd fails.
-    if [ -d "$DIR_NAME" ]; then
-        cd "$DIR_NAME"
-    else
-        # Find the most recently created directory
-        local NEW_DIR=$(ls -td */ | head -n 1 | cut -d'/' -f1)
+    # Find the newly created directory (it might not exactly match DIR_NAME)
+    local NEW_DIR=$(ls -td */ | head -n 1 | cut -d'/' -f1)
+    if [ -d "$NEW_DIR" ]; then
         cd "$NEW_DIR"
+        # Export for cleanup later
+        export GINGER_CURRENT_BUILD_DIR="$BUILD_BASE/$NEW_DIR"
+    else
+        log "ERROR" "Failed to find extracted directory in $BUILD_BASE"
+        exit 1
+    fi
+}
+
+cleanup() {
+    if [ -n "${GINGER_CURRENT_BUILD_DIR:-}" ] && [ -d "$GINGER_CURRENT_BUILD_DIR" ]; then
+        log "PROCESS" "Cleaning up build directory: $GINGER_CURRENT_BUILD_DIR"
+        rm -rf "$GINGER_CURRENT_BUILD_DIR"
+        unset GINGER_CURRENT_BUILD_DIR
     fi
 }
 

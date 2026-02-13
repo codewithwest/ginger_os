@@ -9,6 +9,7 @@ from datetime import datetime
 import re
 import termios
 import tty
+import shutil
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
@@ -123,6 +124,9 @@ class GingerEngine:
         # Regex for ANSI filtering
         self.ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
         
+        # Log rotation
+        self._rotate_logs()
+        
         # Keep sudo alive
         self.sudo_thread = threading.Thread(target=self._sudo_keepalive, daemon=True)
         
@@ -147,6 +151,24 @@ class GingerEngine:
                     break
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+    def _rotate_logs(self):
+        """Clean up old logs or rotate master log if too big."""
+        if os.path.exists(MASTER_LOG):
+            if os.path.getsize(MASTER_LOG) > 50 * 1024 * 1024: # 50MB
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                shutil.move(MASTER_LOG, f"{MASTER_LOG}.{timestamp}.bak")
+                with open(MASTER_LOG, "w") as f:
+                    f.write(f"--- GingerOS Master Log Rotated at {timestamp} ---\n")
+        
+        # Keep only the last 50 phase logs
+        all_logs = sorted([os.path.join(LOG_DIR, f) for f in os.listdir(LOG_DIR) if f.endswith(".log")])
+        if len(all_logs) > 50:
+            for old_log in all_logs[:-50]:
+                try:
+                    os.remove(old_log)
+                except:
+                    pass
 
     def restart_phase(self):
         self.log("RESTARTING PHASE...", "bold yellow")
@@ -511,17 +533,27 @@ def main():
         console.print("Please run 'sudo -v' first or run this script with sudo.")
         sys.exit(1)
 
-    # Start build
-    build_thread = threading.Thread(target=engine.run)
-    build_thread.start()
-    
     try:
+        # Initial UI Update
+        update_ui(layout, engine)
+        
         with Live(layout, refresh_per_second=4, screen=True) as live:
-            while engine.is_running or build_thread.is_alive():
+            engine.ui_live = live
+            
+            # Start engine in separate thread
+            build_thread = threading.Thread(target=engine.run)
+            build_thread.start()
+            
+            while engine.is_running or engine.paused_for_error:
                 update_ui(layout, engine)
                 time.sleep(0.2)
+                
+            # Final update
             update_ui(layout, engine)
-            time.sleep(2) # Show final state
+            time.sleep(1)
+            
+    except KeyboardInterrupt:
+        engine.abort()
     except Exception as e:
         console.print(f"[bold red]UI Error: {str(e)}[/bold red]")
     finally:

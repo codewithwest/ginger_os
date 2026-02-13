@@ -1,44 +1,38 @@
-# GingerOS - Phase 3 Orchestrator (Inside Chroot)
+#!/bin/bash
+# GingerOS - Phase 4 Orchestrator (Kernel & Boot)
+# Runs inside the chroot environment
 
 set -e
 set -o pipefail
 
-LOG_DIR="/var/log/ginger"
-mkdir -p "$LOG_DIR"
+echo "Inside Chroot: Starting Phase 4 (Kernel & Boot)..."
 
-echo "Inside Chroot: Starting Phase 3 (Final System Build)..."
+# Collect scripts - and ensure they follow the GINGER_PKG pattern for the engine
+SCRIPTS=(/scripts/phase4-boot/*.sh)
 
-# Map scripts to 5 dashboard steps
-get_phase3_idx() {
-    local num=$(echo "$1" | cut -d'-' -f1 | sed 's/^0//')
-    if [ "$num" -le 10 ]; then echo 0
-    elif [ "$num" -le 35 ]; then echo 1
-    elif [ "$num" -le 65 ]; then echo 2
-    elif [ "$num" -le 85 ]; then echo 3
-    else echo 4
-    fi
-}
-
-SCRIPTS=(/scripts/phase3-system/*.sh)
 for script in "${SCRIPTS[@]}"; do
     PKG_NAME=$(basename "$script" .sh | cut -d'-' -f2-)
-
+    
     echo "GINGER_PKG: $PKG_NAME"
-    echo "Building: $PKG_NAME (Final System)"
+    echo "Building: $PKG_NAME (Boot Components)"
 
+    # Skip if already built
     if [ -f "/var/lib/ginger/$PKG_NAME.built" ]; then
         echo "$PKG_NAME already built, skipping."
         continue
     fi
 
+    # Execute
     if bash "$script"; then
         mkdir -p "/var/lib/ginger"
         touch "/var/lib/ginger/$PKG_NAME.built"
         echo "Successfully built: $PKG_NAME"
-        # Cleanup sources to save space
+        # Safe cleanup: only folders, preserve archives
         find /sources -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
     else
         echo "Error: Failed to build $PKG_NAME"
         exit 1
     fi
 done
+
+echo "Phase 4 Kernel & Boot Build Complete."

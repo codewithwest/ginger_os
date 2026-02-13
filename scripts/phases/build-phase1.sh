@@ -32,6 +32,11 @@ for script in "${SCRIPTS[@]}"; do
         mkdir -p "/mnt/lfs/var/lib/ginger"
         touch "/mnt/lfs/var/lib/ginger/$PKG_NAME.built"
         echo "Successfully built: $PKG_NAME"
+        # Call cleanup from common.sh if it was sourced in the child, 
+        # but since we run in a subshell, we'll manually clean up here too 
+        # or ensure the child does it. Actually, better to have the orchestrator
+        # ensure cleanup of whatever was left in /mnt/lfs/sources.
+        find /mnt/lfs/sources -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
     else
         echo "Error: Failed to build $PKG_NAME"
         exit 1
