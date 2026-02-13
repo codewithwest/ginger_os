@@ -158,6 +158,9 @@ done
 
 if [ "$found" -eq 1 ]; then
     echo "Launching GingerOS installer..."
+    chmod +x /mnt/iso/installer/installer.sh
+    export TERM=linux
+    clear
     cd /mnt/iso/installer
     exec /bin/bash /mnt/iso/installer/installer.sh
 else
@@ -181,6 +184,10 @@ cp "$INITRD_WORK/root/.bashrc" "$INITRD_WORK/.bashrc" 2>/dev/null || true
 
 # Step 4: ISO Build
 echo "__GINGER_PKG_MARKER__: ISO Build"
+echo "ISO Directory Size: $(du -sh "$ISO_DIR" | cut -f1)"
+echo "Top 5 largest files in ISO:"
+find "$ISO_DIR" -type f -exec du -h {} + | sort -rh | head -n 5 || true
+
 echo "Generating final ISO..."
 cat << EOF > "$ISO_DIR/boot/grub/grub.cfg"
 set default=0
