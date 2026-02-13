@@ -43,6 +43,7 @@ class GingerTUI:
         self.mode = "select"  # select, execute, logs
         self.log_scroll = 0
         self.auto_all = False
+        self.last_auto_step = None
         
     def create_layout(self):
         """Create the TUI layout"""
@@ -357,6 +358,8 @@ class GingerTUI:
     def run_all_pending(self):
         """Toggle automatic sequential execution mode."""
         self.auto_all = not self.auto_all
+        if self.auto_all:
+            self.last_auto_step = None
     
     def handle_key(self, key):
         """Handle keyboard input"""
@@ -424,20 +427,26 @@ class GingerTUI:
                 while self.running:
                     # Sequential Auto-All Logic
                     if self.auto_all and self.executing_step is None:
+                        # Safety: If the last step we tried in auto-mode failed, stop.
+                        if self.last_auto_step is not None:
+                            last_step = self.engine.steps[self.last_auto_step]
+                            if last_step.status == "failed":
+                                self.auto_all = False
+                                self.last_auto_step = None
+                                continue # Skip finding next till user interacts
+                        
                         next_step_idx = -1
                         for idx, step in enumerate(self.engine.steps):
                             if not self.engine._should_skip(step):
-                                # If the last run step failed, stop auto-execution
-                                if step.status == "failed":
-                                    self.auto_all = False
-                                    break
                                 next_step_idx = idx
                                 break
                         
                         if next_step_idx != -1:
+                            self.last_auto_step = next_step_idx
                             self.run_step(next_step_idx)
                         else:
-                            self.auto_all = False # No more pending steps
+                            self.auto_all = False 
+                            self.last_auto_step = None
 
                     # Update display
                     self.update_display(layout)
@@ -454,17 +463,10 @@ class GingerTUI:
                         
                         action = self.handle_key(key)
                         
-                        # Handle actions that need terminal restoration
-                        if action in ['delete', 'run_all']:
-                            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                            
-                            if action == 'delete':
-                                self.delete_marker(self.selected_step)
-                            elif action == 'run_all':
-                                self.run_all_pending()
-                            
-                            tty.setcbreak(fd)
-                        
+                        if action == 'delete':
+                            self.delete_marker(self.selected_step)
+                        elif action == 'run_all':
+                            self.run_all_pending()
                         elif action == 'run':
                             self.run_step(self.selected_step, force=False)
                         elif action == 'force':

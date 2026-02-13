@@ -7,6 +7,7 @@ GINGER_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 def load_ginger_conf():
     conf = {
         "LFS_MOUNT": "/mnt/lfs",
+        "BUILD_TYPE": "image",
         "IMAGE_NAME": "ginger_os.img",
         "IMAGE_SIZE": "12G"
     }
@@ -30,6 +31,7 @@ MASTER_LOG = os.path.join(LOG_DIR, "master.log")
 
 # Build-specific paths from config
 LFS_MOUNT = CONFIG.get("LFS_MOUNT", "/mnt/lfs")
+BUILD_TYPE = CONFIG.get("BUILD_TYPE", "image")
 IMAGE_NAME = CONFIG.get("IMAGE_NAME", "ginger_os.img")
 IMAGE_SIZE = CONFIG.get("IMAGE_SIZE", "12G")
 

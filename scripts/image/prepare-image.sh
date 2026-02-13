@@ -10,6 +10,18 @@ source "${SCRIPT_DIR}/../lib/common.sh"
 IMAGE_NAME="${IMAGE_NAME:-ginger_os.img}"
 IMAGE_SIZE="${IMAGE_SIZE:-12G}"
 IMAGE_PATH="${GINGER_ROOT}/${IMAGE_NAME}"
+BUILD_TYPE="${BUILD_TYPE:-image}"
+
+if [ "$BUILD_TYPE" = "native" ]; then
+    log "INFO" "Native build detected. Skipping disk image preparation."
+    if mountpoint -q "$LFS"; then
+        log "INFO" "$LFS is already mounted. Ready."
+        exit 0
+    else
+        log "ERROR" "LFS partition is not mounted at $LFS. Please mount it manually for native builds."
+        exit 1
+    fi
+fi
 
 if [ ! -f "$IMAGE_PATH" ]; then
     log "INFO" "Creating ${IMAGE_SIZE} sparse disk image..."

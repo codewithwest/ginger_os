@@ -11,7 +11,7 @@ import tty
 import json
 import signal
 from datetime import datetime
-from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, LFS_MOUNT
+from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, LFS_MOUNT, BUILD_TYPE
 from .models import BuildStep
 
 class GingerEngine:
@@ -418,24 +418,33 @@ class GingerEngine:
             if result.returncode == 0:
                 return True
             
-            # Mount lost! Attempt automatic recovery.
+            # Mount lost! Behavior depends on BUILD_TYPE
+            if BUILD_TYPE == "native":
+                self.log(f"CRITICAL: LFS partition ({LFS_MOUNT}) is NOT mounted!", "bold red")
+                self.log("On native servers, please mount your partition manually.", "yellow")
+                return False
+
+            # Image recovery
             self.log(f"WARN: LFS partition ({LFS_MOUNT}) is NOT mounted!", "yellow")
             self.log("Attempting automated mount recovery...", "bold cyan")
             
-            # Find the "prepare-image" step
+            # ... recovery steps ...
             prepare_step = next((s for s in self.steps if s.id == "04_prepare_image"), None)
             if not prepare_step:
                 self.log("ERROR: Could not find Recovery Step (04_prepare_image)!", "bold red")
                 return False
                 
-            # Run the idempotent script directly
-            # We don't use _execute_step here to avoid recursion/state mess
-            proc = subprocess.run(prepare_step.command, shell=True, cwd=GINGER_ROOT, capture_output=True, text=True)
-            if proc.returncode == 0:
-                self.log("✅ Mount recovered successfully.", "bold green")
-                return True
-            else:
-                self.log(f"❌ Automated recovery failed: {proc.stderr}", "bold red")
+            # Run the idempotent script with a timeout to avoid hangs
+            try:
+                proc = subprocess.run(prepare_step.command, shell=True, cwd=GINGER_ROOT, capture_output=True, text=True, timeout=30)
+                if proc.returncode == 0:
+                    self.log("✅ Mount recovered successfully.", "bold green")
+                    return True
+                else:
+                    self.log(f"❌ Automated recovery failed: {proc.stderr}", "bold red")
+                    return False
+            except subprocess.TimeoutExpired:
+                self.log("❌ Automated recovery TIMED OUT (likely waiting for sudo).", "bold red")
                 return False
         except Exception as e:
             self.log(f"!!! Error during mount check: {str(e)}", "bold red")
