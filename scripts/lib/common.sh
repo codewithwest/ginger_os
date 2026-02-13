@@ -12,11 +12,13 @@ source "${SCRIPT_DIR}/../../config/env.sh"
 GINGER_STATE_DIR="${GINGER_ROOT}/.build_state"
 mkdir -p "$GINGER_STATE_DIR"
 
-# Status directory - relative to LFS for package build markers
+# Status directory - relative into the LFS partition
 STATUS_DIR="$LFS/var/lib/ginger"
-if [ "$LFS" != "/mnt/lfs" ] || [ -e "/mnt/lfs" ]; then
-    # We only try to create the LFS status dir if the mountpoint exists
-    # or if we are already inside chroot (where LFS=/ )
+
+# Safety: Only try to create this if:
+# 1. We are NOT at the default /mnt/lfs (meaning we are likely inside chroot)
+# 2. OR the mountpoint actually exists and is writable.
+if [ "$LFS" != "/mnt/lfs" ] || { mountpoint -q /mnt/lfs && [ -w /mnt/lfs ]; }; then
     mkdir -p "$STATUS_DIR" 2>/dev/null || true
 fi
 
