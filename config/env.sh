@@ -108,10 +108,17 @@ export PATH="$LFS/tools/bin:/usr/bin:/usr/sbin:/usr/local/bin"
 export MAKEFLAGS="-j$(nproc)"
 
 # Workspace directories
-export GINGER_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export GINGER_SCRIPTS="$GINGER_ROOT/scripts"
-export GINGER_SOURCES="$GINGER_ROOT/sources"
-export GINGER_LOGS="$GINGER_ROOT/logs"
+# Use sed to ensure GINGER_ROOT is normalized (no double slashes or trailing slashes)
+# especially when it becomes the root "/" inside chroot.
+GINGER_ROOT_RAW="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export GINGER_ROOT=$(echo "$GINGER_ROOT_RAW" | sed 's|^//|/|; s|/$||')
+
+# If GINGER_ROOT is empty (can happen at true root), make it /
+[ -z "$GINGER_ROOT" ] && GINGER_ROOT="/"
+
+export GINGER_SCRIPTS="${GINGER_ROOT%/}/scripts"
+export GINGER_SOURCES="${GINGER_ROOT%/}/sources"
+export GINGER_LOGS="${GINGER_ROOT%/}/logs"
 
 # Ensure directories exist
 mkdir -p "$GINGER_SOURCES" "$GINGER_LOGS"

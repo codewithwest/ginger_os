@@ -101,7 +101,9 @@ extract() {
     rm -rf "${DIR_NAME%-*}"* || true
     
     # Extract
-    tar -xf "$GINGER_SOURCES/$ARCHIVE_NAME"
+    # Normalize the path to remove double slashes (e.g., //sources -> /sources)
+    local CLEAN_SOURCES=$(echo "$GINGER_SOURCES" | sed 's|^//|/|')
+    tar -xf "${CLEAN_SOURCES%/}/$ARCHIVE_NAME"
     
     # Find the newly created directory (it might not exactly match DIR_NAME)
     local NEW_DIR=$(ls -td */ | head -n 1 | cut -d'/' -f1)
