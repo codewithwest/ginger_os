@@ -281,6 +281,88 @@ class GingerEngine:
         with open(MASTER_LOG, "a") as f:
             f.write(log_entry + "\n")
 
+    def _execute_step(self, step):
+        """Execute a single build step (used by interactive mode and single-step execution)"""
+        step.status = "running"
+        step.start_time = time.time()
+        self.phase_start_time = step.start_time
+        self.current_pkg = ""
+        self.pkg_start_time = None
+        step.packages_completed = []
+        
+        self.log(f"Phase {step.phase}: Starting {step.name}...", "cyan")
+        
+        try:
+            with open(step.log_file, "w") as f:
+                f.write(f"--- GingerOS Step Log: {step.name} ---\n")
+            
+            process = subprocess.Popen(
+                step.command,
+                shell=True,
+                cwd=GINGER_ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                env=os.environ.copy()
+            )
+            
+            for line in iter(process.stdout.readline, ""):
+                if self.aborted:
+                    process.terminate()
+                    break
+                if line:
+                    # CRITICAL: Strip carriage returns which mess up rich.Live
+                    stripped = line.replace('\r', '').strip()
+                    clean_line = self.ansi_escape.sub('', stripped)
+                    clean_line = self.non_printable.sub('', clean_line)
+                    
+                    # Print to console for interactive mode
+                    print(clean_line)
+                    
+                    # Periodically update storage info
+                    if time.time() % 3 < 0.1:
+                        self._update_storage()
+
+                    if clean_line.startswith("GINGER_PKG:"):
+                        if self.current_pkg and self.pkg_start_time:
+                            duration = time.time() - self.pkg_start_time
+                            step.packages_completed.append((self.current_pkg, duration))
+                        self.current_pkg = clean_line.replace("GINGER_PKG:", "").strip()
+                        self.pkg_start_time = time.time()
+                        self.log(f"Building: {self.current_pkg}", "bold cyan")
+                    
+                    with open(step.log_file, "a") as f:
+                        f.write(line)
+            
+            process.wait()
+            step.end_time = time.time()
+            if self.current_pkg and self.pkg_start_time:
+                duration = time.time() - self.pkg_start_time
+                step.packages_completed.append((self.current_pkg, duration))
+            
+            if self.aborted:
+                step.status = "failed"
+                return
+            
+            if process.returncode == 0:
+                step.status = "completed"
+                # Persist the completion state
+                try:
+                    marker_path = os.path.join(STATE_DIR, f"{step.id}.built")
+                    with open(marker_path, "w") as f:
+                        f.write(f"Completed at {datetime.now()}\n")
+                except: pass
+            else:
+                step.status = "failed"
+                self.log(f"✘ {step.name} FAILED with code {process.returncode}", "bold red")
+                self.error_msg = f"{step.name} failed. Check {step.log_file}"
+                
+        except Exception as e:
+            step.status = "failed"
+            self.log(f"!!! EXCEPTION in {step.name}: {str(e)}", "bold red")
+            self.error_msg = str(e)
+
     def run(self):
         # State should already be set by caller, but we'll ensure it here
         self.is_running = True

@@ -39,7 +39,8 @@ sudo git clone https://github.com/codewithwest/ginger_os.git /opt/ginger_os
 cd /opt/ginger_os
 
 # 3. Fix permissions for the build users
-sudo chown -R $USER:lfs /opt/ginger_os
+# sudo chown -R $USER:lfs /opt/ginger_os
+sudo chown ginger:777 -R /opt/ginger_os
 sudo chmod -R 775 /opt/ginger_os
 git config --global --add safe.directory /opt/ginger_os
 ```
