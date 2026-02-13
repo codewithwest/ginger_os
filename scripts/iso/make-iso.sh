@@ -55,8 +55,8 @@ sudo rm -rf "$INITRD_WORK"
 # We pull these from the host system to ensure they matching the architecture
 ESSENTIAL_TOOLS=(
     bash id sh mount umount mkdir ls cat grep sed awk rm
-    parted mkfs.ext4 mke2fs tar lsblk blkid wipefs
-    useradd chpasswd groupadd chown chmod 
+    parted mkfs.ext4 mke2fs tar lsblk blkid wipefs gzip udevadm chroot findmnt
+    useradd chpasswd groupadd chown chmod
     grub-install grub-mkconfig find basename 
     tee sleep which clear ps kill tput 
     readlink dirname touch du df
