@@ -129,14 +129,37 @@ def update_ui(layout: Layout, engine):
         padding=(0, 1)
     ))
     
-    # Footer
-    footer_text = "STATUS: RUNNING BUILD"
+    # Footer with keyboard shortcuts
+    footer_text = Text()
     footer_style = "bold yellow"
-    if engine.paused_for_error:
-        footer_text = "⚠️ ERROR: [bold white]R[/] Restart Phase | [bold white]P[/] Restart Pkg | [bold white]Ctrl+C[/] Abort"
-        footer_style = "bold red"
-    elif not engine.is_running:
-        footer_text = f"CRITICAL ERROR: {engine.error_msg}" if engine.error_msg else "🎉 BUILD COMPLETED SUCCESSFULLY"
-        footer_style = "bold red" if engine.error_msg else "bold green"
     
-    layout["footer"].update(Panel(Align.center(Text(footer_text, style=footer_style)), border_style="bright_blue"))
+    if engine.paused_for_error:
+        footer_text.append("⚠️ ERROR: ", style="bold red")
+        footer_text.append("R", style="bold white on red")
+        footer_text.append(" Restart Phase | ", style="bold red")
+        footer_text.append("P", style="bold white on red")
+        footer_text.append(" Restart Pkg | ", style="bold red")
+        footer_text.append("Ctrl+C", style="bold white on red")
+        footer_text.append(" Abort", style="bold red")
+    elif not engine.is_running:
+        footer_msg = f"CRITICAL ERROR: {engine.error_msg}" if engine.error_msg else "🎉 BUILD COMPLETED SUCCESSFULLY"
+        footer_text.append(footer_msg, style="bold red" if engine.error_msg else "bold green")
+    else:
+        # Show keyboard shortcuts during normal operation
+        footer_text.append("⚡ CONTROLS: ", style="bold cyan")
+        footer_text.append("SPACE", style="bold white on blue")
+        footer_text.append("=Pause ", style="dim")
+        footer_text.append("N", style="bold white on green")
+        footer_text.append("=Next ", style="dim")
+        footer_text.append("S", style="bold white on yellow")
+        footer_text.append("=Skip ", style="dim")
+        footer_text.append("J", style="bold white on magenta")
+        footer_text.append("=Jump ", style="dim")
+        footer_text.append("L", style="bold white on cyan")
+        footer_text.append("=List ", style="dim")
+        footer_text.append("?", style="bold white on blue")
+        footer_text.append("=Help ", style="dim")
+        footer_text.append("Q", style="bold white on red")
+        footer_text.append("=Quit", style="dim")
+    
+    layout["footer"].update(Panel(Align.center(footer_text), border_style="bright_blue"))

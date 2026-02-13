@@ -73,30 +73,52 @@ class GingerEngine:
         self.kb_thread = threading.Thread(target=self._kb_listener, daemon=True)
 
     def _kb_listener(self):
-        """Listen for R and P keys when paused."""
-        # Note: We use a non-blocking way to avoid terminal resource fighting
+        """Listen for keyboard commands during build."""
+        import select
+        
         while not self.aborted:
-            if self.paused_for_error:
-                # Only try to read if we are actually paused
-                # This minimizes the window for terminal conflicts
+            # Check if there's input available (non-blocking)
+            if select.select([sys.stdin], [], [], 0.1)[0]:
                 fd = sys.stdin.fileno()
                 try:
                     old_settings = termios.tcgetattr(fd)
-                    tty.setraw(fd)
-                    # Small timeout read
+                    tty.setcbreak(fd)  # Use cbreak instead of raw for better control
                     char = sys.stdin.read(1).lower()
                     termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
                     
-                    if char == 'r':
-                        self.restart_phase()
-                    elif char == 'p':
-                        self.restart_package()
-                    elif char == '\x03': # Ctrl+C
-                        self.abort()
-                        break
+                    # Error recovery keys (when paused)
+                    if self.paused_for_error:
+                        if char == 'r':
+                            self.restart_phase()
+                        elif char == 'p':
+                            self.restart_package()
+                        elif char == '\x03':  # Ctrl+C
+                            self.abort()
+                            break
+                    
+                    # Interactive control keys (during normal operation)
+                    elif self.is_running:
+                        if char == ' ':  # SPACE - Pause/Resume
+                            self.toggle_pause()
+                        elif char == 'n':  # N - Next step
+                            self.skip_to_next()
+                        elif char == 's':  # S - Skip current step
+                            self.skip_current_step()
+                        elif char == 'j':  # J - Jump to step
+                            self.jump_to_step()
+                        elif char == 'l':  # L - List steps
+                            self.show_steps_list()
+                        elif char == '?':  # ? - Help
+                            self.show_help()
+                        elif char == 'q':  # Q - Quit
+                            self.abort()
+                            break
+                        elif char == '\x03':  # Ctrl+C
+                            self.abort()
+                            break
                 except:
                     pass
-            time.sleep(0.5)
+            time.sleep(0.1)
 
     def _rotate_logs(self):
         """Clean up old logs or rotate master log if too big."""
@@ -117,6 +139,62 @@ class GingerEngine:
     def restart_phase(self):
         self.log("RESTARTING PHASE...", "bold yellow")
         self.paused_for_error = False
+
+    def toggle_pause(self):
+        """Pause/Resume the build"""
+        self.paused_for_error = not self.paused_for_error
+        if self.paused_for_error:
+            self.log("⏸ BUILD PAUSED (press SPACE to resume)", "bold yellow")
+        else:
+            self.log("▶ BUILD RESUMED", "bold green")
+    
+    def skip_to_next(self):
+        """Skip to next step"""
+        if self.current_step_idx < len(self.steps) - 1:
+            self.current_step_idx += 1
+            self.log(f"⏭ SKIPPED TO: {self.steps[self.current_step_idx].name}", "bold cyan")
+        else:
+            self.log("Already at last step", "yellow")
+    
+    def skip_current_step(self):
+        """Mark current step as skipped and move to next"""
+        if self.current_step_idx < len(self.steps):
+            current = self.steps[self.current_step_idx]
+            current.status = "completed"  # Mark as complete to skip
+            self.log(f"⏭ SKIPPED: {current.name}", "bold yellow")
+            self.skip_to_next()
+    
+    def jump_to_step(self):
+        """Jump to a specific step (shows prompt)"""
+        self.paused_for_error = True  # Pause to show prompt
+        self.log("JUMP TO STEP: Enter step number (1-15):", "bold cyan")
+        # Note: Actual input handling would need terminal restoration
+        # For now, just log the option
+    
+    def show_steps_list(self):
+        """Show list of all steps"""
+        self.log("=" * 60, "dim")
+        self.log("STEPS LIST:", "bold cyan")
+        for idx, step in enumerate(self.steps, 1):
+            status = "✓" if self._should_skip(step) else "○"
+            self.log(f"  {status} [{idx:2d}] {step.name} ({step.phase})", "white")
+        self.log("=" * 60, "dim")
+    
+    def show_help(self):
+        """Show help information"""
+        self.log("=" * 60, "dim")
+        self.log("KEYBOARD SHORTCUTS:", "bold cyan")
+        self.log("  SPACE - Pause/Resume build", "white")
+        self.log("  N     - Skip to next step", "white")
+        self.log("  S     - Skip current step", "white")
+        self.log("  J     - Jump to specific step", "white")
+        self.log("  L     - List all steps", "white")
+        self.log("  ?     - Show this help", "white")
+        self.log("  Q     - Quit build", "white")
+        self.log("  R     - Restart phase (when paused on error)", "white")
+        self.log("  P     - Restart package (when paused on error)", "white")
+        self.log("=" * 60, "dim")
+
 
     def restart_package(self):
         if not self.current_pkg:
