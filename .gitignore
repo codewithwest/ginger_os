@@ -4,3 +4,5 @@
 vmlinuz-*
 *.tar.gz
 
+**/*.pyc
+
