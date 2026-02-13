@@ -362,11 +362,36 @@ class GingerEngine:
         with open(MASTER_LOG, "a") as f:
             f.write(log_entry + "\n")
 
+    def _verify_chroot_ready(self):
+        """Verify chroot filesystems are mounted."""
+        mounts = ["/mnt/lfs/proc", "/mnt/lfs/sys", "/mnt/lfs/dev"]
+        try:
+            with open("/proc/mounts", "r") as f:
+                content = f.read()
+                for m in mounts:
+                    if m not in content:
+                        self.log(f"CRITICAL: {m} is NOT mounted!", "bold red")
+                        return False
+            return True
+        except:
+            return False
+
     def _execute_step(self, step):
-        """Execute a single build step (used by interactive mode and single-step execution)"""
-        step.status = "running"
+        """Execute a build step."""
+        self.log(f"Starting step: {step.name}", "bold cyan")
         step.start_time = time.time()
         self.phase_start_time = step.start_time
+        step.status = "running"
+        self.logs = []  # Clear previous logs for this run
+        self.aborted = False
+        
+        # Verify chroot for system phases
+        if step.id in ["13_phase3_system", "14_kernel"]:
+            if not self._verify_chroot_ready():
+                self.log("ERROR: Chroot not mounted. Please run 'Mount Chroot' step first.", "bold red")
+                step.status = "failed"
+                return
+        
         self.current_pkg = ""
         self.pkg_start_time = None
         step.packages_completed = []

@@ -17,9 +17,9 @@ for script in "${SCRIPTS[@]}"; do
     FILE_PKG_NAME=$(basename "$script" .sh)
     
     # Check both names for consistency (noting Phase 2 often uses -temp suffix)
-    if [ -f "/mnt/lfs/var/lib/ginger/${FILE_PKG_NAME}-temp.built" ] || \
-       [ -n "$SCRIPT_PKG_NAME" -a -f "/mnt/lfs/var/lib/ginger/${SCRIPT_PKG_NAME}-temp.built" ] || \
-       [ -n "$SCRIPT_PKG_NAME" -a -f "/mnt/lfs/var/lib/ginger/${SCRIPT_PKG_NAME}.built" ]; then
+    if [[ -f "/mnt/lfs/var/lib/ginger/${FILE_PKG_NAME}-temp.built" ]] || \
+       [[ -n "$SCRIPT_PKG_NAME" && -f "/mnt/lfs/var/lib/ginger/${SCRIPT_PKG_NAME}-temp.built" ]] || \
+       [[ -n "$SCRIPT_PKG_NAME" && -f "/mnt/lfs/var/lib/ginger/${SCRIPT_PKG_NAME}.built" ]]; then
         continue
     fi
     

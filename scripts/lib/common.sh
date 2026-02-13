@@ -141,8 +141,13 @@ extract() {
     mkdir -p "$BUILD_BASE"
     cd "$BUILD_BASE"
     
-    # Clean up previous build directory if it exists
-    rm -rf "${DIR_NAME%-*}"* || true
+    # Safe cleanup of previous build directory
+    if [[ -n "$DIR_NAME" && "$DIR_NAME" != "/" && "$DIR_NAME" != "." ]]; then
+        # Only remove if pattern is sufficiently specific (length > 2)
+        if [[ ${#DIR_NAME} -gt 2 ]]; then
+             rm -rf "${DIR_NAME%-*}"* || true
+        fi
+    fi
     
     # Extract with re-download fallback
     # Normalize the path to remove double slashes
@@ -203,6 +208,8 @@ error_handler() {
     local LINE=$1
     local CMD=$2
     log "ERROR" "Command '$CMD' failed at line $LINE"
+    cleanup
+}
     exit 1
 }
 

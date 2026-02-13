@@ -5,22 +5,22 @@
 
 ## 🔴 CRITICAL (Must Fix Before Merge)
 
-- [ ] **Issue #5**: Fix race condition in `scripts/lib/ui.sh` ui_monitor startup (Line 300-304)
+- [x] **Issue #5**: Fix race condition in `scripts/lib/ui.sh` ui_monitor startup (Line 300-304)
   - Replace `pgrep` check with atomic PID file creation
   - File: `scripts/lib/ui.sh`
 
-- [ ] **Issue #2**: Add safety checks to `scripts/lib/common.sh` wildcard removal (Line 145)
+- [x] **Issue #2**: Add safety checks to `scripts/lib/common.sh` wildcard removal (Line 145)
   - Prevent accidental deletion if DIR_NAME is empty/malformed
   - File: `scripts/lib/common.sh`
 
-- [ ] **Issue #4**: Fix error handler to call cleanup (Line 202-206)
+- [x] **Issue #4**: Fix error handler to call cleanup (Line 202-206)
   - Ensure build directories are cleaned up on error
   - File: `scripts/lib/common.sh`
 
-- [ ] **Deprecated Test Operator**: Replace `-a` with `&&` in phase scripts
+- [x] **Deprecated Test Operator**: Replace `-a` with `&&` in phase scripts
   - Files: `scripts/phases/build-phase1.sh`, `build-phase2.sh`
 
-- [ ] **Chroot Verification**: Add mount verification before Phase 3
+- [x] **Chroot Verification**: Add mount verification before Phase 3
   - Add `_verify_chroot_ready()` method to engine.py
   - File: `lfs_builder_ui/engine.py`
 
@@ -33,9 +33,10 @@
   - [ ] Integration tests for bash scripts (extract, cleanup)
   - [ ] Shellcheck integration
 
-- [ ] **Issue #8**: Fix terminal resource conflict in keyboard listener
+- [x] **Issue #8**: Fix terminal resource conflict in keyboard listener
   - Use `select()` with timeout instead of blocking read
   - File: `lfs_builder_ui/engine.py` (Lines 75-99)
+  - *Note: Superseded by new TUI architecture in ginger_os.py*
 
 - [ ] **Issue #11**: Add subprocess timeout mechanism
   - Prevent hangs on stuck build steps

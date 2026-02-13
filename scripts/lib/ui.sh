@@ -297,11 +297,28 @@ ui_init() {
     
     # Start background monitor only if not already running
     # Force output to /dev/tty to prevent UI leaking into step logs
-    if ! pgrep -f "ui_monitor" >/dev/null; then
-        ui_monitor > /dev/tty 2>&1 &
-        UI_MONITOR_PID=$!
-        sleep 0.2
+    # Start background monitor atomic check
+    local pi_file="/tmp/ginger_ui_monitor.${GINGER_UI_MASTER_PID}.pid"
+    
+    if [[ -f "$pi_file" ]]; then
+        # Check if process is actually running
+        local existing_pid=$(cat "$pi_file")
+        if kill -0 "$existing_pid" 2>/dev/null; then
+             return
+        fi
+        # Stale PID file, remove it
+        rm -f "$pi_file"
     fi
+
+    # Start monitor
+    ui_monitor > /dev/tty 2>&1 &
+    UI_MONITOR_PID=$!
+    echo "$UI_MONITOR_PID" > "$pi_file"
+    
+    # Ensure cleanup on exit
+    trap "rm -f '$pi_file'; exit" EXIT
+    
+    sleep 0.2
 }
 
 ui_step() {
