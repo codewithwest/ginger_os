@@ -37,7 +37,13 @@ fi
 # Step 1: Environment
 echo "__GINGER_PKG_MARKER__: Environment"
 echo "Collecting Kernel..."
-KERNEL_IMG=$(ls "$GINGER_ROOT/vmlinuz-"* 2>/dev/null | head -n 1)
+# Prefer vmlinuz-ginger (finalized), fallback to any vmlinuz-*
+if [ -f "$GINGER_ROOT/vmlinuz-ginger" ]; then
+    KERNEL_IMG="$GINGER_ROOT/vmlinuz-ginger"
+else
+    KERNEL_IMG=$(ls "$GINGER_ROOT/vmlinuz-"* 2>/dev/null | head -n 1)
+fi
+
 [ -z "$KERNEL_IMG" ] && { echo "Kernel not found!"; exit 1; }
 cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 
@@ -52,7 +58,8 @@ ESSENTIAL_TOOLS=(
     parted mkfs.ext4 mke2fs tar lsblk blkid 
     useradd chpasswd groupadd chown chmod 
     grub-install grub-mkconfig find basename 
-    tee sleep which clear ps kill tput
+    tee sleep which clear ps kill tput 
+    readlink dirname touch du df
 )
 
 # Create essential system directory structure
