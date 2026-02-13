@@ -377,33 +377,44 @@ class GingerEngine:
             with open(step.log_file, "w") as f:
                 f.write(f"--- GingerOS Step Log: {step.name} ---\n")
             
+            # Use Popen to capture output in real-time
             process = subprocess.Popen(
                 step.command,
-                shell=True,
                 cwd=GINGER_ROOT,
+                shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=1,
+                bufsize=1,  # Line buffered
                 env=os.environ.copy()
             )
             
-            for line in iter(process.stdout.readline, ""):
+            # Read output
+            while True:
                 if self.aborted:
                     process.terminate()
                     break
+
+                line = process.stdout.readline()
+                if not line and process.poll() is not None:
+                    break
+                
                 if line:
                     # CRITICAL: Strip carriage returns which mess up rich.Live
                     stripped = line.replace('\r', '').strip()
                     clean_line = self.ansi_escape.sub('', stripped)
                     clean_line = self.non_printable.sub('', clean_line)
-                    
-                    # Print to console for interactive mode
-                    print(clean_line)
-                    
+
                     # Periodically update storage info
                     if time.time() % 3 < 0.1:
                         self._update_storage()
+                    
+                    # Log to file
+                    with open(step.log_file, "a") as f:
+                        f.write(line)
+                    
+                    # Print to console for interactive mode
+                    print(clean_line)
 
                     if clean_line.startswith("GINGER_PKG:"):
                         if self.current_pkg and self.pkg_start_time:
@@ -412,7 +423,6 @@ class GingerEngine:
                         self.current_pkg = clean_line.replace("GINGER_PKG:", "").strip()
                         self.pkg_start_time = time.time()
                         self.log(f"Building: {self.current_pkg}", "bold cyan")
-                    
                     with open(step.log_file, "a") as f:
                         f.write(line)
             
