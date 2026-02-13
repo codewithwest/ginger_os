@@ -27,11 +27,17 @@ sudo ln -sf bash /bin/sh
 
 # Function to wait for apt locks
 wait_for_apt_lock() {
+    local lock_files=("/var/lib/dpkg/lock-frontend" "/var/lib/apt/lists/lock" "/var/lib/dpkg/lock")
     echo "Checking for package manager locks..."
-    while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/lib/dpkg/lock >/dev/null 2>&1; do
-        echo "Waiting for other package manager (apt/dpkg) to release locks..."
-        sleep 2
+    for lock_file in "${lock_files[@]}"; do
+        while [ -e "$lock_file" ] && sudo fuser "$lock_file" >/dev/null 2>&1; do
+            local pid=$(sudo fuser "$lock_file" 2>/dev/null | awk '{print $NF}')
+            echo "Waiting for process $pid to release $lock_file..."
+            sleep 3
+        done
     done
+    # Final grace period
+    sleep 1
 }
 
 # ============================================================================
