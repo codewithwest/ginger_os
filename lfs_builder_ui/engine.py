@@ -364,22 +364,27 @@ class GingerEngine:
             # Check if image is already mounted to LFS
             # CRITICAL FAILSAFE: Even if marker exists, if it's NOT mounted, we should NOT skip
             try:
-                result = subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True)
+                result = subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True, timeout=5)
                 is_mounted = result.returncode == 0
                 if not is_mounted:
                     return False
                 return True # Marker exists AND is mounted
+            except subprocess.TimeoutExpired:
+                self.log(f"WARN: mountpoint check timed out for {LFS_MOUNT}", "yellow")
+                return False
             except: return False
             
         if step.id == "12_chroot_mounts":
             # Check if chroot special filesystems are mounted
             # FAILSAFE: If marker exists but mounts are gone, do NOT skip
             try:
-                result = subprocess.run(["grep", "-q", f"{LFS_MOUNT}/proc", "/proc/mounts"], capture_output=True)
+                result = subprocess.run(["grep", "-q", f"{LFS_MOUNT}/proc", "/proc/mounts"], capture_output=True, timeout=5)
                 is_mounted = result.returncode == 0
                 if not is_mounted:
                     return False
                 return True # Marker exists AND chroot is mounted
+            except subprocess.TimeoutExpired:
+                return False
             except: return False
 
         return False
@@ -414,9 +419,11 @@ class GingerEngine:
         if self.dry_run:
             return True
         try:
-            result = subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True)
+            result = subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True, timeout=5)
             if result.returncode == 0:
                 return True
+            
+            if self.dry_run: return True
             
             # Mount lost! Behavior depends on BUILD_TYPE
             if BUILD_TYPE == "native":

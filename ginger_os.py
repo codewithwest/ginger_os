@@ -360,6 +360,11 @@ class GingerTUI:
         self.auto_all = not self.auto_all
         if self.auto_all:
             self.last_auto_step = None
+            # Disable stepping when auto-running
+            self.engine.package_stepping = False
+            # Resume if paused
+            if self.engine.paused_for_package:
+                self.engine.resume_package()
     
     def handle_key(self, key):
         """Handle keyboard input"""
@@ -433,6 +438,7 @@ class GingerTUI:
                             if last_step.status == "failed":
                                 self.auto_all = False
                                 self.last_auto_step = None
+                                self.engine.log(f"Auto-Run: Stopped (Step '{last_step.name}' failed)", "bold red")
                                 continue # Skip finding next till user interacts
                         
                         next_step_idx = -1
@@ -447,6 +453,7 @@ class GingerTUI:
                         else:
                             self.auto_all = False 
                             self.last_auto_step = None
+                            self.engine.log("Auto-Run: All pending steps finished! 🏁", "bold green")
 
                     # Update display
                     self.update_display(layout)
