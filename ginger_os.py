@@ -283,25 +283,22 @@ Examples:
             build_thread = threading.Thread(target=engine.run)
             build_thread.start()
             
-            while engine.is_running or engine.paused_for_error:
+            # Update UI while build runs
+            while build_thread.is_alive():
                 update_ui(layout, engine)
-                time.sleep(0.1)
-                
-            # Final update
-            update_ui(layout, engine)
-            time.sleep(1)
+                live.update(layout)
+                time.sleep(0.25)
             
-    except KeyboardInterrupt:
-        engine.abort()
-    except Exception as e:
-        console.print(f"[bold red]UI Error: {str(e)}[/bold red]")
-    finally:
-        if not engine.aborted:
-            if any(s.status == "failed" for s in engine.steps):
-                console.print("\n[bold red]Build failed. Check the logs above.[/bold red]")
-            else:
-                console.print("\n[bold green]Success! GingerOS is ready.[/bold green]")
-                console.print(f"Master log: {MASTER_LOG}")
+            build_thread.join()
+    
+    # Final status
+    if engine.error_msg:
+        console.print(f"\n[bold red]Build failed: {engine.error_msg}[/bold red]")
+        sys.exit(1)
+    else:
+        console.print("\n[bold green]✓ Build completed successfully![/bold green]")
+        console.print(f"Master log: {MASTER_LOG}")
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()
