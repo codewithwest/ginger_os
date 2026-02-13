@@ -92,18 +92,36 @@ fetch_missing_source() {
 
     if [ -n "$URL" ]; then
         log "INFO" "Found download target: $URL"
+        
+        # Check if we have tools to download
+        if ! command -v wget &> /dev/null && ! command -v curl &> /dev/null; then
+            log "WARN" "Download tools (wget/curl) are missing in this environment (likely Phase 3 chroot)."
+            log "INFO" "__GINGER_MISSING_SOURCE_URL__: $URL"
+            log "ERROR" "Please download $URL manually on the host and place it in $SRC_DIR"
+            return 1
+        fi
+
         log "PROCESS" "Downloading to $SRC_DIR..."
         
         # Save to a temp location first to ensure we don't end up with a 0-byte file
         local PKG_NAME=$(basename "$URL")
-        if wget -4 --continue --progress=bar:force:noscroll --tries=3 --timeout=15 -O "${SRC_DIR}/${PKG_NAME}.tmp" "$URL"; then
-             mv "${SRC_DIR}/${PKG_NAME}.tmp" "${SRC_DIR}/${PKG_NAME}"
-             log "INFO" "Successfully acquired $PKG_NAME"
-             return 0
-        else
-             rm -f "${SRC_DIR}/${PKG_NAME}.tmp"
-             log "ERROR" "Network Error: Could not reach $URL"
+        
+        if command -v wget &> /dev/null; then
+            if wget -4 --continue --progress=bar:force:noscroll --tries=3 --timeout=15 -O "${SRC_DIR}/${PKG_NAME}.tmp" "$URL"; then
+                 mv "${SRC_DIR}/${PKG_NAME}.tmp" "${SRC_DIR}/${PKG_NAME}"
+                 log "INFO" "Successfully acquired $PKG_NAME via wget"
+                 return 0
+            fi
+        elif command -v curl &> /dev/null; then
+            if curl -L --connect-timeout 15 --retry 3 -o "${SRC_DIR}/${PKG_NAME}.tmp" "$URL"; then
+                 mv "${SRC_DIR}/${PKG_NAME}.tmp" "${SRC_DIR}/${PKG_NAME}"
+                 log "INFO" "Successfully acquired $PKG_NAME via curl"
+                 return 0
+            fi
         fi
+        
+        rm -f "${SRC_DIR}/${PKG_NAME}.tmp"
+        log "ERROR" "Network Error: Could not reach $URL"
     fi
     return 1
 }

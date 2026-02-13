@@ -10,7 +10,7 @@ import termios
 import tty
 import json
 from datetime import datetime
-from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, LFS_MOUNT, BUILD_TYPE
+from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, SOURCES_DIR, LFS_MOUNT, BUILD_TYPE
 from .models import BuildStep
 
 class GingerEngine:
@@ -689,3 +689,18 @@ class GingerEngine:
                 try: self.current_process.kill()
                 except: pass
             self.current_process = None
+    def _download_missing_source(self, url):
+        """Attempts a host-side download if chroot environment lacks tools."""
+        try:
+            filename = os.path.basename(url)
+            self.log(f"HOST_DOWNLOAD: Requesting {filename} on behalf of chroot...", "bold yellow")
+            
+            # Using wget on host for maximum reliability
+            cmd = ["wget", "-4", "--continue", "--progress=bar:force:noscroll", "-O", os.path.join(SOURCES_DIR, filename), url]
+            
+            # Run in a separate thread so we don't block the line reader (though line reader is in a thread anyway)
+            # But the script will still wait or fail eventually.
+            subprocess.run(cmd, capture_output=True)
+            self.log(f"HOST_DOWNLOAD: Succeeded for {filename}", "bold green")
+        except Exception as e:
+            self.log(f"HOST_DOWNLOAD: Failed: {str(e)}", "bold red")

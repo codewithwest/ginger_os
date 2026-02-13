@@ -27,6 +27,7 @@ CONFIG = load_ginger_conf()
 
 LOG_DIR = os.path.join(GINGER_ROOT, "logs")
 STATE_DIR = os.path.join(GINGER_ROOT, ".build_state")
+SOURCES_DIR = os.path.join(GINGER_ROOT, "sources")
 MASTER_LOG = os.path.join(LOG_DIR, "master.log")
 
 # Build-specific paths from config
