@@ -55,6 +55,9 @@ class GingerEngine:
         self.error_msg = ""
         self.paused_for_error = False
         
+        # Storage monitoring
+        self.storage_stats = {"host": 0, "lfs": 0}
+        
         # Regex for ANSI filtering
         self.ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
         # Filter for non-printable characters except newline and tab
@@ -132,6 +135,41 @@ class GingerEngine:
                 except: pass
         self.paused_for_error = False
 
+    def _update_storage(self):
+        """Update storage usage percentages."""
+        paths = {"host": "/", "lfs": "/mnt/lfs"}
+        for key, path in paths.items():
+            try:
+                if os.path.exists(path):
+                    st = os.statvfs(path)
+                    used = (st.f_blocks - st.f_bfree)
+                    total = st.f_blocks
+                    if total > 0:
+                        percent = (used / total) * 100
+                        self.storage_stats[key] = percent
+                        
+                        # Emergency Autonomous Cleanup
+                        if key == "host" and percent > 95:
+                            # Only cleanup host sources if we are already in Phase 3 or 4
+                            # because at that point, sources are already copied to LFS
+                            if self.current_step_idx >= 12: # Phase 3 System or later
+                                host_sources = os.path.join(GINGER_ROOT, "sources")
+                                if os.path.exists(host_sources):
+                                    self.log("CRITICAL: Host disk full! Purging host sources to survive...", "bold red")
+                                    try:
+                                        # We don't delete the dir, just the contents
+                                        for f in os.listdir(host_sources):
+                                            fpath = os.path.join(host_sources, f)
+                                            if os.path.isfile(fpath): os.remove(fpath)
+                                            elif os.path.isdir(fpath): shutil.rmtree(fpath)
+                                        self.log("Emergency cleanup finished. Build will attempt to continue.", "green")
+                                    except Exception as e:
+                                        self.log(f"Emergency cleanup failed: {str(e)}", "bold red")
+                else:
+                    self.storage_stats[key] = 0
+            except:
+                self.storage_stats[key] = 0
+
     def _sudo_keepalive(self):
         while True:
             subprocess.run(["sudo", "-v"], capture_output=True)
@@ -195,6 +233,10 @@ class GingerEngine:
                         clean_line = self.ansi_escape.sub('', stripped)
                         clean_line = self.non_printable.sub('', clean_line)
                         
+                        # Periodically update storage info
+                        if time.time() % 3 < 0.1:
+                            self._update_storage()
+
                         if clean_line.startswith("GINGER_PKG:"):
                             if self.current_pkg and self.pkg_start_time:
                                 duration = time.time() - self.pkg_start_time

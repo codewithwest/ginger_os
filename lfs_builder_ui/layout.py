@@ -98,6 +98,19 @@ def update_ui(layout: Layout, engine):
             pkg_display = f"[bold red blink]FAILED: {pkg_display}[/bold red blink]"
         status_table.add_row(f"[bold yellow]PACKAGE:[/bold yellow] {pkg_display} [bold magenta]⏱ {format_time(pkg_time)}[/bold magenta]")
         
+        # Storage Monitoring
+        host_color = LASER_RED if engine.storage_stats["host"] > 90 else ELECTRIC_BLUE
+        lfs_color = LASER_RED if engine.storage_stats["lfs"] > 90 else LASER_GREEN
+        
+        host_bar = "█" * int(engine.storage_stats["host"] / 5) + "░" * (20 - int(engine.storage_stats["host"] / 5))
+        lfs_bar = "█" * int(engine.storage_stats["lfs"] / 5) + "░" * (20 - int(engine.storage_stats["lfs"] / 5))
+        
+        storage_row = Columns([
+            Text.from_markup(f"[bold cyan]STORAGE (Host):[/][{host_color}]{host_bar}[/] {engine.storage_stats['host']:.0f}% "),
+            Text.from_markup(f"[bold cyan](LFS):[/][{lfs_color}]{lfs_bar}[/] {engine.storage_stats['lfs']:.0f}%")
+        ])
+        status_table.add_row(storage_row)
+        
         layout["status"].update(Panel(status_table, title="[bold blue]System Status[/bold blue]", border_style="bright_blue"))
     else:
         layout["status"].update(Panel(Align.center("[bold green]BUILD COMPLETE[/bold green]"), title="[bold blue]System Status[/bold blue]", border_style="bright_blue"))
