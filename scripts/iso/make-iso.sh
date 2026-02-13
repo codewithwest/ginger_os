@@ -51,7 +51,7 @@ echo "Using host system binaries for minimal boot environment..."
 # Essential tools needed for a functional Live environment and Installer
 # We pull these from the host system to ensure they matching the architecture
 ESSENTIAL_TOOLS=(
-    bash xd sh mount umount mkdir ls cat grep sed awk 
+    bash id sh mount umount mkdir ls cat grep sed awk 
     parted mkfs.ext4 mke2fs tar lsblk blkid 
     useradd chpasswd groupadd chown chmod 
     grub-install grub-mkconfig find basename 
