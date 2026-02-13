@@ -144,14 +144,14 @@ extract() {
     local SRC_PATH="${CLEAN_SOURCES%/}/$ARCHIVE_NAME"
     
     log "PROCESS" "Attempting extraction of $SRC_PATH..."
-    set +e
-    tar -xf "$SRC_PATH" 2>/dev/null
-    local TAR_EXIT=$?
-    set -e
+    
+    # Isolate extraction attempt using the '||' pattern (prevents set -e and trap ERR)
+    TAR_EXIT=0
+    tar -xf "$SRC_PATH" 2>/dev/null || TAR_EXIT=$?
 
     if [ $TAR_EXIT -ne 0 ]; then
-        log "WARN" "Primary extraction failed for $SRC_PATH."
-        log "PROCESS" "Archive might be missing or corrupted. Triggering self-healing..."
+        log "WARN" "Primary extraction failed for $SRC_PATH (Archive likely missing)."
+        log "PROCESS" "Triggering self-healing recovery..."
         
         if fetch_missing_source "$PKG_PATTERN"; then
             # Re-locate the archive (it might have a different name)
@@ -160,10 +160,8 @@ extract() {
                 ARCHIVE_NAME=$(basename "$NEW_SEARCH")
                 SRC_PATH="${CLEAN_SOURCES%/}/$ARCHIVE_NAME"
                 log "PROCESS" "Retrying extraction with fresh archive: $ARCHIVE_NAME"
-                if ! tar -xf "$SRC_PATH"; then
-                    log "ERROR" "CRITICAL: Extraction failed even after re-downloading $ARCHIVE_NAME"
-                    exit 1
-                fi
+                # This time we let it fail normally if it still doesn't work (no isolation)
+                tar -xf "$SRC_PATH"
             else
                 log "ERROR" "CRITICAL: fetch_missing_source reported success but archive is still missing!"
                 exit 1
