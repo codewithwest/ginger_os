@@ -175,7 +175,7 @@ cat << EOF > "$ISO_DIR/boot/grub/grub.cfg"
 set default=0
 set timeout=5
 menuentry "GingerOS Installer (Cyberpunk Edition)" {
-    linux /boot/vmlinuz root=/dev/ram0 rw quiet loglevel=3 splash
+    linux /boot/vmlinuz root=/dev/ram0 rw console=tty0 console=ttyS0 loglevel=7
     initrd /boot/initrd.img
 }
 EOF

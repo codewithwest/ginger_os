@@ -21,6 +21,7 @@ fi
 
 echo "--- GingerOS ISO Validation ---"
 echo "Launching QEMU with 2GB RAM and 2 CPUs..."
+echo "Tip: If you see a black screen, try running with -nographic"
 echo "Press Ctrl+C to exit."
 
 # Create a temporary virtual disk for testing the installer (10GB)
@@ -37,6 +38,6 @@ qemu-system-x86_64 \
     -cdrom "$ISO_PATH" \
     -hda "$TEST_DISK" \
     -boot d \
-    -vga virtio \
+    -vga std \
     -display gtk,zoom-to-fit=on \
     -serial stdio
