@@ -20,7 +20,9 @@ def create_layout() -> Layout:
         Layout(name="body", ratio=2)
     )
     
-    layout["side"].update(Layout(name="roadmap"))
+    layout["side"].split_column(
+        Layout(name="roadmap")
+    )
     
     layout["body"].split_column(
         Layout(name="status", size=11),
