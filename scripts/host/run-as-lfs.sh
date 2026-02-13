@@ -9,6 +9,15 @@ if [ -z "$SCRIPT" ]; then
   exit 1
 fi
 
+# Validate script existence
+if [ ! -f "$SCRIPT" ]; then
+    echo "ERROR: Script '$SCRIPT' not found!"
+    exit 1
+fi
+
+# Use absolute path for safety during user switch
+ABS_SCRIPT=$(readlink -f "$SCRIPT")
+
 # Determine GINGER_ROOT from the script location
 GINGER_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
 
@@ -26,4 +35,4 @@ exec sudo runuser -u lfs -- env -i \
   GINGER_SOURCES="$GINGER_ROOT/sources" \
   GINGER_LOGS="$GINGER_ROOT/logs" \
   GINGER_SCRIPTS="$GINGER_ROOT/scripts" \
-  bash "$SCRIPT" "$@"
+  /bin/bash "$ABS_SCRIPT" "$@"

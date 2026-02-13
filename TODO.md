@@ -38,16 +38,16 @@
   - File: `lfs_builder_ui/engine.py` (Lines 75-99)
   - *Note: Superseded by new TUI architecture in ginger_os.py*
 
-- [ ] **Issue #11**: Add subprocess timeout mechanism
+- [x] **Issue #11**: Add subprocess timeout mechanism
   - Prevent hangs on stuck build steps
   - File: `lfs_builder_ui/engine.py` (Lines 316-326)
 
-- [ ] **Documentation**: Update README.md
+- [x] **Documentation**: Update README.md
   - Document new directory structure
   - Add Python requirements (Rich library)
   - Update build instructions
 
-- [ ] **Issue #12**: Add input validation to `run-as-lfs.sh`
+- [x] **Issue #12**: Add input validation to `run-as-lfs.sh`
   - Validate script path before execution
   - File: `scripts/host/run-as-lfs.sh`
 

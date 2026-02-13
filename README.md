@@ -88,3 +88,13 @@ The TUI shows:
 ---
 
 **Simple. Command-driven. Full control.**
+
+## Requirements
+- Python 3.8+
+- `rich` library (`pip install rich`)
+
+## Directory Structure
+- `logs/`: Build logs for each step
+- `.build_state/`: Internal state markers
+- `sources/`: Downloaded tarballs (LFS sources)
+- `scripts/`: Build logic (Host, Phase 1-3)

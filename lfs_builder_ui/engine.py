@@ -414,59 +414,81 @@ class GingerEngine:
                 env=os.environ.copy()
             )
             
-            # Read output
+            # Read output with timeout
+            import select
+            last_output_time = time.time()
+            IDLE_TIMEOUT = 600  # 10 minutes (configurable via constant eventually)
+
             while True:
                 if self.aborted:
                     process.terminate()
                     break
 
-                # Read line
-                line = process.stdout.readline()
-                if not line and process.poll() is not None:
-                    break
-                
-                if line:
-                    # Write exact raw line to log file
-                    with open(step.log_file, "a") as f:
-                        f.write(line)
+                # Check for output (non-blocking)
+                # We select on process.stdout
+                rlist, _, _ = select.select([process.stdout], [], [], 1.0) # 1 sec poll
 
-                    # Clean for UI
-                    # CRITICAL: Strip carriage returns for rich.Live safety
-                    clean_line = line.replace('\r', '').strip()
-                    clean_line = self.ansi_escape.sub('', clean_line)
-                    clean_line = self.non_printable.sub('', clean_line)
-                    
-                    if not clean_line:
-                        continue
+                if rlist:
+                    # Output available - read line
+                    line = process.stdout.readline()
+                    if line:
+                        last_output_time = time.time()
+                        # Write exact raw line to log file
+                        with open(step.log_file, "a") as f:
+                            f.write(line)
 
-                    # Periodically update storage info (non-blocking if possible)
-                    if time.time() % 3 < 0.1:
-                        self._update_storage()
-                    
-                    # Log to TUI panel (NO PRINT!)
-                    # Special handling for useful keywords
-                    style = "white"
-                    lower_line = clean_line.lower()
-                    
-                    if "error" in lower_line or "fail" in lower_line:
-                        style = "bold red"
-                    elif "warning" in lower_line:
-                        style = "yellow"
-                    elif "pass" in lower_line:
-                        style = "bold green"
-                    
-                    self.log(clean_line, style)
-
-                    # Package tracking
-                    if clean_line.startswith("GINGER_PKG:"):
-                        if self.current_pkg and self.pkg_start_time:
-                            duration = time.time() - self.pkg_start_time
-                            step.packages_completed.append((self.current_pkg, duration))
+                        # Clean for UI
+                        # CRITICAL: Strip carriage returns for rich.Live safety
+                        clean_line = line.replace('\r', '').strip()
+                        clean_line = self.ansi_escape.sub('', clean_line)
+                        clean_line = self.non_printable.sub('', clean_line)
                         
-                        pkg_name = clean_line.replace("GINGER_PKG:", "").strip()
-                        self.current_pkg = pkg_name
-                        self.pkg_start_time = time.time()
-                        self.log(f"Building Package: {pkg_name}", "bold cyan")
+                        if clean_line:
+                            # Periodically update storage info (non-blocking if possible)
+                            if time.time() % 3 < 0.1:
+                                self._update_storage()
+                            
+                            # Log to TUI panel (NO PRINT!)
+                            # Special handling for useful keywords
+                            style = "white"
+                            lower_line = clean_line.lower()
+                            
+                            if "error" in lower_line or "fail" in lower_line:
+                                style = "bold red"
+                            elif "warning" in lower_line:
+                                style = "yellow"
+                            elif "pass" in lower_line:
+                                style = "bold green"
+                            elif "%" in clean_line: # Progress
+                                style = "cyan"
+                            
+                            self.log(clean_line, style)
+
+                            # Package tracking
+                            if clean_line.startswith("GINGER_PKG:"):
+                                if self.current_pkg and self.pkg_start_time:
+                                    duration = time.time() - self.pkg_start_time
+                                    step.packages_completed.append((self.current_pkg, duration))
+                                
+                                pkg_name = clean_line.replace("GINGER_PKG:", "").strip()
+                                self.current_pkg = pkg_name
+                                self.pkg_start_time = time.time()
+                                self.log(f"Building Package: {pkg_name}", "bold cyan")
+                    else:
+                        # EOF
+                        if process.poll() is not None:
+                            break
+                else:
+                    # No output for 1 sec
+                    if time.time() - last_output_time > IDLE_TIMEOUT:
+                        self.log(f"ERROR: Step timed out after {IDLE_TIMEOUT}s of silence.", "bold red")
+                        process.terminate()
+                        process.wait() # Cleanup zombie
+                        step.status = "failed"
+                        return
+
+                    if process.poll() is not None:
+                        break
             
             process.wait()
             step.end_time = time.time()
