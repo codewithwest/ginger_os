@@ -48,6 +48,12 @@ missing_count=0
 
 while read -r url; do
     current=$((current + 1))
+    
+    # Fix for flaky GNU mirrors SSL - allow HTTP since we verify checksums
+    if [[ "$url" == *"ftpmirror.gnu.org"* ]]; then
+        url="${url/https:/http:}"
+    fi
+
     pkg=$(basename "$url")
     
     if [ ! -f "$pkg" ] || [ ! -s "$pkg" ]; then
