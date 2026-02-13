@@ -81,13 +81,14 @@ class GingerEngine:
     def __init__(self):
         self.steps = [
             # Preparation Phase
-            BuildStep("01_permissions", "Set Permissions", "chmod -R 755 .", "Preparation"),
+            BuildStep("01_fix_repo", "Fix Repo Ownership", "sudo chown -R $(logname):$(logname) .git || true", "Preparation"),
             BuildStep("02_host_reqs", "Host Requirements", "bash ./scripts/host/host-requirements-install.sh", "Preparation"),
             BuildStep("03_version_check", "Version Check", "bash ./scripts/host/version-check.sh", "Preparation"),
             BuildStep("04_prepare_image", "Prepare Image", "bash ./scripts/image/prepare-image.sh", "Preparation"),
             BuildStep("05_download_sources", "Download Sources", "bash ./scripts/host/download.sh", "Preparation"),
-            BuildStep("06_host_setup", "Host Setup", "bash ./scripts/host/setup-host.sh", "Preparation"),
-            BuildStep("07_update_dir", "Update Directories", "bash ./scripts/host/update-dir.sh", "Preparation"),
+            BuildStep("06_fix_source_perms", "Fix Source Perms", "sudo chown -R lfs:lfs /mnt/lfs/sources && sudo chmod -R 775 /mnt/lfs/sources", "Preparation"),
+            BuildStep("07_host_setup", "Host Setup", "bash ./scripts/host/setup-host.sh", "Preparation"),
+            BuildStep("08_update_dir", "Update Directories", "bash ./scripts/host/update-dir.sh", "Preparation"),
             
             # Host Tools Phase
             BuildStep("09_setup_lfs_env", "Setup LFS Environment", "bash scripts/host/run-as-lfs.sh ./scripts/phases/setup-lfs-user-env.sh", "Host Tools"),
@@ -341,6 +342,11 @@ def create_layout() -> Layout:
         Layout(name="body", ratio=2)
     )
     
+    layout["side"].split_column(
+        Layout(name="roadmap", ratio=2),
+        Layout(name="history", ratio=1)
+    )
+    
     layout["body"].split_column(
         Layout(name="status", size=11),  # Increased size for more progress bars
         Layout(name="logs")
@@ -399,6 +405,8 @@ def update_ui(layout, engine):
             Text(step.status.upper(), style=style)
         )
     
+    layout["side"]["roadmap"].update(Panel(roadmap_table, title="[bold blue]Roadmap[/bold blue]", border_style="bright_blue"))
+
     # History of packages for current phase
     history_content = Text()
     if engine.current_step_idx < len(engine.steps):
@@ -409,12 +417,7 @@ def update_ui(layout, engine):
         for pkg, dur in current_step.packages_completed[-5:]:  # Show last 5
             history_content.append(f"  ✓ {pkg} ({dur:.1f}s)\n", style="green")
 
-    side_layout = Layout()
-    side_layout.split_column(
-        Layout(Panel(roadmap_table, title="[bold blue]Roadmap[/bold blue]", border_style="bright_blue"), ratio=2),
-        Layout(Panel(history_content, title="[bold blue]Package Trail[/bold blue]", border_style="bright_blue"), ratio=1)
-    )
-    layout["side"].update(side_layout)
+    layout["side"]["history"].update(Panel(history_content, title="[bold blue]Package Trail[/bold blue]", border_style="bright_blue"))
     
     # Status
     if engine.current_step_idx < len(engine.steps):
