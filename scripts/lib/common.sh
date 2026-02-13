@@ -66,21 +66,54 @@ mark_built() {
     log "INFO" "Finished building $PKG_NAME"
 }
 
+fetch_missing_source() {
+    local PKG_PATTERN=$1
+    local WGET_LIST="${GINGER_SOURCES}/wget-list"
+    
+    if [ ! -f "$WGET_LIST" ]; then
+        log "INFO" "wget-list missing, attempting to fetch it..."
+        wget -q -O "$WGET_LIST" "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/wget-list" || return 1
+    fi
+
+    log "PROCESS" "Archive missing for '$PKG_PATTERN'. Searching LFS manifest..."
+    local URL=$(grep -iE "/${PKG_PATTERN}-?[0-9]" "$WGET_LIST" | head -n 1)
+    
+    if [ -z "$URL" ]; then
+        # Try a broader match
+        URL=$(grep -iE "/${PKG_PATTERN}" "$WGET_LIST" | head -n 1)
+    fi
+
+    if [ -n "$URL" ]; then
+        log "INFO" "Found URL for $PKG_PATTERN: $URL"
+        log "PROCESS" "Downloading missing package on-the-fly..."
+        cd "$GINGER_SOURCES"
+        wget -nc -4 -q "$URL"
+        return 0
+    fi
+    return 1
+}
+
 extract() {
     local PKG_PATTERN=$1
     
-    # Find the matching archive in GINGER_SOURCES
-    # This logic mimics the user's find/grep approach but is more robust.
-    # Supports .tar.* and .tgz
-    local ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}-?[0-9]" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+    # 1. Try to find local archive
+    local ARCHIVE_NAME=$(ls "$GINGER_SOURCES" 2>/dev/null | grep -iE "^${PKG_PATTERN}-?[0-9]" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
     
-    # Fallback for packages without a standard hyphen-version (like 'tcl') or simple matches
     if [ -z "$ARCHIVE_NAME" ]; then
-        ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+        ARCHIVE_NAME=$(ls "$GINGER_SOURCES" 2>/dev/null | grep -iE "^${PKG_PATTERN}" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+    fi
+
+    # 2. If missing, attempt self-healing download
+    if [ -z "$ARCHIVE_NAME" ]; then
+        if fetch_missing_source "$PKG_PATTERN"; then
+            # Re-run search after download
+            ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}-?[0-9]" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+            [ -z "$ARCHIVE_NAME" ] && ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+        fi
     fi
 
     if [ -z "$ARCHIVE_NAME" ]; then
-        log "ERROR" "No archive found matching pattern '$PKG_PATTERN' in $GINGER_SOURCES"
+        log "ERROR" "No archive found matching pattern '$PKG_PATTERN' in $GINGER_SOURCES and fetch failed."
         exit 1
     fi
 
