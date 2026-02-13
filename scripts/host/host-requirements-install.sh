@@ -16,14 +16,16 @@ source "${SCRIPT_DIR}/../lib/common.sh"
 export UI_LOG_FILE="${UI_LOG_FILE:-${GINGER_LOGS}/host-requirements.log}"
 
 # ============================================================================
-# SUDO KEEPALIVE
+# STEP 0: CONFIGURE HOST SHELL (LFS Requirement)
 # ============================================================================
 
-# Get sudo credentials upfront
 sudo -v
+echo "GINGER_PKG: Configure Host Shell"
+echo "Ensuring /bin/sh is bash..."
+sudo ln -sf bash /bin/sh
 
 # ============================================================================
-# STEP 0: UPDATE PACKAGE CACHE
+# STEP 1: UPDATE PACKAGE CACHE
 # ============================================================================
 
 echo "GINGER_PKG: Update Package Cache"
@@ -31,7 +33,7 @@ echo "Refreshing package database..."
 sudo apt update -y >> "$UI_LOG_FILE" 2>&1
 
 # ============================================================================
-# STEP 1: INSTALL BUILD TOOLS
+# STEP 2: INSTALL BUILD TOOLS
 # ============================================================================
 
 echo "GINGER_PKG: Install Build Tools"
@@ -39,7 +41,7 @@ echo "Installing essential build tools..."
 sudo apt install -y build-essential bison gawk m4 texinfo >> "$UI_LOG_FILE" 2>&1
 
 # ============================================================================
-# STEP 2: INSTALL LFS DEPENDENCIES
+# STEP 3: INSTALL LFS DEPENDENCIES
 # ============================================================================
 
 echo "GINGER_PKG: Install LFS Dependencies"
@@ -65,7 +67,7 @@ sudo apt install -y \
     >> "$UI_LOG_FILE" 2>&1
 
 # ============================================================================
-# STEP 3: CREATE LFS USER
+# STEP 4: CREATE LFS USER
 # ============================================================================
 
 echo "GINGER_PKG: Create LFS User"
@@ -99,7 +101,7 @@ EOF
 sudo chown -R lfs:lfs /home/lfs >> "$UI_LOG_FILE" 2>&1
 
 # ============================================================================
-# STEP 4: VERIFY INSTALLATION
+# STEP 5: VERIFY INSTALLATION
 # ============================================================================
 
 echo "GINGER_PKG: Verify Installation"

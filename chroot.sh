@@ -42,32 +42,20 @@ mountpoint -q "$LFS/sources" || mount --bind "$(dirname "$(readlink -f "$0")")/s
 
 log "INFO" "Entering chroot..."
 
-
-
-# Find the absolute path to chroot to avoid "command not found" issues
-# chroot "$LFS" /usr/bin/env -i   \
-#     HOME=/root                  \
-#     TERM="$TERM"                \
-#     PS1='(lfs chroot) \u:\w\$ ' \
-#     PATH=/usr/bin:/usr/sbin     \
-#     MAKEFLAGS="-j$(nproc)"      \
-#     TESTSUITEFLAGS="-j$(nproc)" \
-#     /bin/bash --login
-
-# # Determine if we are running in interactive mode or executing a script
-# if [ $# -gt 0 ]; then
-#     log "INFO" "Executing command inside chroot: $@"
-#     chroot "$LFS" /usr/bin/env -i   \
-#         HOME=/root                  \
-#         TERM="$TERM"                \
-#         PATH=/usr/bin:/usr/sbin     \
-#         /bin/bash -c "$@"
-# else
-#     log "INFO" "Entering interactive chroot..."
-#     chroot "$LFS" /usr/bin/env -i   \
-#         HOME=/root                  \
-#         TERM="$TERM"                \
-#         PS1='(ginger-chroot) \u:\w\$ '  \
-#         PATH=/usr/bin:/usr/sbin     \
-#         /bin/bash --login
-# fi
+# Determine if we are running in interactive mode or executing a script
+if [ $# -gt 0 ]; then
+    log "INFO" "Executing command inside chroot: $@"
+    chroot "$LFS" /usr/bin/env -i   \
+        HOME=/root                  \
+        TERM="$TERM"                \
+        PATH=/usr/bin:/usr/sbin     \
+        /bin/bash -c "$@"
+else
+    log "INFO" "Entering interactive chroot..."
+    chroot "$LFS" /usr/bin/env -i   \
+        HOME=/root                  \
+        TERM="$TERM"                \
+        PS1='(ginger-chroot) \u:\w\$ '  \
+        PATH=/usr/bin:/usr/sbin     \
+        /bin/bash --login
+fi
