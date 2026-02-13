@@ -10,7 +10,6 @@ from .constants import LOGO, LASER_GREEN, LASER_RED
 def create_layout() -> Layout:
     layout = Layout()
     layout.split_column(
-        Layout(name="header", size=10),
         Layout(name="main"),
         Layout(name="footer", size=3)
     )
@@ -40,17 +39,6 @@ def format_time(seconds):
     return f"{mins:02d}:{secs:02d}"
 
 def update_ui(layout: Layout, engine):
-    # Header
-    layout["header"].update(Panel(
-        Align.center(
-            Columns([
-                Text(LOGO, style="bold bright_cyan"),
-                Text("\n\n🌶️ GingerOS Build System\nLFS 12.4 Automata\nCyberpunk Edition", style="bold bright_green", justify="center")
-            ])
-        ),
-        border_style="bright_blue"
-    ))
-    
     # Roadmap
     roadmap_table = Table(show_header=True, header_style="bold magenta", expand=True, box=None)
     roadmap_table.add_column("PHASE / STEP", style="bold white")
@@ -103,11 +91,17 @@ def update_ui(layout: Layout, engine):
         layout["status"].update(Panel(Align.center("[bold green]BUILD COMPLETE[/bold green]"), title="[bold blue]System Status[/bold blue]", border_style="bright_blue"))
 
     # Logs
-    log_content = Text()
-    log_slice = engine.logs[-25:] if engine.paused_for_error else engine.logs[-15:]
+    log_content = Text(no_wrap=True)
+    log_slice = engine.logs[-20:] if engine.paused_for_error else engine.logs[-12:]
     for entry, style in log_slice:
         log_content.append(entry + "\n", style=style or "bright_white")
-    layout["logs"].update(Panel(log_content, title="[bold blue]Real-time Intelligence[/bold blue]", border_style="bright_blue"))
+    
+    layout["logs"].update(Panel(
+        log_content, 
+        title="[bold blue]Live Logs[/bold blue]", 
+        border_style="bright_blue",
+        padding=(0, 1)
+    ))
     
     # Footer
     footer_text = "STATUS: RUNNING BUILD"
