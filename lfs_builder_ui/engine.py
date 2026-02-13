@@ -395,36 +395,53 @@ class GingerEngine:
                     process.terminate()
                     break
 
+                # Read line
                 line = process.stdout.readline()
                 if not line and process.poll() is not None:
                     break
                 
                 if line:
-                    # CRITICAL: Strip carriage returns which mess up rich.Live
-                    stripped = line.replace('\r', '').strip()
-                    clean_line = self.ansi_escape.sub('', stripped)
-                    clean_line = self.non_printable.sub('', clean_line)
+                    # Write exact raw line to log file
+                    with open(step.log_file, "a") as f:
+                        f.write(line)
 
-                    # Periodically update storage info
+                    # Clean for UI
+                    # CRITICAL: Strip carriage returns for rich.Live safety
+                    clean_line = line.replace('\r', '').strip()
+                    clean_line = self.ansi_escape.sub('', clean_line)
+                    clean_line = self.non_printable.sub('', clean_line)
+                    
+                    if not clean_line:
+                        continue
+
+                    # Periodically update storage info (non-blocking if possible)
                     if time.time() % 3 < 0.1:
                         self._update_storage()
                     
-                    # Log to file
-                    with open(step.log_file, "a") as f:
-                        f.write(line)
+                    # Log to TUI panel (NO PRINT!)
+                    # Special handling for useful keywords
+                    style = "white"
+                    lower_line = clean_line.lower()
                     
-                    # Print to console for interactive mode
-                    print(clean_line)
+                    if "error" in lower_line or "fail" in lower_line:
+                        style = "bold red"
+                    elif "warning" in lower_line:
+                        style = "yellow"
+                    elif "pass" in lower_line:
+                        style = "bold green"
+                    
+                    self.log(clean_line, style)
 
+                    # Package tracking
                     if clean_line.startswith("GINGER_PKG:"):
                         if self.current_pkg and self.pkg_start_time:
                             duration = time.time() - self.pkg_start_time
                             step.packages_completed.append((self.current_pkg, duration))
-                        self.current_pkg = clean_line.replace("GINGER_PKG:", "").strip()
+                        
+                        pkg_name = clean_line.replace("GINGER_PKG:", "").strip()
+                        self.current_pkg = pkg_name
                         self.pkg_start_time = time.time()
-                        self.log(f"Building: {self.current_pkg}", "bold cyan")
-                    with open(step.log_file, "a") as f:
-                        f.write(line)
+                        self.log(f"Building Package: {pkg_name}", "bold cyan")
             
             process.wait()
             step.end_time = time.time()

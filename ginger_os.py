@@ -56,7 +56,7 @@ class GingerTUI:
         
         # Split right side into details and logs
         layout["right"].split_column(
-            Layout(name="details", size=12),
+            Layout(name="details", size=8),
             Layout(name="logs")
         )
         
@@ -112,11 +112,11 @@ class GingerTUI:
         for idx, step in enumerate(self.engine.steps):
             # Status
             if self.engine._should_skip(step):
-                status = "[bright_green]✓ Done[/]"
+                status = "[bright_green]✓ COMPLETED[/]"
             elif self.executing_step == idx:
-                status = "[bright_cyan]▶ Run[/]"
+                status = "[bright_cyan]▶ RUNNING[/]"
             else:
-                status = "[dim]○ Wait[/]"
+                status = "[dim]○ PENDING[/]"
             
             # Highlight selected
             if idx == self.selected_step:
