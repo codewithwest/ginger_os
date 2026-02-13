@@ -103,9 +103,22 @@ fetch_missing_source() {
         
         # Check if we have tools to download
         if ! command -v wget &> /dev/null && ! command -v curl &> /dev/null; then
-            log "WARN" "Download tools (wget/curl) are missing in this environment (likely Phase 3 chroot)."
+            log "WARN" "Download tools (wget/curl) are missing (likely Phase 3 chroot)."
             log "INFO" "__GINGER_MISSING_SOURCE_URL__: $URL"
-            log "ERROR" "Please download $URL manually on the host and place it in $SRC_DIR"
+            log "PROCESS" "Waiting for host to process download (60s timeout)..."
+            
+            # Wait up to 60 seconds for the file to appear
+            local TARGET_PKG_NAME=$(basename "$URL")
+            for i in {1..12}; do
+                sleep 5
+                if [ -s "${SRC_DIR}/${TARGET_PKG_NAME}" ]; then
+                    log "INFO" "Host successfully acquired $TARGET_PKG_NAME!"
+                    return 0
+                fi
+                log "INFO" "Polling for $TARGET_PKG_NAME... ($((i*5))s)"
+            done
+            
+            log "ERROR" "Timeout waiting for host download. Please download $URL manually on the host and place it in $SRC_DIR"
             return 1
         fi
 

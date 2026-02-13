@@ -695,17 +695,20 @@ class GingerEngine:
                 except: pass
             self.current_process = None
     def _download_missing_source(self, url):
-        """Attempts a host-side download if chroot environment lacks tools."""
-        try:
-            filename = os.path.basename(url)
-            self.log(f"HOST_DOWNLOAD: Requesting {filename} on behalf of chroot...", "bold yellow")
-            
-            # Using wget on host for maximum reliability
-            cmd = ["wget", "-4", "--continue", "--progress=bar:force:noscroll", "-O", os.path.join(SOURCES_DIR, filename), url]
-            
-            # Run in a separate thread so we don't block the line reader (though line reader is in a thread anyway)
-            # But the script will still wait or fail eventually.
-            subprocess.run(cmd, capture_output=True)
-            self.log(f"HOST_DOWNLOAD: Succeeded for {filename}", "bold green")
-        except Exception as e:
-            self.log(f"HOST_DOWNLOAD: Failed: {str(e)}", "bold red")
+        """Attempts a host-side download using a background thread."""
+        def download_worker():
+            try:
+                filename = os.path.basename(url)
+                self.log(f"HOST_DOWNLOAD: Requesting {filename} on behalf of chroot...", "bold yellow")
+                
+                # Using wget on host for maximum reliability
+                cmd = ["wget", "-4", "--continue", "--progress=bar:force:noscroll", "-O", os.path.join(SOURCES_DIR, filename), url]
+                
+                # Execute download
+                subprocess.run(cmd, capture_output=True)
+                self.log(f"HOST_DOWNLOAD: Succeeded for {filename}", "bold green")
+            except Exception as e:
+                self.log(f"HOST_DOWNLOAD: Failed: {str(e)}", "bold red")
+        
+        # Launch background downloader
+        threading.Thread(target=download_worker, daemon=True).start()
