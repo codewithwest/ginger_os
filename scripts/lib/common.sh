@@ -90,11 +90,11 @@ fetch_missing_source() {
         if [[ "$PKG_PATTERN" == *"gettext"* ]]; then
             URL="https://ftp.gnu.org/gnu/gettext/gettext-0.26.tar.xz"
         elif [[ "$PKG_PATTERN" == *"libburn"* ]]; then
-            URL="https://files.libburnia-project.org/releases/libburn-1.5.6.pl01.tar.gz"
+            URL="https://files.libburnia-project.org/releases/libburn-1.5.6.tar.gz"
         elif [[ "$PKG_PATTERN" == *"libisofs"* ]]; then
-            URL="https://files.libburnia-project.org/releases/libisofs-1.5.6.pl01.tar.gz"
+            URL="https://files.libburnia-project.org/releases/libisofs-1.5.6.tar.gz"
         elif [[ "$PKG_PATTERN" == *"libisoburn"* ]]; then
-            URL="https://files.libburnia-project.org/releases/libisoburn-1.5.6.pl01.tar.gz"
+            URL="https://files.libburnia-project.org/releases/libisoburn-1.5.6.tar.gz"
         fi
     fi
 
