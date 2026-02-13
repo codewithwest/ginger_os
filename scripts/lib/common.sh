@@ -87,7 +87,7 @@ fetch_missing_source() {
     
     # Fallback to direct GNU mirror if manifest search fails for gettext
     if [ -z "$URL" ] && [[ "$PKG_PATTERN" == *"gettext"* ]]; then
-        URL="https://ftp.gnu.org/gnu/gettext/gettext-0.23.1.tar.gz"
+        URL="https://ftp.gnu.org/gnu/gettext/gettext-0.26.tar.xz"
     fi
 
     if [ -n "$URL" ]; then
