@@ -350,7 +350,10 @@ def create_layout() -> Layout:
 
 def format_time(seconds):
     if seconds is None: return "00:00"
-    mins, secs = divmod(int(seconds), 60)
+    hours, remainder = divmod(int(seconds), 3600)
+    mins, secs = divmod(remainder, 60)
+    if hours > 0:
+        return f"{hours:02d}:{mins:02d}:{secs:02d}"
     return f"{mins:02d}:{secs:02d}"
 
 def update_ui(layout, engine):
@@ -358,8 +361,8 @@ def update_ui(layout, engine):
     layout["header"].update(Panel(
         Align.center(
             Columns([
-                Text(LOGO, style="bold cyan"),
-                Text("\n\n🌶️ GingerOS Build System\nLFS 12.4 Automata\nCyberpunk Edition", style="bold green", justify="center")
+                Text(LOGO, style="bold bright_cyan"),
+                Text("\n\n🌶️ GingerOS Build System\nLFS 12.4 Automata\nCyberpunk Edition", style="bold bright_green", justify="center")
             ])
         ),
         border_style="bright_blue"
@@ -455,7 +458,7 @@ def update_ui(layout, engine):
         log_slice = engine.logs[-25:] # Show more logs during error
         
     for entry, style in log_slice:
-        log_content.append(entry + "\n", style=style or "dim")
+        log_content.append(entry + "\n", style=style or "bright_white")
     
     layout["logs"].update(Panel(log_content, title="[bold blue]Real-time Intelligence[/bold blue]", border_style="bright_blue"))
     
