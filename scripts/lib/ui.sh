@@ -14,6 +14,12 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
+# Color aliases
+RED="$LASER_RED"
+GREEN="$LASER_GREEN"
+YELLOW="$LASER_YELLOW"
+BLUE="$ELECTRIC_BLUE"
+
 # State files
 # Use a master PID to ensure all sub-scripts share the same UI session
 export GINGER_UI_MASTER_PID="${GINGER_UI_MASTER_PID:-$$}"
@@ -348,9 +354,12 @@ ui_init_dashboard() {
 
     # Start monitor
     # Force output to /dev/tty or /dev/console to prevent UI leaking into step logs
-    local out_dev="/dev/tty"
-    [ ! -e "$out_dev" ] && out_dev="/dev/console"
-    [ ! -e "$out_dev" ] && out_dev="/dev/stdout"
+    local out_dev="/dev/stdout"
+    if (echo > /dev/tty) >/dev/null 2>&1; then
+        out_dev="/dev/tty"
+    elif (echo > /dev/console) >/dev/null 2>&1; then
+        out_dev="/dev/console"
+    fi
 
     ui_monitor > "$out_dev" 2>&1 &
     UI_MONITOR_PID=$!

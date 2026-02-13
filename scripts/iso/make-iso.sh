@@ -127,6 +127,7 @@ cat << 'EOF' > "$INITRD_WORK/init"
 # GingerOS Live Init - Minimal Boot Environment
 
 echo "=== GingerOS Installer Boot ==="
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo "Mounting kernel filesystems..."
 
 mount -t proc proc /proc || echo "WARNING: Failed to mount /proc"
