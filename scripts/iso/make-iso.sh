@@ -48,9 +48,15 @@ sudo rm -rf "$INITRD_WORK"
 mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sbin,sys,tmp,var,root}
 
 echo "Using host system binaries for minimal boot environment..."
-# Essential tools needed ONLY to boot and mount the ISO
-# We use the host system binaries since we only need them for initial boot
-ESSENTIAL_TOOLS=(bash xd sh mount umount mkdir ls cat grep sed awk)
+# Essential tools needed for a functional Live environment and Installer
+# We pull these from the host system to ensure they matching the architecture
+ESSENTIAL_TOOLS=(
+    bash xd sh mount umount mkdir ls cat grep sed awk 
+    parted mkfs.ext4 mke2fs tar lsblk blkid 
+    useradd chpasswd groupadd chown chmod 
+    grub-install grub-mkconfig find basename 
+    tee sleep which clear ps kill tput
+)
 
 for tool in "${ESSENTIAL_TOOLS[@]}"; do
     TOOL_PATH=$(which "$tool" 2>/dev/null || true)
@@ -85,8 +91,8 @@ for file in "$INITRD_WORK/bin/"*; do
     done
 done
 
-# CRITICAL: Ensure the dynamic linker is present
-echo "Ensuring dynamic linker is present..."
+# CRITICAL: Ensure the dynamic linker and terminfo are present
+echo "Ensuring dynamic linker and terminfo are present..."
 DYNAMIC_LINKER="/lib64/ld-linux-x86-64.so.2"
 if [ -f "$DYNAMIC_LINKER" ]; then
     mkdir -p "$INITRD_WORK/lib64"
@@ -95,6 +101,11 @@ else
     echo "Dynamic linker not found at $DYNAMIC_LINKER"
     exit 1
 fi
+
+# Copy xterm-256color terminfo for professional UI support
+mkdir -p "$INITRD_WORK/usr/share/terminfo/x"
+TERMINFO_FILE="/usr/share/terminfo/x/xterm-256color"
+[ -f "$TERMINFO_FILE" ] && cp -v "$TERMINFO_FILE" "$INITRD_WORK/usr/share/terminfo/x/"
 
 # Step 4: Packaging
 echo "__GINGER_PKG_MARKER__: Packaging"

@@ -20,6 +20,21 @@ if [ -z "$(command -v sudo 2>/dev/null)" ] || [ "$EUID" == "0" ] || [ "${USER:-}
     sudo() { "$@"; }
 fi
 
+# --- DEPENDENCY CHECK ---
+REQUIRED_TOOLS=(parted mkfs.ext4 tar lsblk blkid useradd chpasswd grub-install)
+MISSING_TOOLS=()
+for tool in "${REQUIRED_TOOLS[@]}"; do
+    if ! command -v "$tool" &> /dev/null; then
+        MISSING_TOOLS+=("$tool")
+    fi
+done
+
+if [ ${#MISSING_TOOLS[@]} -gt 0 ]; then
+    echo -e "\033[0;31mERROR: The following required tools are missing in this environment: ${MISSING_TOOLS[*]}\033[0m"
+    echo "This live environment is incomplete. Please ensure make-iso.sh included all essentials."
+    exit 1
+fi
+
 # Step Configuration
 ui_init_dashboard "Preparation" "Formatting" "Extraction" "Hardware Sync" "User Setup" "Bootloader"
 
