@@ -20,10 +20,7 @@ def create_layout() -> Layout:
         Layout(name="body", ratio=2)
     )
     
-    layout["side"].split_column(
-        Layout(name="roadmap", ratio=2),
-        Layout(name="history", ratio=1)
-    )
+    layout["side"].update(Layout(name="roadmap"))
     
     layout["body"].split_column(
         Layout(name="status", size=11),
@@ -79,17 +76,6 @@ def update_ui(layout: Layout, engine):
         roadmap_table.add_row(Text(f"{marker} {name}", style=style), Text(step.status.upper(), style=style))
     
     layout["side"]["roadmap"].update(Panel(roadmap_table, title="[bold blue]Roadmap[/bold blue]", border_style="bright_blue"))
-
-    # History
-    history_content = Text()
-    if engine.current_step_idx < len(engine.steps):
-        current_step = engine.steps[engine.current_step_idx]
-        history_content.append(f"\n[bold yellow]Completed in {current_step.name}:[/bold yellow]\n")
-        if not current_step.packages_completed:
-            history_content.append("  (No packages yet)\n", style="dim italic")
-        for pkg, dur in current_step.packages_completed[-5:]:
-            history_content.append(f"  ✓ {pkg} ({dur:.1f}s)\n", style="green")
-    layout["side"]["history"].update(Panel(history_content, title="[bold blue]Package Trail[/bold blue]", border_style="bright_blue"))
     
     # Status
     if engine.current_step_idx < len(engine.steps):

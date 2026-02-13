@@ -40,8 +40,8 @@ sudo apt-get update -qq >> "$UI_LOG_FILE" 2>&1 || { echo "Failed to update packa
 
 echo "GINGER_PKG: Install Build Tools"
 echo "Installing essential build tools..."
-sudo apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
-    build-essential bison gawk m4 texinfo >> "$UI_LOG_FILE" 2>&1
+sleep 1
+sudo apt-get install -y -qq build-essential bison gawk m4 texinfo >> "$UI_LOG_FILE" 2>&1 || { echo "ERROR: Failed to install core build tools"; exit 1; }
 
 # ============================================================================
 # STEP 3: INSTALL LFS DEPENDENCIES
@@ -49,25 +49,11 @@ sudo apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Option
 
 echo "GINGER_PKG: Install LFS Dependencies"
 echo "Installing LFS-specific dependencies..."
-sudo apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
-    libncurses5-dev \
-    libtool \
-    autoconf \
-    automake \
-    patch \
-    wget \
-    curl \
-    xz-utils \
-    bzip2 \
-    file \
-    bc \
-    flex \
-    zlib1g-dev \
-    xorriso \
-    grub-pc-bin \
-    grub-efi-amd64-bin \
-    mtools \
-    >> "$UI_LOG_FILE" 2>&1
+sleep 1
+sudo apt-get install -y -qq \
+    libncurses5-dev libtool autoconf automake patch wget curl \
+    xz-utils bzip2 file bc flex zlib1g-dev xorriso grub-pc-bin \
+    grub-efi-amd64-bin mtools >> "$UI_LOG_FILE" 2>&1 || { echo "ERROR: Failed to install LFS dependencies"; exit 1; }
 
 # ============================================================================
 # STEP 4: CREATE LFS USER

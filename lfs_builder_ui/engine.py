@@ -190,8 +190,11 @@ class GingerEngine:
                         process.terminate()
                         break
                     if line:
-                        stripped = line.strip()
+                        # CRITICAL: Strip carriage returns which mess up rich.Live
+                        stripped = line.replace('\r', '').strip()
                         clean_line = self.ansi_escape.sub('', stripped)
+                        clean_line = self.non_printable.sub('', clean_line)
+                        
                         if clean_line.startswith("GINGER_PKG:"):
                             if self.current_pkg and self.pkg_start_time:
                                 duration = time.time() - self.pkg_start_time
@@ -203,9 +206,10 @@ class GingerEngine:
                         with open(step.log_file, "a") as f:
                             f.write(line)
                         
-                        if any(kw in clean_line.lower() for kw in ["error", "warning", "installing", "building", "configuring", "checking"]):
+                        # Only show very specific, safe keywords in the UI to avoid clutter/corruption
+                        if any(kw in clean_line.lower() for kw in ["error", "warning"]):
                             if not clean_line.startswith("GINGER_PKG:"):
-                                self.log(f"  {clean_line[:80]}", "dim")
+                                self.log(f"  {clean_line[:100]}", "dim")
                 
                 process.wait()
                 step.end_time = time.time()
