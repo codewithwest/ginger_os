@@ -1,7 +1,7 @@
 #!/bin/bash
 # LFS 12.4 - 8.52. Python-3.13.7
 source "/scripts/lib/common.sh"
-PKG_NAME="PythonPip"
+PKG_NAME="newPythonPip"
 check_built "$PKG_NAME" && exit 0
 extract "Python"
 
