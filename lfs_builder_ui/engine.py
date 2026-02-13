@@ -35,7 +35,7 @@ class GingerEngine:
             BuildStep("11_phase2_toolchain", "Cross Tools Build", "bash scripts/host/run-as-lfs.sh ./scripts/phases/build-phase2.sh", "Phase 2 Cross Tools"),
             
             # Phase 3 System
-            BuildStep("12_chroot_mounts", "Mount Chroot", "bash chroot.sh", "Phase 3 System"),
+            BuildStep("12_chroot_mounts", "Mount Chroot", "sudo bash scripts/chroot.sh", "Phase 3 System"),
             BuildStep("13_phase3_system", "System Build", "sudo chroot /mnt/lfs /bin/bash -c 'bash scripts/phases/build-phase3.sh'", "Phase 3 System"),
             
             # Kernel & Boot
