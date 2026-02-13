@@ -92,6 +92,9 @@ class GingerEngine:
                             self.restart_phase()
                         elif char == 'p':
                             self.restart_package()
+                        elif char == ' ' or char == '\r' or char == '\n':  # SPACE or ENTER
+                            self.paused_for_error = False
+                            self.log("▶ BUILD STARTED/RESUMED", "bold green")
                         elif char == '\x03':  # Ctrl+C
                             self.abort()
                             break

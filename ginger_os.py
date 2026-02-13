@@ -242,21 +242,44 @@ Examples:
         sys.exit(0)
     
     signal.signal(signal.SIGINT, signal_handler)
-
-    # Initial sudo check
-    try:
-        subprocess.run(["sudo", "-v", "-n"], check=True, capture_output=True)
-    except subprocess.CalledProcessError:
-        console.print("[bold red]Error: Script must be run with sudo or have cached credentials.[/bold red]")
-        sys.exit(1)
-
-    try:
-        # screen=True is better for consistency on most terminals as it uses the alternate buffer
-        with Live(layout, refresh_per_second=10, screen=True) as live:
-            # Set state BEFORE starting thread to avoid race condition
-            engine.is_running = True
+    
+    # Start paused - wait for user command
+    engine.paused_for_error = True  # Use this flag to pause at start
+    engine.is_running = True
+    
+    with Live(layout, refresh_per_second=4, screen=True) as live:
+        # Show initial state
+        update_ui(layout, engine)
+        live.update(layout)
+        
+        # Log welcome message
+        engine.log("🌶️ GingerOS Build System Ready", "bold cyan")
+        engine.log("=" * 60, "dim")
+        engine.log("CONTROLS:", "bold yellow")
+        engine.log("  SPACE or ENTER - Start/Resume build", "white")
+        engine.log("  N - Skip to next step", "white")
+        engine.log("  S - Skip current step", "white")
+        engine.log("  L - List all steps", "white")
+        engine.log("  ? - Show help", "white")
+        engine.log("  Q - Quit", "white")
+        engine.log("=" * 60, "dim")
+        engine.log("⏸ Press SPACE or ENTER to start the build...", "bold green")
+        
+        # Start threads
+        engine.sudo_thread.start()
+        engine.kb_thread.start()
+        
+        # Wait for user to unpause
+        while engine.paused_for_error and not engine.aborted:
+            update_ui(layout, engine)
+            live.update(layout)
+            time.sleep(0.1)
+        
+        # If not aborted, run the build
+        if not engine.aborted:
+            engine.paused_for_error = False  # Ensure we're unpaused
             
-            # Start engine in separate thread
+            # Run build in separate thread
             build_thread = threading.Thread(target=engine.run)
             build_thread.start()
             
