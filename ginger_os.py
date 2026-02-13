@@ -27,6 +27,7 @@ def main():
         console.print("[bold red]Error: Script must be run with sudo or have cached credentials.[/bold red]")
         sys.exit(1)
 
+    try:
         # Fixed: We now initialize the Live context more carefully
         # and ensure the engine starts AFTER Live is ready.
         with Live(layout, refresh_per_second=4, screen=True) as live:
