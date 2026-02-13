@@ -11,9 +11,8 @@ set -e  # Exit on error
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../../config/env.sh"
 source "${SCRIPT_DIR}/../lib/common.sh"
-source "${SCRIPT_DIR}/../lib/ui.sh"
 
-# Set log file location if not already defined by orchestrator
+# Set log file location
 export UI_LOG_FILE="${UI_LOG_FILE:-${GINGER_LOGS}/host-requirements.log}"
 
 # ============================================================================
@@ -23,64 +22,28 @@ export UI_LOG_FILE="${UI_LOG_FILE:-${GINGER_LOGS}/host-requirements.log}"
 # Get sudo credentials upfront
 sudo -v
 
-# Start background sudo keepalive to prevent password prompts
-ui_sudo_keepalive &
-SUDO_KEEPALIVE_PID=$!
-
-# Ensure sudo keepalive is killed on exit
-cleanup_sudo() {
-    if [[ -n "$SUDO_KEEPALIVE_PID" ]] && kill -0 "$SUDO_KEEPALIVE_PID" 2>/dev/null; then
-        kill "$SUDO_KEEPALIVE_PID" 2>/dev/null
-    fi
-}
-trap cleanup_sudo EXIT
-
-# ============================================================================
-# INITIALIZE UI
-# ============================================================================
-
-ui_init \
-    "Update Package Cache" \
-    "Install Build Tools" \
-    "Install LFS Dependencies" \
-    "Create LFS User" \
-    "Verify Installation"
-
 # ============================================================================
 # STEP 0: UPDATE PACKAGE CACHE
 # ============================================================================
 
-ui_step 0 "Refreshing package database..."
-ui_log "Starting apt update"
-
+echo "GINGER_PKG: Update Package Cache"
+echo "Refreshing package database..."
 sudo apt update -y >> "$UI_LOG_FILE" 2>&1
-
-ui_log "Package cache updated successfully"
 
 # ============================================================================
 # STEP 1: INSTALL BUILD TOOLS
 # ============================================================================
 
-ui_step 1 "Installing essential build tools..."
-ui_log "Installing: build-essential, bison, gawk, m4, texinfo"
-
-sudo apt install -y \
-    build-essential \
-    bison \
-    gawk \
-    m4 \
-    texinfo \
-    >> "$UI_LOG_FILE" 2>&1
-
-ui_log "Build tools installed successfully"
+echo "GINGER_PKG: Install Build Tools"
+echo "Installing essential build tools..."
+sudo apt install -y build-essential bison gawk m4 texinfo >> "$UI_LOG_FILE" 2>&1
 
 # ============================================================================
 # STEP 2: INSTALL LFS DEPENDENCIES
 # ============================================================================
 
-ui_step 2 "Installing LFS-specific dependencies..."
-ui_log "Installing development libraries and tools"
-
+echo "GINGER_PKG: Install LFS Dependencies"
+echo "Installing LFS-specific dependencies..."
 sudo apt install -y \
     libncurses5-dev \
     libtool \
@@ -101,28 +64,21 @@ sudo apt install -y \
     mtools \
     >> "$UI_LOG_FILE" 2>&1
 
-ui_log "All LFS dependencies installed successfully"
-
 # ============================================================================
 # STEP 3: CREATE LFS USER
 # ============================================================================
 
-ui_step 3 "Setting up LFS user environment..."
-
+echo "GINGER_PKG: Create LFS User"
 if ! id lfs >/dev/null 2>&1; then
-    ui_log "Creating lfs group and user"
-    
+    echo "Creating lfs group and user"
     sudo groupadd lfs >> "$UI_LOG_FILE" 2>&1 || true
     sudo useradd -s /bin/bash -g lfs -m -k /dev/null lfs >> "$UI_LOG_FILE" 2>&1
-    
-    ui_log "LFS user created successfully"
 else
-    ui_log "LFS user already exists, skipping creation"
+    echo "LFS user already exists, skipping creation"
 fi
 
 # Set up LFS user bash profile
-ui_log "Configuring LFS user environment"
-
+echo "Configuring LFS user environment"
 sudo tee /home/lfs/.bash_profile > /dev/null <<'EOF'
 exec env -i HOME=$HOME TERM=$TERM PS1='\u:\w\$ ' /bin/bash
 EOF
@@ -142,16 +98,12 @@ EOF
 
 sudo chown -R lfs:lfs /home/lfs >> "$UI_LOG_FILE" 2>&1
 
-ui_log "LFS user environment configured"
-
 # ============================================================================
 # STEP 4: VERIFY INSTALLATION
 # ============================================================================
 
-ui_step 4 "Verifying installation..."
-ui_log "Running version checks"
-
-# Check critical tools
+echo "GINGER_PKG: Verify Installation"
+echo "Verifying installation..."
 {
     echo "=== Tool Versions ==="
     bash --version | head -n1
@@ -165,33 +117,4 @@ ui_log "Running version checks"
     echo "=== Verification Complete ==="
 } >> "$UI_LOG_FILE" 2>&1
 
-ui_log "All tools verified successfully"
-
-# ============================================================================
-# FINISH
-# ============================================================================
-
-ui_step 5 "Installation complete!"
-ui_log "Host system is ready for LFS build"
-
-sleep 2
-ui_finish
-
-# ============================================================================
-# SUMMARY
-# ============================================================================
-
-echo
-echo "╔════════════════════════════════════════════════════════════╗"
-echo "║                    ✅ SUCCESS ✅                            ║"
-echo "╚════════════════════════════════════════════════════════════╝"
-echo
-echo "Host requirements installed successfully!"
-echo
-echo "Next steps:"
-echo "  1. Prepare LFS partition: sudo ./scripts/host/prepare-partition.sh"
-echo "  2. Download sources: ./scripts/host/download-sources.sh"
-echo "  3. Begin LFS build: ./scripts/phases/build-phase1.sh"
-echo
-echo "Log file: $UI_LOG_FILE"
-echo
+echo "Host system is ready for LFS build"

@@ -4,7 +4,6 @@ set -euo pipefail
 
 # Source libraries
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-source "${SCRIPT_DIR}/../lib/ui.sh"
 source "${SCRIPT_DIR}/../lib/disk.sh"
 source "${SCRIPT_DIR}/../lib/bash_config.sh"
 
@@ -13,8 +12,6 @@ ISO_DIR="$GINGER_ROOT/iso_work"
 ISO_OUTPUT="$GINGER_ROOT/gingeros-installer.iso"
 INITRD_WORK="$GINGER_ROOT/initrd_work"
 LFS="/mnt/lfs"
-
-ui_init_dashboard "Cleanup" "Environment" "Initrd" "Packaging" "ISO Build"
 
 # --- HELPERS ---
 cleanup() {
@@ -25,46 +22,47 @@ trap cleanup EXIT
 # --- BUILD PROCESS ---
 
 # Step 0: Cleanup
-ui_step 0
-ui_log "Preparing build arena..."
+echo "GINGER_PKG: Preparation"
+echo "Preparing build arena..."
 cleanup
 mkdir -p "$ISO_DIR/boot/grub" "$ISO_DIR/installer"
 
 # Low space protection
 FREE_BLOCKS=$(df -k "$GINGER_ROOT" | awk 'NR==2 {print $4}')
 if [ "$FREE_BLOCKS" -lt 5000000 ]; then
-    ui_log "Low space detected. Purging heavy artifacts..."
+    echo "Low space detected. Purging heavy artifacts..."
     sudo rm -rf "$GINGER_ROOT/ginger_os.img" 2>/dev/null || true
 fi
 
 # Step 1: Environment
-ui_step 1
-ui_log "Collecting Kernel..."
+echo "GINGER_PKG: Environment"
+echo "Collecting Kernel..."
 KERNEL_IMG=$(ls "$GINGER_ROOT/vmlinuz-"* 2>/dev/null | head -n 1)
-[ -z "$KERNEL_IMG" ] && ui_error "Kernel not found!"
+[ -z "$KERNEL_IMG" ] && { echo "Kernel not found!"; exit 1; }
 cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 
 # Step 2: Initrd
-ui_step 2
-ui_log "Assembling Minimal Live Environment..."
+echo "GINGER_PKG: Initrd"
+echo "Assembling Minimal Live Environment..."
 sudo rm -rf "$INITRD_WORK"
 mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sbin,sys,tmp,var,root}
 
-ui_log "Using host system binaries for minimal boot environment..."
+echo "Using host system binaries for minimal boot environment..."
 # Essential tools needed ONLY to boot and mount the ISO
 # We use the host system binaries since we only need them for initial boot
-ESSENTIAL_TOOLS=(bash sh mount umount mkdir ls cat grep sed awk)
+ESSENTIAL_TOOLS=(bash xd sh mount umount mkdir ls cat grep sed awk)
 
 for tool in "${ESSENTIAL_TOOLS[@]}"; do
     TOOL_PATH=$(which "$tool" 2>/dev/null || true)
     if [ -n "$TOOL_PATH" ] && [ -f "$TOOL_PATH" ]; then
         cp -v "$TOOL_PATH" "$INITRD_WORK/bin/"
     else
-        ui_error "Critical tool $tool not found on host system!"
+        echo "Critical tool $tool not found on host system!"
+        exit 1
     fi
 done
 
-ui_log "Resolving library dependencies..."
+echo "Resolving library dependencies..."
 # Copy only the libraries needed by our minimal binaries
 for file in "$INITRD_WORK/bin/"*; do
     [ -f "$file" ] || continue
@@ -88,18 +86,19 @@ for file in "$INITRD_WORK/bin/"*; do
 done
 
 # CRITICAL: Ensure the dynamic linker is present
-ui_log "Ensuring dynamic linker is present..."
+echo "Ensuring dynamic linker is present..."
 DYNAMIC_LINKER="/lib64/ld-linux-x86-64.so.2"
 if [ -f "$DYNAMIC_LINKER" ]; then
     mkdir -p "$INITRD_WORK/lib64"
-    cp -L "$DYNAMIC_LINKER" "$INITRD_WORK/lib64/" || ui_error "Failed to copy dynamic linker!"
+    cp -L "$DYNAMIC_LINKER" "$INITRD_WORK/lib64/" || { echo "Failed to copy dynamic linker!"; exit 1; }
 else
-    ui_error "Dynamic linker not found at $DYNAMIC_LINKER"
+    echo "Dynamic linker not found at $DYNAMIC_LINKER"
+    exit 1
 fi
 
-# Step 3: Packaging
-ui_step 3
-ui_log "Creating Live Initrd and Payload..."
+# Step 4: Packaging
+echo "GINGER_PKG: Packaging"
+echo "Creating Live Initrd and Payload..."
 # Create init script with error handling
 cat << 'EOF' > "$INITRD_WORK/init"
 #!/bin/sh
@@ -159,8 +158,8 @@ cp "$INITRD_WORK/root/.bashrc" "$INITRD_WORK/.bashrc" 2>/dev/null || true
 [ -f "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" ] && cp "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/"
 
 # Step 4: ISO Build
-ui_step 4
-ui_log "Generating final ISO..."
+echo "GINGER_PKG: ISO Build"
+echo "Generating final ISO..."
 cat << EOF > "$ISO_DIR/boot/grub/grub.cfg"
 set default=0
 set timeout=5
@@ -171,5 +170,4 @@ menuentry "GingerOS Installer (Cyberpunk Edition)" {
 EOF
 grub-mkrescue -o "$ISO_OUTPUT" "$ISO_DIR" >/dev/null 2>&1
 
-ui_draw_header
-echo -e "${GREEN}${BOLD}SUCCESS! ISO created at: $ISO_OUTPUT${NC}"
+echo "SUCCESS! ISO created at: $ISO_OUTPUT"

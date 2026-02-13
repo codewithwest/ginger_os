@@ -15,6 +15,7 @@ SCRIPTS=("$PHASE2_TOOLS_DIR"/*.sh)
 for script in "${SCRIPTS[@]}"; do
     PKG_NAME=$(basename "$script" .sh)
     
+    echo "GINGER_PKG: $PKG_NAME"
     echo "Building: $PKG_NAME (Temporary Tools)"
 
     # Check if already built

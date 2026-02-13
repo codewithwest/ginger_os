@@ -6,6 +6,7 @@ import subprocess
 import threading
 import signal
 from datetime import datetime
+import re
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
@@ -36,11 +37,11 @@ LASER_RED = "#dc322f"
 LASER_YELLOW = "#b58900"
 
 # ASCII Logo
-LOGO = """
+LOGO = r"""
   _____ _                         ____   ____
  / ____(_)                       / __ \ / ____|
 | |  __ _ _ __   __ _  ___ _ __ | |  | | (___ 
-| | |_ | | '_ \ / _` |/ _ \ '__|| |  | |\___ \\
+| | |_ | | '_ \ / _` |/ _ \ '__|| |  | |\___ \
 | |__| | | | | | (_| |  __/ |   | |__| |____) |
  \_____|_|_| |_|\__, |\___|_|    \____/|_____/ 
                  __/ |                         
@@ -104,11 +105,15 @@ class GingerEngine:
             BuildStep("16_teardown", "Teardown", "bash scripts/image/teardown.sh", "Kernel & Boot")
         ]
         self.current_step_idx = 0
+        self.current_pkg = ""
         self.logs = []
         self.max_logs = 100
         self.is_running = False
         self.aborted = False
         self.error_msg = ""
+        
+        # Regex for ANSI filtering
+        self.ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
         
         # Keep sudo alive
         self.sudo_thread = threading.Thread(target=self._sudo_keepalive, daemon=True)
@@ -119,6 +124,9 @@ class GingerEngine:
             time.sleep(60)
 
     def log(self, message, style=None):
+        # Filter ANSI codes
+        message = self.ansi_escape.sub('', message)
+        
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}"
         self.logs.append((log_entry, style))
@@ -167,13 +175,22 @@ class GingerEngine:
                         break
                     if line:
                         stripped = line.strip()
+                        # Clean line for internal processing
+                        clean_line = self.ansi_escape.sub('', stripped)
+                        
+                        # Check for package marker
+                        if clean_line.startswith("GINGER_PKG:"):
+                            self.current_pkg = clean_line.replace("GINGER_PKG:", "").strip()
+                            self.log(f"Building: {self.current_pkg}", "bold cyan")
+                        
                         # Only log to UI if it's not too chatty, but always log to file
                         with open(step.log_file, "a") as f:
                             f.write(line)
                         
                         # Show some filtered output in UI logs
-                        if any(kw in stripped.lower() for kw in ["error", "warning", "installing", "building", "configuring", "checking"]):
-                            self.log(f"  {stripped[:80]}", "dim")
+                        if any(kw in clean_line.lower() for kw in ["error", "warning", "installing", "building", "configuring", "checking"]):
+                            if not clean_line.startswith("GINGER_PKG:"):
+                                self.log(f"  {clean_line[:80]}", "dim")
                 
                 process.wait()
                 step.end_time = time.time()
@@ -287,6 +304,7 @@ def update_ui(layout, engine):
         
         status_table = Table.grid(expand=True)
         status_table.add_row(f"[bold cyan]ACTIVE:[/bold cyan] {current_step.name}")
+        status_table.add_row(f"[bold yellow]PKG   :[/bold yellow] {engine.current_pkg or 'Initializing...'}")
         status_table.add_row(f"[bold cyan]PHASE :[/bold cyan] {current_step.phase}")
         status_table.add_row(f"[bold cyan]TIME  :[/bold cyan] {current_step.duration():.1f}s")
         
