@@ -217,12 +217,25 @@ class GingerEngine:
 
     def _should_skip(self, step):
         """Determines if a build step should be skipped based on markers or filesystem state."""
-        # 1. Direct marker check in the central state dir
+        # 1. CRITICAL: Source Integrity Check (HOST SIDE)
+        # If we are missing sources, we MUST NOT skip the download step, 
+        # because the chroot doesn't have wget to fix it later.
+        if step.id == "05_download_sources":
+            sources_dir = os.path.join(GINGER_ROOT, "sources")
+            if not os.path.exists(sources_dir) or len(os.listdir(sources_dir)) < 5:
+                # Force re-download by removing the marker if it exists
+                marker_path = os.path.join(STATE_DIR, f"{step.id}.built")
+                if os.path.exists(marker_path):
+                    try: os.remove(marker_path)
+                    except: pass
+                return False
+
+        # 2. Direct marker check in the central state dir
         central_marker = os.path.join(STATE_DIR, f"{step.id}.built")
         if os.path.exists(central_marker):
             return True
             
-        # 2. Smart checks for major phases
+        # 3. Smart checks for major phases
         lfs_marker_dir = "/mnt/lfs/var/lib/ginger"
         if step.id == "10_phase1_toolchain":
             return self._check_phase_complete("phase1-tools", lfs_marker_dir)
@@ -233,13 +246,7 @@ class GingerEngine:
         if step.id == "14_kernel":
              return self._check_phase_complete("phase4-boot", lfs_marker_dir)
              
-        # 3. Dynamic state checks
-        if step.id == "05_download_sources":
-            # Integrity check: If sources directory is empty, we MUST NOT skip
-            sources_dir = os.path.join(GINGER_ROOT, "sources")
-            if not os.path.exists(sources_dir) or not os.listdir(sources_dir):
-                return False
-                
+        # 4. Dynamic state checks
         if step.id == "04_prepare_image":
             # Check if image is already mounted to LFS
             try:
