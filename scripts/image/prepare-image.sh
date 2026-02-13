@@ -40,3 +40,4 @@ fi
 
 log "INFO" "Image ready at $LFS (Loop device: $LOOP_DEV)"
 log "INFO" "Don't forget to unmount and detach after build."
+mark_built "04_prepare_image"

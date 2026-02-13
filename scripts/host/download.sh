@@ -95,4 +95,5 @@ if [ -n "$FAILED_FILES" ]; then
 fi
 
 echo "Source acquisition complete."
+mark_built "05_download_sources"
 sleep 1

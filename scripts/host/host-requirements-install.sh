@@ -11,6 +11,7 @@ set -e  # Exit on error
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../../config/env.sh"
 source "${SCRIPT_DIR}/../lib/common.sh"
+PKG_NAME="02_host_reqs"
 
 # Set log file location
 export UI_LOG_FILE="${UI_LOG_FILE:-${GINGER_LOGS}/host-requirements.log}"
@@ -127,3 +128,4 @@ echo "Verifying installation..."
 } >> "$UI_LOG_FILE" 2>&1
 
 echo "Host system is ready for LFS build"
+mark_built "$PKG_NAME"

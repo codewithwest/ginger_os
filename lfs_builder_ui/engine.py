@@ -170,6 +170,86 @@ class GingerEngine:
             except:
                 self.storage_stats[key] = 0
 
+    def _get_script_pkg_name(self, script_path):
+        """Peeks into a script to find its PKG_NAME definition."""
+        try:
+            with open(script_path, 'r') as f:
+                content = f.read()
+                match = re.search(r'^PKG_NAME=["\'](.*)["\']', content, re.M)
+                if match:
+                    return match.group(1)
+        except:
+            pass
+        return None
+
+    def _check_phase_complete(self, script_subdir, marker_dir):
+        """Helper to check if all scripts in a directory have corresponding markers."""
+        scripts_dir = os.path.join(GINGER_ROOT, "scripts", script_subdir)
+        if not os.path.exists(scripts_dir):
+            return False
+            
+        scripts = sorted([f for f in os.listdir(scripts_dir) if f.endswith(".sh")])
+        if not scripts:
+            return False
+            
+        for script in scripts:
+            script_path = os.path.join(scripts_dir, script)
+            pkg_name = self._get_script_pkg_name(script_path)
+            file_name = script.replace(".sh", "")
+            
+            # For Phase 3/4, file names often have prefixes like 01-
+            if script_subdir in ["phase3-system", "phase4-boot"]:
+                file_name = "-".join(file_name.split("-")[1:]) if "-" in file_name else file_name
+
+            possible_markers = [
+                os.path.join(marker_dir, f"{file_name}.built"),
+                os.path.join(marker_dir, f"{file_name}-temp.built")
+            ]
+            if pkg_name:
+                possible_markers.extend([
+                    os.path.join(marker_dir, f"{pkg_name}.built"),
+                    os.path.join(marker_dir, f"{pkg_name}-temp.built")
+                ])
+            
+            if not any(os.path.exists(m) for m in possible_markers):
+                return False
+        return True
+
+    def _should_skip(self, step):
+        """Determines if a build step should be skipped based on markers or filesystem state."""
+        # 1. Direct marker check in the central state dir
+        central_marker = os.path.join(self.steps[0].log_file.rsplit("/", 1)[0], f"{step.id}.built")
+        if os.path.exists(central_marker):
+            return True
+            
+        # 2. Smart checks for major phases
+        lfs_marker_dir = "/mnt/lfs/var/lib/ginger"
+        if step.id == "10_phase1_toolchain":
+            return self._check_phase_complete("phase1-tools", lfs_marker_dir)
+        if step.id == "11_phase2_toolchain":
+            return self._check_phase_complete("phase2-tools", lfs_marker_dir)
+        if step.id == "13_phase3_system":
+             return self._check_phase_complete("phase3-system", lfs_marker_dir)
+        if step.id == "14_kernel":
+             return self._check_phase_complete("phase4-boot", lfs_marker_dir)
+             
+        # 3. Dynamic state checks
+        if step.id == "04_prepare_image":
+            # Check if image is already mounted to LFS
+            try:
+                result = subprocess.run(["mountpoint", "-q", "/mnt/lfs"], capture_output=True)
+                return result.returncode == 0
+            except: return False
+            
+        if step.id == "12_chroot_mounts":
+            # Check if chroot special filesystems are mounted
+            try:
+                result = subprocess.run(["grep", "-q", "/mnt/lfs/proc", "/proc/mounts"], capture_output=True)
+                return result.returncode == 0
+            except: return False
+
+        return False
+
     def _sudo_keepalive(self):
         while True:
             subprocess.run(["sudo", "-v"], capture_output=True)
@@ -199,6 +279,14 @@ class GingerEngine:
         while self.current_step_idx < len(self.steps):
             if self.aborted: break
             step = self.steps[self.current_step_idx]
+            
+            # Smart skipping check
+            if self._should_skip(step):
+                self.log(f"Step '{step.name}' already complete. Skipping.", "green")
+                step.status = "completed"
+                self.current_step_idx += 1
+                continue
+
             step.status = "running"
             step.start_time = time.time()
             self.phase_start_time = step.start_time
