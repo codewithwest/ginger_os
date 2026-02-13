@@ -25,6 +25,15 @@ echo "GINGER_PKG: Configure Host Shell"
 echo "Ensuring /bin/sh is bash..."
 sudo ln -sf bash /bin/sh
 
+# Function to wait for apt locks
+wait_for_apt_lock() {
+    echo "Checking for package manager locks..."
+    while sudo fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/lib/dpkg/lock >/dev/null 2>&1; do
+        echo "Waiting for other package manager (apt/dpkg) to release locks..."
+        sleep 2
+    done
+}
+
 # ============================================================================
 # STEP 1: UPDATE PACKAGE CACHE
 # ============================================================================
@@ -32,6 +41,7 @@ sudo ln -sf bash /bin/sh
 echo "GINGER_PKG: Update Package Cache"
 echo "Refreshing package database..."
 export DEBIAN_FRONTEND=noninteractive
+wait_for_apt_lock
 sudo apt-get update -qq >> "$UI_LOG_FILE" 2>&1 || { echo "Failed to update package cache. Check $UI_LOG_FILE"; exit 1; }
 
 # ============================================================================
@@ -40,7 +50,7 @@ sudo apt-get update -qq >> "$UI_LOG_FILE" 2>&1 || { echo "Failed to update packa
 
 echo "GINGER_PKG: Install Build Tools"
 echo "Installing essential build tools..."
-sleep 1
+wait_for_apt_lock
 sudo apt-get install -y -qq build-essential bison gawk m4 texinfo >> "$UI_LOG_FILE" 2>&1 || { echo "ERROR: Failed to install core build tools"; exit 1; }
 
 # ============================================================================
@@ -49,7 +59,7 @@ sudo apt-get install -y -qq build-essential bison gawk m4 texinfo >> "$UI_LOG_FI
 
 echo "GINGER_PKG: Install LFS Dependencies"
 echo "Installing LFS-specific dependencies..."
-sleep 1
+wait_for_apt_lock
 sudo apt-get install -y -qq \
     libncurses5-dev libtool autoconf automake patch wget curl \
     xz-utils bzip2 file bc flex zlib1g-dev xorriso grub-pc-bin \

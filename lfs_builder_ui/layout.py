@@ -10,6 +10,7 @@ from .constants import LOGO, LASER_GREEN, LASER_RED
 def create_layout() -> Layout:
     layout = Layout()
     layout.split_column(
+        Layout(name="header", size=10),
         Layout(name="main"),
         Layout(name="footer", size=3)
     )
@@ -39,6 +40,17 @@ def format_time(seconds):
     return f"{mins:02d}:{secs:02d}"
 
 def update_ui(layout: Layout, engine):
+    # Header
+    layout["header"].update(Panel(
+        Align.center(
+            Columns([
+                Text(LOGO, style="bold bright_cyan"),
+                Text("\n\n🌶️ GingerOS Build System\nLFS 12.4 Automata\nCyberpunk Edition", style="bold bright_green", justify="center")
+            ])
+        ),
+        border_style="bright_blue"
+    ))
+    
     # Roadmap
     roadmap_table = Table(show_header=True, header_style="bold magenta", expand=True, box=None)
     roadmap_table.add_column("PHASE / STEP", style="bold white")
