@@ -45,9 +45,6 @@ cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 echo "__GINGER_PKG_MARKER__: Initrd"
 echo "Assembling Minimal Live Environment..."
 sudo rm -rf "$INITRD_WORK"
-mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sbin,sys,tmp,var,root}
-
-echo "Using host system binaries for minimal boot environment..."
 # Essential tools needed for a functional Live environment and Installer
 # We pull these from the host system to ensure they matching the architecture
 ESSENTIAL_TOOLS=(
@@ -58,10 +55,16 @@ ESSENTIAL_TOOLS=(
     tee sleep which clear ps kill tput
 )
 
+# Create essential system directory structure
+mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sys,tmp,var,root}
+(cd "$INITRD_WORK" && ln -sf bin sbin && mkdir -p usr && cd usr && ln -sf ../bin bin && ln -sf ../bin sbin)
+
 for tool in "${ESSENTIAL_TOOLS[@]}"; do
     TOOL_PATH=$(which "$tool" 2>/dev/null || true)
     if [ -n "$TOOL_PATH" ] && [ -f "$TOOL_PATH" ]; then
-        cp -v "$TOOL_PATH" "$INITRD_WORK/bin/"
+        # Use -L to dereference symlinks (e.g. sh -> dash) and ensure 
+        # the actual binary is copied to /bin.
+        cp -vL "$TOOL_PATH" "$INITRD_WORK/bin/"
     else
         echo "Critical tool $tool not found on host system!"
         exit 1
