@@ -35,6 +35,7 @@ class GingerTUI:
         self.selected_step = 0
         self.running = True
         self.executing_step = None
+        self.executing_thread = None
         self.current_start_time = 0
         self.show_help = False
         self.mode = "select"  # select, execute, logs
@@ -276,22 +277,31 @@ class GingerTUI:
         layout["footer"].update(self.render_footer())
     
     def run_step(self, step_idx, force=False):
-        """Execute a single step"""
+        """Execute a single step in a background thread"""
         step = self.engine.steps[step_idx]
         
         # Check if already complete
         if self.engine._should_skip(step) and not force:
             return False
         
+        if self.executing_step is not None:
+            return False  # Already running
+            
         self.executing_step = step_idx
         self.current_start_time = time.time()
         self.engine.current_step_idx = step_idx
         
-        # Execute in current thread (blocking)
-        self.engine._execute_step(step)
+        def _target():
+            self.engine._execute_step(step)
+            # Signal completion is handled by polling in main loop
+            # or we can update executing_step here, but main loop is safer
+            self.executing_step = None
+
+        # Start execution thread
+        self.executing_thread = threading.Thread(target=_target, daemon=True)
+        self.executing_thread.start()
         
-        self.executing_step = None
-        return step.status == "completed"
+        return True
     
     def delete_marker(self, step_idx):
         """Delete marker for a step"""
@@ -381,7 +391,7 @@ class GingerTUI:
                     live.update(layout)
                     
                     # Check for input (non-blocking)
-                    if select.select([sys.stdin], [], [], 0.1)[0]:
+                    if select.select([sys.stdin], [], [], 0.05)[0]:
                         key = sys.stdin.read(1)
                         
                         # Handle arrow keys (multi-byte)
@@ -392,19 +402,20 @@ class GingerTUI:
                         action = self.handle_key(key)
                         
                         # Handle actions that need terminal restoration
-                        if action in ['run', 'force', 'delete', 'run_all']:
+                        if action in ['delete', 'run_all']:
                             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
                             
-                            if action == 'run':
-                                self.run_step(self.selected_step, force=False)
-                            elif action == 'force':
-                                self.run_step(self.selected_step, force=True)
-                            elif action == 'delete':
+                            if action == 'delete':
                                 self.delete_marker(self.selected_step)
                             elif action == 'run_all':
                                 self.run_all_pending()
                             
                             tty.setcbreak(fd)
+                        
+                        elif action == 'run':
+                            self.run_step(self.selected_step, force=False)
+                        elif action == 'force':
+                            self.run_step(self.selected_step, force=True)
         
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
