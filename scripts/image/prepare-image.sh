@@ -7,11 +7,13 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 
 source "${SCRIPT_DIR}/../lib/common.sh"
 
-IMAGE_PATH="${GINGER_ROOT}/ginger_os.img"
+IMAGE_NAME="${IMAGE_NAME:-ginger_os.img}"
+IMAGE_SIZE="${IMAGE_SIZE:-12G}"
+IMAGE_PATH="${GINGER_ROOT}/${IMAGE_NAME}"
 
 if [ ! -f "$IMAGE_PATH" ]; then
-    log "INFO" "Creating 12GB sparse disk image..."
-    truncate -s 12G "$IMAGE_PATH"
+    log "INFO" "Creating ${IMAGE_SIZE} sparse disk image..."
+    truncate -s "${IMAGE_SIZE}" "$IMAGE_PATH"
 
     log "INFO" "Partitioning image..."
     sudo parted -s "$IMAGE_PATH" mklabel msdos

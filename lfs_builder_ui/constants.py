@@ -2,9 +2,36 @@ import os
 
 # Paths
 GINGER_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+
+# Configuration Parser
+def load_ginger_conf():
+    conf = {
+        "LFS_MOUNT": "/mnt/lfs",
+        "IMAGE_NAME": "ginger_os.img",
+        "IMAGE_SIZE": "12G"
+    }
+    conf_path = os.path.join(GINGER_ROOT, "ginger.conf")
+    if os.path.exists(conf_path):
+        with open(conf_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    conf[key.strip()] = value.strip()
+    return conf
+
+CONFIG = load_ginger_conf()
+
 LOG_DIR = os.path.join(GINGER_ROOT, "logs")
 STATE_DIR = os.path.join(GINGER_ROOT, ".build_state")
 MASTER_LOG = os.path.join(LOG_DIR, "master.log")
+
+# Build-specific paths from config
+LFS_MOUNT = CONFIG.get("LFS_MOUNT", "/mnt/lfs")
+IMAGE_NAME = CONFIG.get("IMAGE_NAME", "ginger_os.img")
+IMAGE_SIZE = CONFIG.get("IMAGE_SIZE", "12G")
 
 # Create directories
 os.makedirs(LOG_DIR, exist_ok=True)

@@ -9,7 +9,7 @@ import shutil
 import termios
 import tty
 from datetime import datetime
-from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR
+from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, LFS_MOUNT
 from .models import BuildStep
 
 class GingerEngine:
@@ -338,7 +338,7 @@ class GingerEngine:
             return True
             
         # 3. Smart checks for major phases
-        lfs_marker_dir = "/mnt/lfs/var/lib/ginger"
+        lfs_marker_dir = f"{LFS_MOUNT}/var/lib/ginger"
         if step.id == "10_phase1_toolchain":
             return self._check_phase_complete("phase1-tools", lfs_marker_dir)
         if step.id == "11_phase2_toolchain":
@@ -353,7 +353,7 @@ class GingerEngine:
             # Check if image is already mounted to LFS
             # CRITICAL FAILSAFE: Even if marker exists, if it's NOT mounted, we should NOT skip
             try:
-                result = subprocess.run(["mountpoint", "-q", "/mnt/lfs"], capture_output=True)
+                result = subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True)
                 is_mounted = result.returncode == 0
                 if not is_mounted:
                     return False
@@ -364,7 +364,7 @@ class GingerEngine:
             # Check if chroot special filesystems are mounted
             # FAILSAFE: If marker exists but mounts are gone, do NOT skip
             try:
-                result = subprocess.run(["grep", "-q", "/mnt/lfs/proc", "/proc/mounts"], capture_output=True)
+                result = subprocess.run(["grep", "-q", f"{LFS_MOUNT}/proc", "/proc/mounts"], capture_output=True)
                 is_mounted = result.returncode == 0
                 if not is_mounted:
                     return False
@@ -393,19 +393,19 @@ class GingerEngine:
 
     def _ensure_lfs_mounted(self):
         """
-        Verify that /mnt/lfs is mounted. If not, automatically run
+        Verify that LFS_MOUNT is mounted. If not, automatically run
         the idempotent prepare-image step to recover the environment.
         
         Returns:
             bool: True if mounted (or successfully re-mounted), False otherwise.
         """
         try:
-            result = subprocess.run(["mountpoint", "-q", "/mnt/lfs"], capture_output=True)
+            result = subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True)
             if result.returncode == 0:
                 return True
             
             # Mount lost! Attempt automatic recovery.
-            self.log("WARN: LFS partition (/mnt/lfs) is NOT mounted!", "yellow")
+            self.log(f"WARN: LFS partition ({LFS_MOUNT}) is NOT mounted!", "yellow")
             self.log("Attempting automated mount recovery...", "bold cyan")
             
             # Find the "prepare-image" step
@@ -429,7 +429,7 @@ class GingerEngine:
 
     def _verify_chroot_ready(self):
         """Verify chroot filesystems are mounted."""
-        mounts = ["/mnt/lfs/proc", "/mnt/lfs/sys", "/mnt/lfs/dev"]
+        mounts = [f"{LFS_MOUNT}/proc", f"{LFS_MOUNT}/sys", f"{LFS_MOUNT}/dev"]
         try:
             with open("/proc/mounts", "r") as f:
                 content = f.read()
