@@ -207,7 +207,7 @@ class GingerEngine:
                             f.write(line)
                         
                         # Only show very specific, safe keywords in the UI to avoid clutter/corruption
-                        if any(kw in clean_line.lower() for kw in ["error", "warning"]):
+                        if any(kw in clean_line.lower() for kw in ["error", "warning", "waiting", "checking", "..."]):
                             if not clean_line.startswith("GINGER_PKG:"):
                                 self.log(f"  {clean_line[:100]}", "dim")
                 

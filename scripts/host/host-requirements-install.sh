@@ -48,7 +48,9 @@ echo "GINGER_PKG: Update Package Cache"
 echo "Refreshing package database..."
 export DEBIAN_FRONTEND=noninteractive
 wait_for_apt_lock
+echo "Apt-get update starting... (this may take a minute)"
 sudo apt-get update -qq >> "$UI_LOG_FILE" 2>&1 || { echo "Failed to update package cache. Check $UI_LOG_FILE"; exit 1; }
+echo "Apt-get update finished."
 
 # ============================================================================
 # STEP 2: INSTALL BUILD TOOLS
