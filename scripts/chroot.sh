@@ -34,3 +34,14 @@ mountpoint -q "$LFS/config"  || mount --bind "$GINGER_ROOT/config"  "$LFS/config
 mountpoint -q "$LFS/sources" || mount --bind "$GINGER_SOURCES" "$LFS/sources"
 
 log "INFO" "Entering chroot..."
+
+# If we are running in the UI (where it just needs mounts), it can exit here.
+# But if a user runs this manually, we want to drop them into the shell.
+if [[ "${1:-}" != "--mount-only" ]]; then
+    chroot "$LFS" /usr/bin/env -i   \
+        HOME=/root                  \
+        TERM="$TERM"                \
+        PS1='(ginger-chroot) \u:\w\$ '  \
+        PATH=/usr/bin:/usr/sbin     \
+        /bin/bash --login
+fi
