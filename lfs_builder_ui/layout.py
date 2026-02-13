@@ -25,7 +25,7 @@ def create_layout() -> Layout:
     )
     
     layout["body"].split_column(
-        Layout(name="status", size=11),
+        Layout(name="status", size=7),
         Layout(name="logs")
     )
     
@@ -104,7 +104,8 @@ def update_ui(layout: Layout, engine):
 
     # Logs
     log_content = Text(no_wrap=True)
-    log_slice = engine.logs[-20:] if engine.paused_for_error else engine.logs[-12:]
+    # Increased lines since logs panel is now bigger
+    log_slice = engine.logs[-25:] if engine.paused_for_error else engine.logs[-18:]
     for entry, style in log_slice:
         log_content.append(entry + "\n", style=style or "bright_white")
     
