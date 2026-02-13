@@ -43,17 +43,17 @@ def update_ui(layout: Layout, engine):
     layout["header"].update(Panel(
         Align.center(
             Columns([
-                # Use GINGER_BLUE and LASER_GREEN constants
+                # Use bright colors for transparent terminals
                 Text(LOGO, style=f"bold {GINGER_BLUE}"),
                 Text("\n\n🌶️ GingerOS Build System\nLFS 12.4 Automata\nCyberpunk Edition", style=f"bold {LASER_GREEN}", justify="center")
             ])
         ),
-        border_style=LASER_BLUE
+        border_style=f"bold {LASER_BLUE}"
     ))
     
     # Roadmap
-    roadmap_table = Table(show_header=True, header_style="bold magenta", expand=True, box=None)
-    roadmap_table.add_column("PHASE / STEP", style="bold white")
+    roadmap_table = Table(show_header=True, header_style="bold bright_magenta", expand=True, box=None)
+    roadmap_table.add_column("PHASE / STEP", style="bold bright_white")
     roadmap_table.add_column("STAT", justify="right")
     
     last_phase = ""
@@ -63,21 +63,21 @@ def update_ui(layout: Layout, engine):
             last_phase = step.phase
         
         marker = " [ ]"
-        style = "white"
+        style = "bright_white"
         if step.status == "completed":
             marker = " [✓]"
-            style = "green"
+            style = "bright_green"
         elif step.status == "running":
             marker = " [▶]"
-            style = "bold cyan"
+            style = "bold bright_cyan"
         elif step.status == "failed":
             marker = " [✘]"
-            style = "bold red"
+            style = "bold bright_red"
             
         name = step.name[:17] + "..." if len(step.name) > 20 else step.name
         roadmap_table.add_row(Text(f"{marker} {name}", style=style), Text(step.status.upper(), style=style))
     
-    layout["side"]["roadmap"].update(Panel(roadmap_table, title="[bold blue]Roadmap[/bold blue]", border_style="bright_blue"))
+    layout["side"]["roadmap"].update(Panel(roadmap_table, title="[bold bright_blue]Roadmap[/bold bright_blue]", border_style="bold bright_blue"))
     
     # Status
     if engine.current_step_idx < len(engine.steps):
@@ -87,16 +87,16 @@ def update_ui(layout: Layout, engine):
         
         overall_time = time.time() - engine.overall_start_time if engine.overall_start_time else 0
         overall_bar = "█" * int(overall_progress / 2.5) + "░" * (40 - int(overall_progress / 2.5))
-        status_table.add_row(f"[bold cyan]OVERALL:[/bold cyan] [{LASER_GREEN}]{overall_bar}[/] {overall_progress:.0f}%  [bold magenta]⏱ {format_time(overall_time)}[/bold magenta]")
+        status_table.add_row(f"[bold bright_cyan]OVERALL:[/bold bright_cyan] [{LASER_GREEN}]{overall_bar}[/] {overall_progress:.0f}%  [bold bright_magenta]⏱ {format_time(overall_time)}[/bold bright_magenta]")
         
         phase_time = time.time() - engine.phase_start_time if engine.phase_start_time else 0
-        status_table.add_row(f"[bold cyan]PHASE  :[/bold cyan] {current_step.name} ({current_step.phase}) [bold magenta]⏱ {format_time(phase_time)}[/bold magenta]")
+        status_table.add_row(f"[bold bright_cyan]PHASE  :[/bold bright_cyan] {current_step.name} ({current_step.phase}) [bold bright_magenta]⏱ {format_time(phase_time)}[/bold bright_magenta]")
         
         pkg_time = time.time() - engine.pkg_start_time if engine.pkg_start_time else 0
         pkg_display = engine.current_pkg or "Initializing..."
         if engine.paused_for_error:
-            pkg_display = f"[bold red blink]FAILED: {pkg_display}[/bold red blink]"
-        status_table.add_row(f"[bold yellow]PACKAGE:[/bold yellow] {pkg_display} [bold magenta]⏱ {format_time(pkg_time)}[/bold magenta]")
+            pkg_display = f"[bold bright_red blink]FAILED: {pkg_display}[/bold bright_red blink]"
+        status_table.add_row(f"[bold bright_yellow]PACKAGE:[/bold bright_yellow] {pkg_display} [bold bright_magenta]⏱ {format_time(pkg_time)}[/bold bright_magenta]")
         
         # Storage Monitoring
         host_color = LASER_RED if engine.storage_stats["host"] > 90 else ELECTRIC_BLUE
@@ -111,9 +111,9 @@ def update_ui(layout: Layout, engine):
         ])
         status_table.add_row(storage_row)
         
-        layout["status"].update(Panel(status_table, title="[bold blue]System Status[/bold blue]", border_style="bright_blue"))
+        layout["status"].update(Panel(status_table, title="[bold bright_blue]System Status[/bold bright_blue]", border_style="bold bright_blue"))
     else:
-        layout["status"].update(Panel(Align.center("[bold green]BUILD COMPLETE[/bold green]"), title="[bold blue]System Status[/bold blue]", border_style="bright_blue"))
+        layout["status"].update(Panel(Align.center("[bold bright_green]BUILD COMPLETE[/bold bright_green]"), title="[bold bright_blue]System Status[/bold bright_blue]", border_style="bold bright_blue"))
 
     # Logs
     log_content = Text(no_wrap=True)
@@ -124,8 +124,8 @@ def update_ui(layout: Layout, engine):
     
     layout["logs"].update(Panel(
         log_content, 
-        title="[bold blue]Live Logs[/bold blue]", 
-        border_style="bright_blue",
+        title="[bold bright_blue]Live Logs[/bold bright_blue]", 
+        border_style="bold bright_blue",
         padding=(0, 1)
     ))
     
@@ -162,4 +162,4 @@ def update_ui(layout: Layout, engine):
         footer_text.append("Q", style="bold white on red")
         footer_text.append("=Quit", style="dim")
     
-    layout["footer"].update(Panel(Align.center(footer_text), border_style="bright_blue"))
+    layout["footer"].update(Panel(Align.center(footer_text), border_style="bold bright_blue"))

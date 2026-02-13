@@ -1,21 +1,24 @@
 import os
 
-GINGER_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATE_DIR = os.path.join(GINGER_ROOT, ".build_state")
+# Paths
+GINGER_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 LOG_DIR = os.path.join(GINGER_ROOT, "logs")
-MASTER_LOG = os.path.join(STATE_DIR, "ginger_os_build.log")
+STATE_DIR = os.path.join(GINGER_ROOT, ".build_state")
+MASTER_LOG = os.path.join(LOG_DIR, "master.log")
 
 # Create directories
-os.makedirs(STATE_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(STATE_DIR, exist_ok=True)
 
-# Colors & Style
-ELECTRIC_BLUE = "#00E5FF"
-LASER_GREEN = "#39FF14"
-LASER_RED = "#FF003C"
-LASER_YELLOW = "#FFFB00"
-LASER_BLUE = "#00BFFF"
-GINGER_BLUE = "#00FFFF"
+# Bright colors for transparent terminals
+LASER_GREEN = "bright_green"
+LASER_RED = "bright_red"
+LASER_BLUE = "bright_cyan"
+ELECTRIC_BLUE = "bright_blue"
+GINGER_BLUE = "bright_cyan"
+NEON_YELLOW = "bright_yellow"
+NEON_MAGENTA = "bright_magenta"
+BRIGHT_WHITE = "bright_white"
 
 # ASCII Logo
 LOGO = """
