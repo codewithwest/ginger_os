@@ -80,10 +80,21 @@ for url in "${extra_urls[@]}"; do
 done
 
 log "INFO" "Final manifest verification..."
-if grep -v '^#' md5sums | md5sum -c --quiet; then
+local failed_log=$(mktemp)
+
+# Run check, capture output (failures go to stderr usually, but capture both)
+if grep -v '^#' md5sums | md5sum -c --quiet > "$failed_log" 2>&1; then
+    rm -f "$failed_log"
     log "INFO" "Source acquisition complete and verified."
     mark_built "05_download_sources"
 else
-    log "ERROR" "Checksum verification FAILED for the above packages."
+    log "ERROR" "Checksum verification FAILED:"
+    cat "$failed_log"
+    
+    # Auto-heal: Remove corrupted files
+    log "PROCESS" "Removing corrupted files to force re-download..."
+    grep "FAILED" "$failed_log" | cut -d: -f1 | xargs rm -fv
+    
+    rm -f "$failed_log"
     exit 1
 fi

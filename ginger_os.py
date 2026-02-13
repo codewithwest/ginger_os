@@ -118,10 +118,10 @@ class GingerTUI:
         
         for idx, step in enumerate(self.engine.steps):
             # Status Icons Only
-            if self.engine._should_skip(step):
-                status = "[bold bright_green]✓[/]"
-            elif self.executing_step == idx:
+            if self.executing_step == idx:
                 status = f"[bold bright_cyan]{spinner}[/]"
+            elif self.engine._should_skip(step):
+                status = "[bold bright_green]✓[/]"
             else:
                 status = "[dim]○[/]"
             
