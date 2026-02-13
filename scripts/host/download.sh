@@ -86,7 +86,7 @@ for url in "${extra_urls[@]}"; do
 done
 
 log "INFO" "Final manifest verification..."
-local failed_log=$(mktemp)
+failed_log=$(mktemp)
 
 # Run check, capture output (failures go to stderr usually, but capture both)
 if grep -v '^#' md5sums | md5sum -c --quiet > "$failed_log" 2>&1; then

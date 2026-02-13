@@ -13,7 +13,20 @@ from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR
 from .models import BuildStep
 
 class GingerEngine:
+    """
+    Core build engine for GingerOS.
+    
+    Manages the execution of build steps, process monitoring, logging,
+    and user interaction via a keyboard listener.
+    """
+
     def __init__(self):
+        """
+        Initialize the build engine with defined steps and state.
+        
+        Sets up the build pipeline, initializing step objects, internal counters,
+        and launching background threads for sudo keepalive and keyboard input.
+        """
         self.steps = [
             # Preparation Phase
             BuildStep("01_fix_repo", "Fix Repo Ownership", "sudo chown -R $(logname):$(logname) .git || true", "Preparation"),
@@ -297,7 +310,15 @@ class GingerEngine:
         return True
 
     def _should_skip(self, step):
-        """Determines if a build step should be skipped based on markers or filesystem state."""
+        """
+        Determines if a build step should be skipped based on markers or filesystem state.
+        
+        Args:
+            step (BuildStep): The build step to check.
+            
+        Returns:
+            bool: True if the step is already completed, False otherwise.
+        """
         # 1. CRITICAL: Source Integrity Check (HOST SIDE)
         # If we are missing sources, we MUST NOT skip the download step, 
         # because the chroot doesn't have wget to fix it later.
@@ -377,7 +398,18 @@ class GingerEngine:
             return False
 
     def _execute_step(self, step):
-        """Execute a build step."""
+        """
+        Execute a single build step in a subprocess.
+        
+        Handles:
+        - Output capturing and logging
+        - Real-time UI updates (via shared state)
+        - Timeout enforcement
+        - Error handling and status updates
+        
+        Args:
+            step (BuildStep): The step to execute.
+        """
         self.log(f"Starting step: {step.name}", "bold cyan")
         step.start_time = time.time()
         self.phase_start_time = step.start_time
@@ -521,6 +553,13 @@ class GingerEngine:
             self.error_msg = str(e)
 
     def run(self):
+        """
+        Main execution loop for the build engine.
+        
+        Iterates through the defined steps, skipping completed ones,
+        and executing pending ones. Handles the overall flow control,
+        including pauses and aborts.
+        """
         # State should already be set by caller, but we'll ensure it here
         self.is_running = True
         self.overall_start_time = time.time()
