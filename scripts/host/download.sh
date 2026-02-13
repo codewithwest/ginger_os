@@ -22,8 +22,8 @@ cd "$GINGER_SOURCES"
 # 2. Get list and checksums
 echo "GINGER_PKG: Fetching Package Lists"
 log "INFO" "Fetching package lists for LFS ${LFS_VERSION}..."
-wget -nc -q "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/wget-list"
-wget -nc -q "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/md5sums"
+wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/wget-list"
+wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/md5sums"
 
 # 3. Pre-Download Checksum Verification
 echo "GINGER_PKG: Pre-download Check"
@@ -53,7 +53,7 @@ while read -r url; do
     if [ ! -f "$pkg" ] || [ ! -s "$pkg" ]; then
         echo "GINGER_PKG: $pkg [$current/$total]"
         log "PROCESS" "Missing: $pkg. Downloading..."
-        if ! wget -4 -q --continue --tries=3 --timeout=15 "$url"; then
+        if ! wget -4 --continue --progress=bar:force:noscroll --tries=3 --timeout=15 "$url"; then
             log "ERROR" "Failed to download $pkg"
             exit 1
         fi
@@ -75,7 +75,7 @@ for url in "${extra_urls[@]}"; do
     pkg=$(basename "$url")
     if [ ! -f "$pkg" ] || [ ! -s "$pkg" ]; then
         log "PROCESS" "Downloading extra: $pkg..."
-        wget -4 -q -nc --continue "$url"
+        wget -4 -nc --progress=bar:force:noscroll --continue "$url"
     fi
 done
 

@@ -76,7 +76,7 @@ fetch_missing_source() {
     
     if [ ! -f "$WGET_LIST" ]; then
         log "INFO" "wget-list missing, fetching manifest..."
-        wget -q -nc -O "$WGET_LIST" "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/wget-list" || true
+        wget -nc --progress=bar:force:noscroll -O "$WGET_LIST" "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/wget-list" || true
     fi
 
     log "PROCESS" "Searching manifest for '$PKG_PATTERN'..."
@@ -93,7 +93,7 @@ fetch_missing_source() {
         
         # Save to a temp location first to ensure we don't end up with a 0-byte file
         local PKG_NAME=$(basename "$URL")
-        if wget -4 --continue --tries=3 --timeout=15 -O "${SRC_DIR}/${PKG_NAME}.tmp" "$URL"; then
+        if wget -4 --continue --progress=bar:force:noscroll --tries=3 --timeout=15 -O "${SRC_DIR}/${PKG_NAME}.tmp" "$URL"; then
              mv "${SRC_DIR}/${PKG_NAME}.tmp" "${SRC_DIR}/${PKG_NAME}"
              log "INFO" "Successfully acquired $PKG_NAME"
              return 0
@@ -209,7 +209,6 @@ error_handler() {
     local CMD=$2
     log "ERROR" "Command '$CMD' failed at line $LINE"
     cleanup
-}
     exit 1
 }
 

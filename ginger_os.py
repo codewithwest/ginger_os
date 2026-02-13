@@ -78,7 +78,7 @@ class GingerTUI:
         if self.executing_step is not None:
             elapsed = time.time() - self.current_start_time
             stats_text.append("🚀 EXECUTION IN PROGRESS\n", style="bold bright_red blink")
-            stats_text.append(f"Running: {self.engine.steps[self.executing_step].name}\n", style="bold bright_white")
+            # stats_text.append(f"Running: {self.engine.steps[self.executing_step].name}\n", style="bold bright_white") # Removed per user request
             stats_text.append(f"Time: {self.format_time(elapsed)}\n\n", style="bold bright_yellow")
             stats_text.append("⚠️  PLEASE WAIT - SYSTEM BUSY", style="bold bright_red")
         else:
@@ -102,27 +102,36 @@ class GingerTUI:
         table = Table(
             show_header=True,
             header_style="bold bright_cyan",
-            box=box.SIMPLE_HEAVY,
+            box=box.SIMPLE, # Cleaner look
+            padding=(0, 1), # Tighter spacing
             expand=True
         )
         
-        table.add_column("#", width=4, justify="right")
-        table.add_column("Status", width=8)
+        table.add_column("#", width=3, justify="right")
+        table.add_column("Status", width=6, justify="center")
         table.add_column("Step", style="bright_white")
         
+        # Spinner for animation
+        spinner_chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+        spinner_idx = int(time.time() * 12) % len(spinner_chars)
+        spinner = spinner_chars[spinner_idx]
+        
         for idx, step in enumerate(self.engine.steps):
-            # Status
+            # Status Icons Only
             if self.engine._should_skip(step):
-                status = "[bright_green]✓ COMPLETED[/]"
+                status = "[bold bright_green]✓[/]"
             elif self.executing_step == idx:
-                status = "[bright_cyan]▶ RUNNING[/]"
+                status = f"[bold bright_cyan]{spinner}[/]"
             else:
-                status = "[dim]○ PENDING[/]"
+                status = "[dim]○[/]"
             
             # Highlight selected
             if idx == self.selected_step:
-                num = f"[black on bright_cyan]▶{idx+1:2d}[/]"
+                num = f"[black on bright_cyan]{idx+1:2d}[/]"
+                # Only highlight the name background to look good
                 name = f"[black on bright_cyan]{step.name}[/]"
+                # Or highlight entire row? Table doesn't support row style easily per cell without manual. 
+                # Let's keep it simple.
             else:
                 num = f"{idx+1:2d}"
                 name = step.name
