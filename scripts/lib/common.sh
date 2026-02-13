@@ -8,10 +8,15 @@ set -u # Error on unset variables
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../../config/env.sh"
 
-# Status directory - relative to LFS
-# During host-requirements phase, /mnt/lfs might not be writable or exist yet
+# State directory on host for orchestrator markers
+GINGER_STATE_DIR="${GINGER_ROOT}/.build_state"
+mkdir -p "$GINGER_STATE_DIR"
+
+# Status directory - relative to LFS for package build markers
 STATUS_DIR="$LFS/var/lib/ginger"
-if [ "$LFS" != "/mnt/lfs" ] || [ -w "/mnt" ]; then
+if [ "$LFS" != "/mnt/lfs" ] || [ -e "/mnt/lfs" ]; then
+    # We only try to create the LFS status dir if the mountpoint exists
+    # or if we are already inside chroot (where LFS=/ )
     mkdir -p "$STATUS_DIR" 2>/dev/null || true
 fi
 
@@ -39,7 +44,7 @@ fi
 
 check_built() {
     local PKG_NAME=$1
-    if [ -f "$STATUS_DIR/$PKG_NAME.built" ]; then
+    if [ -f "$STATUS_DIR/$PKG_NAME.built" ] || [ -f "$GINGER_STATE_DIR/$PKG_NAME.built" ]; then
         log "INFO" "$PKG_NAME already built. Skipping."
         return 0
     fi
@@ -48,7 +53,14 @@ check_built() {
 
 mark_built() {
     local PKG_NAME=$1
-    touch "$STATUS_DIR/$PKG_NAME.built"
+    # 1. Always mark on the target filesystem if available
+    if [ -d "$STATUS_DIR" ] || mkdir -p "$STATUS_DIR" 2>/dev/null; then
+        touch "$STATUS_DIR/$PKG_NAME.built" 2>/dev/null || true
+    fi
+    
+    # 2. Also mark on the host state dir so the orchestrator can see it even if unmounted
+    touch "$GINGER_STATE_DIR/$PKG_NAME.built"
+    
     log "INFO" "Finished building $PKG_NAME"
 }
 

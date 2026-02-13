@@ -9,7 +9,7 @@ import shutil
 import termios
 import tty
 from datetime import datetime
-from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT
+from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR
 from .models import BuildStep
 
 class GingerEngine:
@@ -218,7 +218,7 @@ class GingerEngine:
     def _should_skip(self, step):
         """Determines if a build step should be skipped based on markers or filesystem state."""
         # 1. Direct marker check in the central state dir
-        central_marker = os.path.join(self.steps[0].log_file.rsplit("/", 1)[0], f"{step.id}.built")
+        central_marker = os.path.join(STATE_DIR, f"{step.id}.built")
         if os.path.exists(central_marker):
             return True
             
@@ -353,6 +353,12 @@ class GingerEngine:
                 
                 if process.returncode == 0:
                     step.status = "completed"
+                    # Persist the completion state
+                    try:
+                        marker_path = os.path.join(STATE_DIR, f"{step.id}.built")
+                        with open(marker_path, "w") as f:
+                            f.write(f"Completed at {datetime.now()}\n")
+                    except: pass
                     self.current_step_idx += 1
                 else:
                     step.status = "failed"
