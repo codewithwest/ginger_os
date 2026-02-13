@@ -18,7 +18,7 @@ NC='\033[0m'
 # Use a master PID to ensure all sub-scripts share the same UI session
 export GINGER_UI_MASTER_PID="${GINGER_UI_MASTER_PID:-$$}"
 UI_STATE_FILE="/tmp/ginger_ui_state.${GINGER_UI_MASTER_PID}"
-UI_LOG_FILE="${UI_LOG_FILE:-build.log}"
+UI_LOG_FILE="${UI_LOG_FILE:-/tmp/ginger_build.log}"
 UI_MONITOR_PID=""
 
 # UI State
