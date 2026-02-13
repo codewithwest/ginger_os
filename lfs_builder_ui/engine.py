@@ -1,4 +1,4 @@
-import os
+aimport os
 import sys
 import time
 import subprocess
@@ -9,7 +9,6 @@ import shutil
 import termios
 import tty
 import json
-import signal
 from datetime import datetime
 from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, LFS_MOUNT, BUILD_TYPE
 from .models import BuildStep
@@ -84,9 +83,7 @@ class GingerEngine:
         
         # Keep sudo alive
         self.sudo_thread = threading.Thread(target=self._sudo_keepalive, daemon=True)
-        
-        # Keyboard listener
-        self.kb_thread = threading.Thread(target=self._kb_listener, daemon=True)
+        self.sudo_thread.start()
 
         # Telemetry
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -95,57 +92,6 @@ class GingerEngine:
         self.package_stepping = False
         self.paused_for_package = False
         self.current_process = None
-
-    def _kb_listener(self):
-        """Listen for keyboard commands during build."""
-        import select
-        
-        while not self.aborted:
-            # Check if there's input available (non-blocking)
-            if select.select([sys.stdin], [], [], 0.1)[0]:
-                fd = sys.stdin.fileno()
-                try:
-                    old_settings = termios.tcgetattr(fd)
-                    tty.setcbreak(fd)  # Use cbreak instead of raw for better control
-                    char = sys.stdin.read(1).lower()
-                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                    
-                    # Error recovery keys (when paused)
-                    if self.paused_for_error:
-                        if char == 'r':
-                            self.restart_phase()
-                        elif char == 'p':
-                            self.restart_package()
-                        elif char == ' ' or char == '\r' or char == '\n':  # SPACE or ENTER
-                            self.paused_for_error = False
-                            self.log("▶ BUILD STARTED/RESUMED", "bold green")
-                        elif char == '\x03':  # Ctrl+C
-                            self.abort()
-                            break
-                    
-                    # Interactive control keys (during normal operation)
-                    elif self.is_running:
-                        if char == ' ':  # SPACE - Pause/Resume
-                            self.toggle_pause()
-                        elif char == 'n':  # N - Next step
-                            self.skip_to_next()
-                        elif char == 's':  # S - Skip current step
-                            self.skip_current_step()
-                        elif char == 'j':  # J - Jump to step
-                            self.jump_to_step()
-                        elif char == 'l':  # L - List steps
-                            self.show_steps_list()
-                        elif char == '?':  # ? - Help
-                            self.show_help()
-                        elif char == 'q':  # Q - Quit
-                            self.abort()
-                            break
-                        elif char == '\x03':  # Ctrl+C
-                            self.abort()
-                            break
-                except:
-                    pass
-            time.sleep(0.1)
 
     def _rotate_logs(self):
         """Clean up old logs or rotate master log if too big."""
@@ -722,141 +668,16 @@ class GingerEngine:
             return True
         return False
 
-    def run(self):
-        """
-        Main execution loop for the build engine.
-        
-        Iterates through the defined steps, skipping completed ones,
-        and executing pending ones. Handles the overall flow control,
-        including pauses and aborts.
-        """
-        # State should already be set by caller, but we'll ensure it here
-        self.is_running = True
-        self.overall_start_time = time.time()
-        self.sudo_thread.start()
-        self.kb_thread.start()
-        self.log("Starting GingerOS Build Engine...", "bold green")
-        
-        while self.current_step_idx < len(self.steps):
-            if self.aborted: break
-            step = self.steps[self.current_step_idx]
-            
-            # Smart skipping check
-            if self._should_skip(step):
-                self.log(f"Step '{step.name}' already complete. Skipping.", "green")
-                step.status = "completed"
-                self.current_step_idx += 1
-                continue
-
-            step.status = "running"
-            step.start_time = time.time()
-            self.phase_start_time = step.start_time
-            self.current_pkg = ""
-            self.pkg_start_time = None
-            step.packages_completed = []
-            
-            self.log(f"Phase {step.phase}: Starting {step.name}...", "cyan")
-            
-            try:
-                with open(step.log_file, "w") as f:
-                    f.write(f"--- GingerOS Step Log: {step.name} ---\n")
-                
-                if not self.dry_run:
-                    process = subprocess.Popen(
-                        step.command,
-                        shell=True,
-                        cwd=GINGER_ROOT,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                        text=True,
-                        bufsize=1,
-                        env=os.environ.copy()
-                    )
-                else:
-                    self.log(f"[DRY-RUN] Would execute: {step.command}", "bold bright_yellow")
-                
-                if not self.dry_run:
-                    for line in iter(process.stdout.readline, ""):
-                        if self.aborted:
-                            process.terminate()
-                            break
-                        if line:
-                            # CRITICAL: Strip carriage returns which mess up rich.Live
-                            stripped = line.replace('\r', '').strip()
-                            clean_line = self.ansi_escape.sub('', stripped)
-                            clean_line = self.non_printable.sub('', clean_line)
-                            
-                            # Periodically update storage info
-                            if time.time() % 3 < 0.1:
-                                self._update_storage()
-
-                            if clean_line.startswith("GINGER_PKG:"):
-                                if self.current_pkg and self.pkg_start_time:
-                                    duration = time.time() - self.pkg_start_time
-                                    step.packages_completed.append((self.current_pkg, duration))
-                                self.current_pkg = clean_line.replace("GINGER_PKG:", "").strip()
-                                self.pkg_start_time = time.time()
-                                self.log(f"Building: {self.current_pkg}", "bold cyan")
-                            
-                            with open(step.log_file, "a") as f:
-                                f.write(line)
-                            
-                            # Only show very specific, safe keywords in the UI to avoid clutter/corruption
-                            if any(kw in clean_line.lower() for kw in ["error", "warning", "waiting", "checking", "..."]):
-                                if not clean_line.startswith("GINGER_PKG:"):
-                                    self.log(f"  {clean_line[:100]}", "dim")
-                
-                if not self.dry_run:
-                    process.wait()
-                    process_returncode = process.returncode
-                else:
-                    time.sleep(0.5) # Simulated execution time
-                    process_returncode = 0
-                
-                step.end_time = time.time()
-                if self.current_pkg and self.pkg_start_time:
-                    duration = time.time() - self.pkg_start_time
-                    step.packages_completed.append((self.current_pkg, duration))
-                
-                if self.aborted:
-                    step.status = "failed"
-                    break
-                
-                if process_returncode == 0:
-                    step.status = "completed"
-                    # Persist the completion state only if NOT dry-run
-                    if not self.dry_run:
-                        try:
-                            marker_path = os.path.join(STATE_DIR, f"{step.id}.built")
-                            with open(marker_path, "w") as f:
-                                f.write(f"Completed at {datetime.now()}\n")
-                        except: pass
-                    self.current_step_idx += 1
-                else:
-                    step.status = "failed"
-                    if not self.dry_run:
-                        self.log(f"✘ {step.name} FAILED with code {process.returncode}", "bold red")
-                    else:
-                        self.log(f"✘ {step.name} simulated failure", "bold red")
-                    self.error_msg = f"{step.name} failed. Check {step.log_file}"
-                    self.paused_for_error = True
-                    while self.paused_for_error and not self.aborted:
-                        time.sleep(0.5)
-                    if self.aborted: break
-                    continue
-            except Exception as e:
-                step.status = "failed"
-                self.log(f"!!! EXCEPTION in {step.name}: {str(e)}", "bold red")
-                self.paused_for_error = True
-                while self.paused_for_error and not self.aborted:
-                    time.sleep(0.5)
-                if self.aborted: break
-                continue
-        
-        self.is_running = False
-        self._save_telemetry()
 
     def abort(self):
+        """Abort the current build process."""
         self.aborted = True
-        self.is_running = False
-        self.paused_for_error = False
+        self.paused_for_package = False
+        if self.current_process:
+            try:
+                self.current_process.terminate()
+                self.current_process.wait(timeout=5)
+            except:
+                try: self.current_process.kill()
+                except: pass
+            self.current_process = None
