@@ -8,6 +8,7 @@ import re
 import shutil
 import termios
 import tty
+import json
 from datetime import datetime
 from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, LFS_MOUNT
 from .models import BuildStep
@@ -84,6 +85,10 @@ class GingerEngine:
         
         # Keyboard listener
         self.kb_thread = threading.Thread(target=self._kb_listener, daemon=True)
+
+        # Telemetry
+        self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.telemetry_file = os.path.join(STATE_DIR, "telemetry.json")
 
     def _kb_listener(self):
         """Listen for keyboard commands during build."""
@@ -427,6 +432,37 @@ class GingerEngine:
             self.log(f"!!! Error during mount check: {str(e)}", "bold red")
             return False
 
+    def _save_telemetry(self):
+        """
+        Record build session data to a persistent JSON file.
+        Includes durations for all completed packages and steps.
+        """
+        try:
+            data = {}
+            if os.path.exists(self.telemetry_file):
+                with open(self.telemetry_file, "r") as f:
+                    data = json.load(f)
+            
+            if self.session_id not in data:
+                data[self.session_id] = {
+                    "start_time": datetime.now().isoformat(),
+                    "steps": {}
+                }
+            
+            for step in self.steps:
+                if step.status != "pending":
+                    data[self.session_id]["steps"][step.id] = {
+                        "name": step.name,
+                        "status": step.status,
+                        "duration": step.duration(),
+                        "packages": {pkg: dur for pkg, dur in step.packages_completed}
+                    }
+            
+            with open(self.telemetry_file, "w") as f:
+                json.dump(data, f, indent=4)
+        except Exception as e:
+            self.log(f"WARN: Failed to save telemetry: {str(e)}", "yellow")
+
     def _verify_chroot_ready(self):
         """Verify chroot filesystems are mounted."""
         mounts = [f"{LFS_MOUNT}/proc", f"{LFS_MOUNT}/sys", f"{LFS_MOUNT}/dev"]
@@ -620,6 +656,8 @@ class GingerEngine:
                 self.log(f"✘ {step.name} FAILED with code {process.returncode}", "bold red")
                 self.error_msg = f"{step.name} failed. Check {step.log_file}"
                 
+            self._save_telemetry()
+                
         except Exception as e:
             step.status = "failed"
             self.log(f"!!! EXCEPTION in {step.name}: {str(e)}", "bold red")
@@ -743,6 +781,7 @@ class GingerEngine:
                 continue
         
         self.is_running = False
+        self._save_telemetry()
 
     def abort(self):
         self.aborted = True
