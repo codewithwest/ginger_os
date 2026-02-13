@@ -161,11 +161,12 @@ menuentry 'GingerOS' {
 }
 EOF
 
-# Find and run grub-install with logging
+# Find and run grub-install with logging and force
 GRUB_BIN=$(find "$MNT/usr/sbin" "$MNT/usr/bin" -name "grub-install" | head -n 1)
 if [ -n "$GRUB_BIN" ]; then
-    ui_log "Running grub-install..."
-    sudo chroot "$MNT" "${GRUB_BIN#$MNT}" --target=i386-pc "$TARGET_DEV" || ui_error "GRUB installation failed!"
+    ui_log "Running grub-install (force)..."
+    # Set PATH so grub-install can find its helpers inside chroot
+    sudo chroot "$MNT" /bin/bash -c "export PATH=/usr/sbin:/usr/bin:/sbin:/bin && ${GRUB_BIN#$MNT} --target=i386-pc --no-floppy --force $TARGET_DEV" || ui_error "GRUB installation failed!"
 else
     ui_error "grub-install not found in the target system!"
 fi
