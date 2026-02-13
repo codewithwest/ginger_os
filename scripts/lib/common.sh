@@ -8,8 +8,12 @@ set -u # Error on unset variables
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../../config/env.sh"
 
+# Status directory - relative to LFS
+# During host-requirements phase, /mnt/lfs might not be writable or exist yet
 STATUS_DIR="$LFS/var/lib/ginger"
-mkdir -p "$STATUS_DIR"
+if [ "$LFS" != "/mnt/lfs" ] || [ -w "/mnt" ]; then
+    mkdir -p "$STATUS_DIR" 2>/dev/null || true
+fi
 
 log() {
     local TYPE=$1

@@ -57,6 +57,8 @@ class GingerEngine:
         
         # Regex for ANSI filtering
         self.ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
+        # Filter for non-printable characters except newline and tab
+        self.non_printable = re.compile(r'[^\x20-\x7E\n\t]')
         
         # Log rotation
         self._rotate_logs()
@@ -136,7 +138,10 @@ class GingerEngine:
             time.sleep(60)
 
     def log(self, message, style=None):
+        # Filter ANSI and non-printables
         message = self.ansi_escape.sub('', message)
+        message = self.non_printable.sub('', message)
+        
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}"
         self.logs.append((log_entry, style))

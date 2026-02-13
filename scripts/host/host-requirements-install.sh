@@ -14,6 +14,7 @@ source "${SCRIPT_DIR}/../lib/common.sh"
 
 # Set log file location
 export UI_LOG_FILE="${UI_LOG_FILE:-${GINGER_LOGS}/host-requirements.log}"
+mkdir -p "$(dirname "$UI_LOG_FILE")"
 
 # ============================================================================
 # STEP 0: CONFIGURE HOST SHELL (LFS Requirement)
@@ -30,7 +31,8 @@ sudo ln -sf bash /bin/sh
 
 echo "GINGER_PKG: Update Package Cache"
 echo "Refreshing package database..."
-sudo apt update -y >> "$UI_LOG_FILE" 2>&1
+export DEBIAN_FRONTEND=noninteractive
+sudo apt-get update -qq >> "$UI_LOG_FILE" 2>&1 || { echo "Failed to update package cache. Check $UI_LOG_FILE"; exit 1; }
 
 # ============================================================================
 # STEP 2: INSTALL BUILD TOOLS
@@ -38,7 +40,8 @@ sudo apt update -y >> "$UI_LOG_FILE" 2>&1
 
 echo "GINGER_PKG: Install Build Tools"
 echo "Installing essential build tools..."
-sudo apt install -y build-essential bison gawk m4 texinfo >> "$UI_LOG_FILE" 2>&1
+sudo apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+    build-essential bison gawk m4 texinfo >> "$UI_LOG_FILE" 2>&1
 
 # ============================================================================
 # STEP 3: INSTALL LFS DEPENDENCIES
@@ -46,7 +49,7 @@ sudo apt install -y build-essential bison gawk m4 texinfo >> "$UI_LOG_FILE" 2>&1
 
 echo "GINGER_PKG: Install LFS Dependencies"
 echo "Installing LFS-specific dependencies..."
-sudo apt install -y \
+sudo apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
     libncurses5-dev \
     libtool \
     autoconf \
