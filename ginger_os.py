@@ -12,6 +12,7 @@ import subprocess
 import termios
 import tty
 import select
+import argparse
 from rich.console import Console
 from rich.live import Live
 from rich.layout import Layout
@@ -29,9 +30,10 @@ from lfs_builder_ui import GingerEngine
 from lfs_builder_ui.constants import LOGO
 
 class GingerTUI:
-    def __init__(self):
+    def __init__(self, dry_run=False):
         self.console = Console()
-        self.engine = GingerEngine()
+        self.dry_run = dry_run
+        self.engine = GingerEngine(dry_run=dry_run)
         self.selected_step = 0
         self.running = True
         self.executing_step = None
@@ -40,6 +42,7 @@ class GingerTUI:
         self.show_help = False
         self.mode = "select"  # select, execute, logs
         self.log_scroll = 0
+        self.auto_all = False
         
     def create_layout(self):
         """Create the TUI layout"""
@@ -82,11 +85,19 @@ class GingerTUI:
             stats_text.append(f"Time: {self.format_time(elapsed)}\n\n", style="bold bright_yellow")
             stats_text.append("⚠️  PLEASE WAIT - SYSTEM BUSY", style="bold bright_red")
         else:
-            stats_text.append("🌶️ GingerOS Command Center 🌶️\n", style="bold bright_cyan")
-            stats_text.append("LFS 12.4 Automata - Cyberpunk Edition\n\n", style="bold bright_green")
+            if self.dry_run:
+                stats_text.append("🧪 DRY-RUN MODE ACTIVE 🧪\n", style="bold bright_yellow blink")
+                stats_text.append("No changes will be made\n\n", style="bold bright_white")
+            else:
+                stats_text.append("🌶️ GingerOS Command Center 🌶️\n", style="bold bright_cyan")
+                stats_text.append("LFS 12.4 Automata - Cyberpunk Edition\n\n", style="bold bright_green")
+            
             stats_text.append(f"Total: {total}  ", style="dim")
             stats_text.append(f"✓ {complete}  ", style="bright_green")
             stats_text.append(f"○ {pending}", style="bright_yellow")
+            
+            if self.auto_all:
+                stats_text.append("\n\n🤖 AUTO-RUN ACTIVE", style="bold bright_cyan blink")
         
         return Panel(
             Columns([
@@ -265,8 +276,12 @@ class GingerTUI:
             footer.append("=force  ", style="dim")
             footer.append("d", style="bold bright_red")
             footer.append("=delete  ", style="dim")
-            footer.append("a", style="bold bright_yellow")
-            footer.append("=run-all  ", style="dim")
+            
+            auto_style = "bold bright_cyan" if self.auto_all else "bold bright_white"
+            auto_label = "AUTO-ON" if self.auto_all else "auto"
+            footer.append("a", style=auto_style)
+            footer.append(f"={auto_label}  ", style="dim")
+            
             footer.append("?", style="bold bright_magenta")
             footer.append("=help  ", style="dim")
             footer.append("q", style="bold bright_red")
@@ -330,12 +345,8 @@ class GingerTUI:
                     pass
     
     def run_all_pending(self):
-        """Run all pending steps"""
-        for idx, step in enumerate(self.engine.steps):
-            if not self.engine._should_skip(step):
-                success = self.run_step(idx, force=False)
-                if not success:
-                    break
+        """Toggle automatic sequential execution mode."""
+        self.auto_all = not self.auto_all
     
     def handle_key(self, key):
         """Handle keyboard input"""
@@ -395,6 +406,23 @@ class GingerTUI:
             
             with Live(layout, refresh_per_second=10, screen=True) as live:
                 while self.running:
+                    # Sequential Auto-All Logic
+                    if self.auto_all and self.executing_step is None:
+                        next_step_idx = -1
+                        for idx, step in enumerate(self.engine.steps):
+                            if not self.engine._should_skip(step):
+                                # If the last run step failed, stop auto-execution
+                                if step.status == "failed":
+                                    self.auto_all = False
+                                    break
+                                next_step_idx = idx
+                                break
+                        
+                        if next_step_idx != -1:
+                            self.run_step(next_step_idx)
+                        else:
+                            self.auto_all = False # No more pending steps
+
                     # Update display
                     self.update_display(layout)
                     live.update(layout)
@@ -432,7 +460,11 @@ class GingerTUI:
         self.console.print("\n[bright_cyan]Build session ended[/]")
 
 def main():
-    tui = GingerTUI()
+    parser = argparse.ArgumentParser(description="GingerOS Command-First TUI")
+    parser.add_argument("-n", "--dry-run", action="store_true", help="Preview build without executing commands")
+    args = parser.parse_args()
+    
+    tui = GingerTUI(dry_run=args.dry_run)
     tui.run()
 
 if __name__ == "__main__":

@@ -85,7 +85,7 @@
 
 - [x] Add configuration file support (avoid hardcoded paths)
 - [x] Implement build telemetry (time per package, failure rates)
-- [ ] Add `--dry-run` mode to preview build plan
+- [x] Add `--dry-run` mode to preview build plan
 - [ ] Support parallel package builds where dependencies allow
 - [ ] Add web-based UI option for remote builds
 

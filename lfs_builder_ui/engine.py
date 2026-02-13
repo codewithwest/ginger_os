@@ -21,7 +21,7 @@ class GingerEngine:
     and user interaction via a keyboard listener.
     """
 
-    def __init__(self):
+    def __init__(self, dry_run=False):
         """
         Initialize the build engine with defined steps and state.
         
@@ -57,6 +57,7 @@ class GingerEngine:
             BuildStep("15_grub", "Grub Setup", "bash scripts/phase4-boot/02-grub.sh", "Kernel & Boot"),
             BuildStep("16_teardown", "Teardown", "bash scripts/image/teardown.sh", "Kernel & Boot")
         ]
+        self.dry_run = dry_run
         self.current_step_idx = 0
         self.current_pkg = ""
         self.pkg_start_time = None
@@ -379,8 +380,9 @@ class GingerEngine:
         return False
 
     def _sudo_keepalive(self):
-        while True:
-            subprocess.run(["sudo", "-v"], capture_output=True)
+        while not self.aborted:
+            if not self.dry_run:
+                subprocess.run(["sudo", "-v"], capture_output=True)
             time.sleep(60)
 
     def log(self, message, style=None):
@@ -404,6 +406,8 @@ class GingerEngine:
         Returns:
             bool: True if mounted (or successfully re-mounted), False otherwise.
         """
+        if self.dry_run:
+            return True
         try:
             result = subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True)
             if result.returncode == 0:
@@ -465,6 +469,8 @@ class GingerEngine:
 
     def _verify_chroot_ready(self):
         """Verify chroot filesystems are mounted."""
+        if self.dry_run:
+            return True
         mounts = [f"{LFS_MOUNT}/proc", f"{LFS_MOUNT}/sys", f"{LFS_MOUNT}/dev"]
         try:
             with open("/proc/mounts", "r") as f:
@@ -543,97 +549,107 @@ class GingerEngine:
             with open(step.log_file, "w") as f:
                 f.write(f"--- GingerOS Step Log: {step.name} ---\n")
             
-            # Use Popen to capture output in real-time
-            process = subprocess.Popen(
-                step.command,
-                cwd=GINGER_ROOT,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,  # Line buffered
-                env=os.environ.copy()
-            )
+            # Execution logic
+            if self.dry_run:
+                self.log(f"[DRY-RUN] Would execute: {step.command}", "bold bright_yellow")
+                process_returncode = 0
+                last_output_time = time.time()
+            else:
+                # Use Popen to capture output in real-time
+                process = subprocess.Popen(
+                    step.command,
+                    cwd=GINGER_ROOT,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,  # Line buffered
+                    env=os.environ.copy()
+                )
             
             # Read output with timeout
             import select
             last_output_time = time.time()
             IDLE_TIMEOUT = 600  # 10 minutes (configurable via constant eventually)
 
-            while True:
-                if self.aborted:
-                    process.terminate()
-                    break
+            if not self.dry_run:
+                while True:
+                    if self.aborted:
+                        process.terminate()
+                        break
 
-                # Check for output (non-blocking)
-                # We select on process.stdout
-                rlist, _, _ = select.select([process.stdout], [], [], 1.0) # 1 sec poll
+                    # Check for output (non-blocking)
+                    # We select on process.stdout
+                    rlist, _, _ = select.select([process.stdout], [], [], 1.0) # 1 sec poll
 
-                if rlist:
-                    # Output available - read line
-                    line = process.stdout.readline()
-                    if line:
-                        last_output_time = time.time()
-                        # Write exact raw line to log file
-                        with open(step.log_file, "a") as f:
-                            f.write(line)
+                    if rlist:
+                        # Output available - read line
+                        line = process.stdout.readline()
+                        if line:
+                            last_output_time = time.time()
+                            # Write exact raw line to log file
+                            with open(step.log_file, "a") as f:
+                                f.write(line)
 
-                        # Clean for UI
-                        # CRITICAL: Strip carriage returns for rich.Live safety
-                        clean_line = line.replace('\r', '').strip()
-                        clean_line = self.ansi_escape.sub('', clean_line)
-                        clean_line = self.non_printable.sub('', clean_line)
-                        
-                        if clean_line:
-                            # Periodically update storage info (non-blocking if possible)
-                            if not hasattr(self, 'last_storage_update'): self.last_storage_update = 0
-                            if time.time() - self.last_storage_update > 3.0:
-                                self._update_storage()
-                                self.last_storage_update = time.time()
+                            # Clean for UI
+                            # CRITICAL: Strip carriage returns for rich.Live safety
+                            clean_line = line.replace('\r', '').strip()
+                            clean_line = self.ansi_escape.sub('', clean_line)
+                            clean_line = self.non_printable.sub('', clean_line)
                             
-                            # Log to TUI panel (NO PRINT!)
-                            # Special handling for useful keywords
-                            style = "white"
-                            lower_line = clean_line.lower()
-                            
-                            if "error" in lower_line or "fail" in lower_line:
-                                style = "bold red"
-                            elif "warning" in lower_line:
-                                style = "yellow"
-                            elif "pass" in lower_line:
-                                style = "bold green"
-                            elif "%" in clean_line: # Progress
-                                style = "cyan"
-                            
-                            self.log(clean_line, style)
-
-                            # Package tracking
-                            if clean_line.startswith("__GINGER_PKG_MARKER__:"):
-                                if self.current_pkg and self.pkg_start_time:
-                                    duration = time.time() - self.pkg_start_time
-                                    step.packages_completed.append((self.current_pkg, duration))
+                            if clean_line:
+                                # Periodically update storage info (non-blocking if possible)
+                                if not hasattr(self, 'last_storage_update'): self.last_storage_update = 0
+                                if time.time() - self.last_storage_update > 3.0:
+                                    self._update_storage()
+                                    self.last_storage_update = time.time()
                                 
-                                pkg_name = clean_line.replace("__GINGER_PKG_MARKER__:", "").strip()
-                                self.current_pkg = pkg_name
-                                self.pkg_start_time = time.time()
-                                self.log(f"Building Package: {pkg_name}", "bold cyan")
+                                # Log to TUI panel (NO PRINT!)
+                                # Special handling for useful keywords
+                                style = "white"
+                                lower_line = clean_line.lower()
+                                
+                                if "error" in lower_line or "fail" in lower_line:
+                                    style = "bold red"
+                                elif "warning" in lower_line:
+                                    style = "yellow"
+                                elif "pass" in lower_line:
+                                    style = "bold green"
+                                elif "%" in clean_line: # Progress
+                                    style = "cyan"
+                                
+                                self.log(clean_line, style)
+
+                                # Package tracking
+                                if clean_line.startswith("__GINGER_PKG_MARKER__:"):
+                                    if self.current_pkg and self.pkg_start_time:
+                                        duration = time.time() - self.pkg_start_time
+                                        step.packages_completed.append((self.current_pkg, duration))
+                                    
+                                    pkg_name = clean_line.replace("__GINGER_PKG_MARKER__:", "").strip()
+                                    self.current_pkg = pkg_name
+                                    self.pkg_start_time = time.time()
+                                    self.log(f"Building Package: {pkg_name}", "bold cyan")
+                        else:
+                            # EOF
+                            if process.poll() is not None:
+                                break
                     else:
-                        # EOF
+                        # No output for 1 sec
+                        if time.time() - last_output_time > IDLE_TIMEOUT:
+                            self.log(f"ERROR: Step timed out after {IDLE_TIMEOUT}s of silence.", "bold red")
+                            process.terminate()
+                            process.wait() # Cleanup zombie
+                            step.status = "failed"
+                            return
+
                         if process.poll() is not None:
                             break
-                else:
-                    # No output for 1 sec
-                    if time.time() - last_output_time > IDLE_TIMEOUT:
-                        self.log(f"ERROR: Step timed out after {IDLE_TIMEOUT}s of silence.", "bold red")
-                        process.terminate()
-                        process.wait() # Cleanup zombie
-                        step.status = "failed"
-                        return
-
-                    if process.poll() is not None:
-                        break
             
-            process.wait()
+            if not self.dry_run:
+                process.wait()
+                process_returncode = process.returncode
+            
             step.end_time = time.time()
             if self.current_pkg and self.pkg_start_time:
                 duration = time.time() - self.pkg_start_time
@@ -643,17 +659,22 @@ class GingerEngine:
                 step.status = "failed"
                 return
             
-            if process.returncode == 0:
+            if process_returncode == 0:
                 step.status = "completed"
-                # Persist the completion state
-                try:
-                    marker_path = os.path.join(STATE_DIR, f"{step.id}.built")
-                    with open(marker_path, "w") as f:
-                        f.write(f"Completed at {datetime.now()}\n")
-                except: pass
+                # Persist the completion state only if NOT dry-run
+                if not self.dry_run:
+                    try:
+                        marker_path = os.path.join(STATE_DIR, f"{step.id}.built")
+                        with open(marker_path, "w") as f:
+                            f.write(f"Completed at {datetime.now()}\n")
+                    except: pass
+                self.current_step_idx += 1
             else:
                 step.status = "failed"
-                self.log(f"✘ {step.name} FAILED with code {process.returncode}", "bold red")
+                if not self.dry_run:
+                    self.log(f"✘ {step.name} FAILED with code {process.returncode}", "bold red")
+                else:
+                    self.log(f"✘ {step.name} simulated failure", "bold red")
                 self.error_msg = f"{step.name} failed. Check {step.log_file}"
                 
             self._save_telemetry()
@@ -702,48 +723,58 @@ class GingerEngine:
                 with open(step.log_file, "w") as f:
                     f.write(f"--- GingerOS Step Log: {step.name} ---\n")
                 
-                process = subprocess.Popen(
-                    step.command,
-                    shell=True,
-                    cwd=GINGER_ROOT,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    bufsize=1,
-                    env=os.environ.copy()
-                )
+                if not self.dry_run:
+                    process = subprocess.Popen(
+                        step.command,
+                        shell=True,
+                        cwd=GINGER_ROOT,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        bufsize=1,
+                        env=os.environ.copy()
+                    )
+                else:
+                    self.log(f"[DRY-RUN] Would execute: {step.command}", "bold bright_yellow")
                 
-                for line in iter(process.stdout.readline, ""):
-                    if self.aborted:
-                        process.terminate()
-                        break
-                    if line:
-                        # CRITICAL: Strip carriage returns which mess up rich.Live
-                        stripped = line.replace('\r', '').strip()
-                        clean_line = self.ansi_escape.sub('', stripped)
-                        clean_line = self.non_printable.sub('', clean_line)
-                        
-                        # Periodically update storage info
-                        if time.time() % 3 < 0.1:
-                            self._update_storage()
+                if not self.dry_run:
+                    for line in iter(process.stdout.readline, ""):
+                        if self.aborted:
+                            process.terminate()
+                            break
+                        if line:
+                            # CRITICAL: Strip carriage returns which mess up rich.Live
+                            stripped = line.replace('\r', '').strip()
+                            clean_line = self.ansi_escape.sub('', stripped)
+                            clean_line = self.non_printable.sub('', clean_line)
+                            
+                            # Periodically update storage info
+                            if time.time() % 3 < 0.1:
+                                self._update_storage()
 
-                        if clean_line.startswith("GINGER_PKG:"):
-                            if self.current_pkg and self.pkg_start_time:
-                                duration = time.time() - self.pkg_start_time
-                                step.packages_completed.append((self.current_pkg, duration))
-                            self.current_pkg = clean_line.replace("GINGER_PKG:", "").strip()
-                            self.pkg_start_time = time.time()
-                            self.log(f"Building: {self.current_pkg}", "bold cyan")
-                        
-                        with open(step.log_file, "a") as f:
-                            f.write(line)
-                        
-                        # Only show very specific, safe keywords in the UI to avoid clutter/corruption
-                        if any(kw in clean_line.lower() for kw in ["error", "warning", "waiting", "checking", "..."]):
-                            if not clean_line.startswith("GINGER_PKG:"):
-                                self.log(f"  {clean_line[:100]}", "dim")
+                            if clean_line.startswith("GINGER_PKG:"):
+                                if self.current_pkg and self.pkg_start_time:
+                                    duration = time.time() - self.pkg_start_time
+                                    step.packages_completed.append((self.current_pkg, duration))
+                                self.current_pkg = clean_line.replace("GINGER_PKG:", "").strip()
+                                self.pkg_start_time = time.time()
+                                self.log(f"Building: {self.current_pkg}", "bold cyan")
+                            
+                            with open(step.log_file, "a") as f:
+                                f.write(line)
+                            
+                            # Only show very specific, safe keywords in the UI to avoid clutter/corruption
+                            if any(kw in clean_line.lower() for kw in ["error", "warning", "waiting", "checking", "..."]):
+                                if not clean_line.startswith("GINGER_PKG:"):
+                                    self.log(f"  {clean_line[:100]}", "dim")
                 
-                process.wait()
+                if not self.dry_run:
+                    process.wait()
+                    process_returncode = process.returncode
+                else:
+                    time.sleep(0.5) # Simulated execution time
+                    process_returncode = 0
+                
                 step.end_time = time.time()
                 if self.current_pkg and self.pkg_start_time:
                     duration = time.time() - self.pkg_start_time
@@ -753,18 +784,22 @@ class GingerEngine:
                     step.status = "failed"
                     break
                 
-                if process.returncode == 0:
+                if process_returncode == 0:
                     step.status = "completed"
-                    # Persist the completion state
-                    try:
-                        marker_path = os.path.join(STATE_DIR, f"{step.id}.built")
-                        with open(marker_path, "w") as f:
-                            f.write(f"Completed at {datetime.now()}\n")
-                    except: pass
+                    # Persist the completion state only if NOT dry-run
+                    if not self.dry_run:
+                        try:
+                            marker_path = os.path.join(STATE_DIR, f"{step.id}.built")
+                            with open(marker_path, "w") as f:
+                                f.write(f"Completed at {datetime.now()}\n")
+                        except: pass
                     self.current_step_idx += 1
                 else:
                     step.status = "failed"
-                    self.log(f"✘ {step.name} FAILED with code {process.returncode}", "bold red")
+                    if not self.dry_run:
+                        self.log(f"✘ {step.name} FAILED with code {process.returncode}", "bold red")
+                    else:
+                        self.log(f"✘ {step.name} simulated failure", "bold red")
                     self.error_msg = f"{step.name} failed. Check {step.log_file}"
                     self.paused_for_error = True
                     while self.paused_for_error and not self.aborted:
