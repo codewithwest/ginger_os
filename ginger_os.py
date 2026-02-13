@@ -47,8 +47,14 @@ class GingerTUI:
         )
         
         layout["body"].split_row(
-            Layout(name="steps", ratio=2),
-            Layout(name="details", ratio=3)
+            Layout(name="steps", ratio=1),
+            Layout(name="right", ratio=3)
+        )
+        
+        # Split right side into details and logs
+        layout["right"].split_column(
+            Layout(name="details", size=12),
+            Layout(name="logs")
         )
         
         return layout
@@ -118,32 +124,57 @@ class GingerTUI:
         
         details = Text()
         details.append(f"Step {self.selected_step + 1}: ", style="bold bright_cyan")
-        details.append(f"{step.name}\n\n", style="bold bright_white")
+        details.append(f"{step.name}\n", style="bold bright_white")
         
         details.append("Phase: ", style="bright_yellow")
         details.append(f"{step.phase}\n", style="bright_white")
         
         details.append("Command: ", style="bright_yellow")
-        details.append(f"{step.command}\n\n", style="dim")
+        details.append(f"{step.command}\n", style="dim")
         
         details.append("Status: ", style="bright_yellow")
         if self.engine._should_skip(step):
-            details.append("✓ Completed\n", style="bright_green")
+            details.append("✓ Completed", style="bright_green")
         elif self.executing_step == self.selected_step:
-            details.append("▶ Running...\n", style="bright_cyan")
+            details.append("▶ Running...", style="bright_cyan")
         else:
-            details.append("○ Pending\n", style="dim")
-        
-        # Show recent logs if executing
-        if self.executing_step == self.selected_step and self.engine.logs:
-            details.append("\n" + "─" * 50 + "\n", style="dim")
-            details.append("Recent Output:\n", style="bright_yellow")
-            for log_entry, style in self.engine.logs[-10:]:
-                details.append(log_entry + "\n", style=style or "bright_white")
+            details.append("○ Pending", style="dim")
         
         return Panel(
             details,
             title="[bold bright_blue]Details[/]",
+            border_style="bold bright_blue"
+        )
+    
+    def render_logs(self):
+        """Render live logs panel"""
+        log_content = Text()
+        
+        if self.executing_step is not None:
+            # Show live output during execution
+            log_content.append("🔴 LIVE OUTPUT\n\n", style="bold bright_red")
+            
+            # Show recent logs (last 30 lines)
+            recent_logs = self.engine.logs[-30:] if len(self.engine.logs) > 30 else self.engine.logs
+            
+            for log_entry, style in recent_logs:
+                # Truncate very long lines
+                if len(log_entry) > 120:
+                    log_entry = log_entry[:117] + "..."
+                log_content.append(log_entry + "\n", style=style or "bright_white")
+        else:
+            # Show instructions when idle
+            log_content.append("Ready to execute commands\n\n", style="bold bright_cyan")
+            log_content.append("Press ", style="dim")
+            log_content.append("ENTER", style="bold bright_green")
+            log_content.append(" to run selected step\n", style="dim")
+            log_content.append("Press ", style="dim")
+            log_content.append("?", style="bold bright_magenta")
+            log_content.append(" for help", style="dim")
+        
+        return Panel(
+            log_content,
+            title="[bold bright_blue]Live Output[/]",
             border_style="bold bright_blue"
         )
     
@@ -222,6 +253,7 @@ class GingerTUI:
         layout["header"].update(self.render_header())
         layout["steps"].update(self.render_steps())
         layout["details"].update(self.render_details())
+        layout["logs"].update(self.render_logs())
         layout["footer"].update(self.render_footer())
     
     def run_step(self, step_idx, force=False):
