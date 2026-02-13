@@ -92,6 +92,7 @@ class GingerEngine:
         self.package_stepping = False
         self.paused_for_package = False
         self.current_process = None
+        self.on_log_callbacks = []
 
     def _rotate_logs(self):
         """Clean up old logs or rotate master log if too big."""
@@ -345,6 +346,14 @@ class GingerEngine:
         self.logs.append((log_entry, style))
         if len(self.logs) > self.max_logs:
             self.logs.pop(0)
+
+        # Broadcast to Web UI
+        for callback in self.on_log_callbacks:
+            try:
+                callback(log_entry, style)
+            except:
+                pass
+
         with open(MASTER_LOG, "a") as f:
             f.write(log_entry + "\n")
 
@@ -578,6 +587,9 @@ class GingerEngine:
                                     style = "bold green"
                                 elif "building" in lower_line or "starting" in lower_line:
                                     style = "bold cyan"
+                                    # Extract package name for UI
+                                    if "__GINGER_PKG_MARKER__" in line:
+                                        self.current_pkg = line.split(":")[-1].strip()
                                 elif "%" in clean_line: # Progress indicator
                                     style = "cyan"
                                 

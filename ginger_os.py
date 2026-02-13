@@ -491,9 +491,24 @@ class GingerTUI:
 def main():
     parser = argparse.ArgumentParser(description="GingerOS Command-First TUI")
     parser.add_argument("-n", "--dry-run", action="store_true", help="Preview build without executing commands")
+    parser.add_argument("-w", "--web", action="store_true", help="Start the remote monitoring Web UI")
+    parser.add_argument("-p", "--port", type=int, default=8000, help="Web UI port (default: 8000)")
     args = parser.parse_args()
     
     tui = GingerTUI(dry_run=args.dry_run)
+    
+    if args.web:
+        from lfs_builder_ui.server import start_server
+        web_thread = threading.Thread(
+            target=start_server, 
+            args=(tui.engine, "0.0.0.0", args.port), 
+            daemon=True
+        )
+        web_thread.start()
+        # Small delay to let the server start before logging to terminal
+        time.sleep(0.5)
+        tui.engine.log(f"Web UI Dashboard: Active at http://localhost:{args.port}", "bold green")
+
     tui.run()
 
 if __name__ == "__main__":
