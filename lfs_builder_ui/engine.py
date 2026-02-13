@@ -1,4 +1,4 @@
-aimport os
+import os
 import sys
 import time
 import subprocess
@@ -576,13 +576,15 @@ class GingerEngine:
                                 style = "white"
                                 lower_line = clean_line.lower()
                                 
-                                if "error" in lower_line or "fail" in lower_line:
+                                if any(kw in lower_line for kw in ["error", "fail", "denied", "critical", "fatal"]):
                                     style = "bold red"
                                 elif "warning" in lower_line:
                                     style = "yellow"
                                 elif "pass" in lower_line:
                                     style = "bold green"
-                                elif "%" in clean_line: # Progress
+                                elif "building" in lower_line or "starting" in lower_line:
+                                    style = "bold cyan"
+                                elif "%" in clean_line: # Progress indicator
                                     style = "cyan"
                                 
                                 self.log(clean_line, style)
