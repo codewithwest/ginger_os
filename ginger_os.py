@@ -30,9 +30,15 @@ def main():
         # Fixed: We now initialize the Live context more carefully
         # and ensure the engine starts AFTER Live is ready.
         with Live(layout, refresh_per_second=4, screen=True) as live:
+            # Set state BEFORE starting thread to avoid race condition
+            engine.is_running = True
+            
             # Start engine in separate thread
             build_thread = threading.Thread(target=engine.run)
             build_thread.start()
+            
+            # Brief sleep to ensure thread has taken off
+            time.sleep(0.1)
             
             while engine.is_running or engine.paused_for_error:
                 update_ui(layout, engine)

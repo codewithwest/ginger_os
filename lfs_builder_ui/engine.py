@@ -146,6 +146,7 @@ class GingerEngine:
             f.write(log_entry + "\n")
 
     def run(self):
+        # State should already be set by caller, but we'll ensure it here
         self.is_running = True
         self.overall_start_time = time.time()
         self.sudo_thread.start()
