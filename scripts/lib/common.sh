@@ -130,13 +130,28 @@ extract() {
     cd "$BUILD_BASE"
     
     # Clean up previous build directory if it exists
-    # We use a broad shell glob to catch variations (e.g., binutils-2.43.1 vs binutils-2.43)
     rm -rf "${DIR_NAME%-*}"* || true
     
-    # Extract
-    # Normalize the path to remove double slashes (e.g., //sources -> /sources)
-    local CLEAN_SOURCES=$(echo "$GINGER_SOURCES" | sed 's|^//|/|')
-    tar -xf "${CLEAN_SOURCES%/}/$ARCHIVE_NAME"
+    # Extract with re-download fallback
+    # Normalize the path to remove double slashes
+    local CLEAN_SOURCES=$(echo "$GINGER_SOURCES" | sed 's|//|/|g')
+    local SRC_PATH="${CLEAN_SOURCES%/}/$ARCHIVE_NAME"
+    
+    if ! tar -xf "$SRC_PATH" 2>/dev/null; then
+        log "WARN" "Extraction failed for $SRC_PATH. Archive might be missing or corrupted."
+        log "PROCESS" "Attempting to re-download $PKG_PATTERN..."
+        
+        if fetch_missing_source "$PKG_PATTERN"; then
+            # Re-locate the archive (it might have a different name)
+            ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}-?[0-9]" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+            SRC_PATH="${CLEAN_SOURCES%/}/$ARCHIVE_NAME"
+            log "PROCESS" "Retrying extraction of fresh archive: $ARCHIVE_NAME"
+            tar -xf "$SRC_PATH"
+        else
+            log "ERROR" "Failed to extract AND failed to download fresh source for $PKG_PATTERN"
+            exit 1
+        fi
+    fi
     
     # Find the newly created directory (it might not exactly match DIR_NAME)
     local NEW_DIR=$(ls -td */ | head -n 1 | cut -d'/' -f1)

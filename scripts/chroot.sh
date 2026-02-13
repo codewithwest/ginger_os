@@ -14,6 +14,8 @@ esac
 mkdir -p $LFS/{dev,proc,sys,run}
 
 # Mount with safety checks
+mkdir -p $LFS/etc
+[ -f /etc/resolv.conf ] && cp -v /etc/resolv.conf $LFS/etc/
 mountpoint -q $LFS/dev || mount -v --bind /dev $LFS/dev
 mountpoint -q $LFS/dev/pts || mount -v --bind /dev/pts $LFS/dev/pts
 mountpoint -q $LFS/proc || mount -vt proc proc $LFS/proc

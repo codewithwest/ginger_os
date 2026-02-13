@@ -38,10 +38,25 @@ if grep -v '^#' md5sums | xargs -P "$(nproc)" -I {} sh -c "echo '{}' | md5sum -c
     fi
 fi
 
-# 4. Download packages in parallel
+# 4. Download packages sequentially
 echo "GINGER_PKG: Downloading Packages"
-log "INFO" "Sources missing or invalid. Downloading packages (Parallel 4)..."
-grep -v '^#' wget-list | xargs -P 4 -n 1 wget -4 -q -nc --continue --tries=5 --timeout=20
+log "INFO" "Sources missing or invalid. Downloading packages..."
+total=$(grep -v '^#' wget-list | wc -l)
+current=0
+while read -r url; do
+    current=$((current + 1))
+    pkg=$(basename "$url")
+    if [ ! -f "$pkg" ]; then
+        echo "GINGER_PKG: $pkg [$current/$total]"
+        log "INFO" "Downloading missing package: $pkg..."
+        wget -4 -q --continue --tries=5 --timeout=20 "$url"
+    else
+        # Optional: Print that we are skipping it to stay active in UI
+        if (( current % 10 == 0 )); then
+             echo "GINGER_PKG: Checking Sources [$current/$total]"
+        fi
+    fi
+done < <(grep -v '^#' wget-list)
 
 # ---------------------------------------------------------------------
 # Download Extra BLFS Packages (xorriso support)
