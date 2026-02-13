@@ -34,6 +34,6 @@ secure_mode 2
 EOF
 
 
-cd .. && rm -rf "sysklogd-"*
+cleanup
 mark_built "$PKG_NAME"
 # Note: Root required for syslog install.

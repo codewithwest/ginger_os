@@ -11,5 +11,5 @@ rm -v man3/crypt*
 
 make -R GIT=false prefix=/usr install
 
-cd .. && rm -rf "man-pages-"*
+cleanup
 mark_built "$PKG_NAME"

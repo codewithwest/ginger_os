@@ -12,5 +12,5 @@ extract "gdbm"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "gdbm-"*
+cleanup
 mark_built "$PKG_NAME"

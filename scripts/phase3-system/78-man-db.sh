@@ -18,5 +18,5 @@ extract "man-db"
             
 make $MAKEFLAGS
 make install
-cd .. && rm -rf "man-db-"*
+cleanup
 mark_built "$PKG_NAME"

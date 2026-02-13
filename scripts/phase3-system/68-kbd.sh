@@ -18,5 +18,5 @@ make install
 
 cp -R -v docs/doc -T /usr/share/doc/kbd-2.8.0
 
-cd .. && rm -rf "kbd-"*
+cleanup
 mark_built "$PKG_NAME"

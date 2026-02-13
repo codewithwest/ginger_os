@@ -38,6 +38,6 @@ grep -q '^users:' /etc/group || groupadd -g 999 users
 mkdir -p /etc/default
 useradd -D --gid 999
 
-cd .. && rm -rf "shadow-"*
+cleanup
 mark_built "$PKG_NAME"
 # Note: Root password must be set manually or via another script

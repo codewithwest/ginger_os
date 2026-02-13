@@ -9,5 +9,5 @@ extract "libpipeline"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "libpipeline-"*
+cleanup
 mark_built "$PKG_NAME"

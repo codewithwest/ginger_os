@@ -9,5 +9,5 @@ extract "psmisc"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "psmisc-"*
+cleanup
 mark_built "$PKG_NAME"

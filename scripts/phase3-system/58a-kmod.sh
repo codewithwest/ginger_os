@@ -17,5 +17,5 @@ ninja
 
 ninja install
 
-cd .. && rm -rf "kmod-"*
+cleanup
 mark_built "$PKG_NAME"

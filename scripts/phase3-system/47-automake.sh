@@ -9,5 +9,5 @@ extract "automake"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "automake-"*
+cleanup
 mark_built "$PKG_NAME"

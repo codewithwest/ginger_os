@@ -7,5 +7,5 @@ extract "patch"
 ./configure --prefix=/usr
 make $MAKEFLAGS
 make install
-cd .. && rm -rf "patch-"*
+cleanup
 mark_built "$PKG_NAME"

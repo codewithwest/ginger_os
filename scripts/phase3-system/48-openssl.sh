@@ -18,5 +18,5 @@ make MANSUFFIX=ssl install
 
 mv -v /usr/share/doc/openssl /usr/share/doc/openssl-3.5.2
 
-cd .. && rm -rf "openssl-"*
+cleanup
 mark_built "$PKG_NAME"

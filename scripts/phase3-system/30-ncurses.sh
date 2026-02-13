@@ -55,5 +55,5 @@ make distclean
 make sources libs
 cp -av lib/lib*.so.5* /usr/lib
 
-cd .. && rm -rf "ncurses-"*
+cleanup
 mark_built "$PKG_NAME"

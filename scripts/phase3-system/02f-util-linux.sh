@@ -25,5 +25,5 @@ mkdir -pv /var/lib/hwclock
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "util-linux-"*
+cleanup
 mark_built "$PKG_NAME"

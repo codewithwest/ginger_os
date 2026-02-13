@@ -13,5 +13,5 @@ extract "attr"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "attr-"*
+cleanup
 mark_built "$PKG_NAME"

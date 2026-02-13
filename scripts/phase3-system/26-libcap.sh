@@ -12,5 +12,5 @@ make prefix=/usr lib=lib $MAKEFLAGS
 
 make prefix=/usr lib=lib install
 
-cd .. && rm -rf "libcap-"*
+cleanup
 mark_built "$PKG_NAME"

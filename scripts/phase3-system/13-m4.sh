@@ -9,5 +9,5 @@ extract "m4"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "m4-"*
+cleanup
 mark_built "$PKG_NAME"

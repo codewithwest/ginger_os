@@ -10,5 +10,5 @@ PAGE=A4 ./configure --prefix=/usr
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "groff-"*
+cleanup
 mark_built "$PKG_NAME"

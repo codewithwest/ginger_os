@@ -13,5 +13,5 @@ extract "Python"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "Python-"*
+cleanup
 mark_built "$PKG_NAME"

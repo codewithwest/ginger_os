@@ -14,5 +14,5 @@ sed -i 's/catch_int ()/catch_int (int signum)/' test/poll.c
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "libburn-"*
+cleanup
 mark_built "$PKG_NAME"

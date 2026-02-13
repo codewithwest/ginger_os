@@ -6,6 +6,6 @@ check_built "$PKG_NAME" && exit 0
 extract "flit_core"
 pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
 pip3 install --no-index --find-links dist flit_core
-cd .. && rm -rf "flit_core-"*
+cleanup
 mark_built "$PKG_NAME"
 # Note: Use of pip3 in chroot requires python to be installed first.

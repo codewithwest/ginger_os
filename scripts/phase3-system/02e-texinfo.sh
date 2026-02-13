@@ -10,5 +10,5 @@ extract "texinfo"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "texinfo-"*
+cleanup
 mark_built "$PKG_NAME"

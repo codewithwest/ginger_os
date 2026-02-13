@@ -14,5 +14,5 @@ make install
 make -C doc install-html docdir=/usr/share/doc/tar-1.35
 
 
-cd .. && rm -rf "tar-"*
+cleanup
 mark_built "$PKG_NAME"

@@ -9,5 +9,5 @@ extract "autoconf"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "autoconf-"*
+cleanup
 mark_built "$PKG_NAME"

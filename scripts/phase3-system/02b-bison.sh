@@ -10,5 +10,5 @@ extract "bison"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "bison-"*
+cleanup
 mark_built "$PKG_NAME"

@@ -40,5 +40,5 @@ endif
 EOF
 
 
-cd .. && rm -rf "vim"*
+cleanup
 mark_built "$PKG_NAME"

@@ -27,5 +27,5 @@ mv -v /usr/{,s}bin/ifconfig
 # In Merged-usr, ifconfig/ping etc are already in /usr/bin. 
 # We just need to ensure permissions are correct if needed.
 
-cd .. && rm -rf "inetutils-"*
+cleanup
 mark_built "$PKG_NAME"

@@ -12,5 +12,5 @@ extract "acl"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "acl-"*
+cleanup
 mark_built "$PKG_NAME"

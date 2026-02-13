@@ -12,5 +12,5 @@ sed -i "s/echo/#echo/" src/egrep.sh
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "grep-"*
+cleanup
 mark_built "$PKG_NAME"

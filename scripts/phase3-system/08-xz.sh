@@ -13,5 +13,5 @@ extract "xz"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "xz-"*
+cleanup
 mark_built "$PKG_NAME"

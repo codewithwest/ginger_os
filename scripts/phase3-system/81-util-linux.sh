@@ -26,5 +26,5 @@ extract "util-linux"
             
 make $MAKEFLAGS
 make install
-cd .. && rm -rf "util-linux-"*
+cleanup
 mark_built "$PKG_NAME"

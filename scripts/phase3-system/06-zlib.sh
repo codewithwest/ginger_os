@@ -14,6 +14,6 @@ make install
 
 rm -fv /usr/lib/libz.a
 
-cd .. && rm -rf "zlib-"*
+cleanup
 
 mark_built "$PKG_NAME"

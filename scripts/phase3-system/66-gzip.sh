@@ -10,6 +10,6 @@ extract "gzip"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "gzip-"*
+cleanup
 mark_built "$PKG_NAME"
 # Note: Host gzip is usually already present, but this builds it for the target.

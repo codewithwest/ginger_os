@@ -10,5 +10,5 @@ extract "findutils"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "findutils-"*
+cleanup
 mark_built "$PKG_NAME"

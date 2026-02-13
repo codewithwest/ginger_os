@@ -10,5 +10,5 @@ extract "diffutils"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "diffutils-"*
+cleanup
 mark_built "$PKG_NAME"

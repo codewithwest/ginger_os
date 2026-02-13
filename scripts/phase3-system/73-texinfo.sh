@@ -23,6 +23,6 @@ pushd /usr/share/info
   done
 popd
 
-cd .. && rm -rf "texinfo-"*
+cleanup
 mark_built "$PKG_NAME"
 # Optional: install-tex

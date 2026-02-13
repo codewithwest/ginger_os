@@ -11,5 +11,5 @@ extract "libisofs"
 make $MAKEFLAGS 
 make install
 
-cd .. && rm -rf "libisofs-"*
+cleanup
 mark_built "$PKG_NAME"

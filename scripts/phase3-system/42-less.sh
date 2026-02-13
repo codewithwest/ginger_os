@@ -10,5 +10,5 @@ extract "less"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "less-"*
+cleanup
 mark_built "$PKG_NAME"

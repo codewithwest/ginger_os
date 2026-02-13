@@ -10,5 +10,5 @@ make PREFIX=/usr install
 
 rm -v /usr/lib/libzstd.a
 
-cd .. && rm -rf "zstd-"*
+cleanup
 mark_built "$PKG_NAME"

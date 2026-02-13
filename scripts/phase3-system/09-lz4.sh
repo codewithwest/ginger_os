@@ -8,5 +8,5 @@ extract "lz4"
 make $MAKEFLAGS
 make PREFIX=/usr install
 
-cd .. && rm -rf "lz4-"*
+cleanup
 mark_built "$PKG_NAME"

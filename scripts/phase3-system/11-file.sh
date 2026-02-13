@@ -12,5 +12,5 @@ extract "file"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "file-"*
+cleanup
 mark_built "$PKG_NAME"

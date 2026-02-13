@@ -11,5 +11,5 @@ perl Makefile.PL
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "XML-Parser-"*
+cleanup
 mark_built "$PKG_NAME"

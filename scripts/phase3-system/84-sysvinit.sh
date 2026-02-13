@@ -11,5 +11,5 @@ patch -Np1 -i /sources/sysvinit-3.14-consolidated-1.patch
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "sysvinit-"*
+cleanup
 mark_built "$PKG_NAME"

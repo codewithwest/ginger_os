@@ -14,5 +14,5 @@ extract "libxcrypt"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "libxcrypt-"*
+cleanup
 mark_built "$PKG_NAME"

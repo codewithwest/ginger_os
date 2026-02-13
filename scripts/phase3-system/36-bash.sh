@@ -13,7 +13,7 @@ extract "bash"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "bash-"*
+cleanup
 mark_built "$PKG_NAME"
 # Note: Executing building bash usually requires re-execing bash, 
 # but for a scripted build, we'll continue.

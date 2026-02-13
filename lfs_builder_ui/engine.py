@@ -595,6 +595,11 @@ class GingerEngine:
                                 
                                 self.log(clean_line, style)
 
+                                # Auto-Download Handler
+                                if "__GINGER_MISSING_SOURCE_URL__:" in clean_line:
+                                    url = clean_line.split("__GINGER_MISSING_SOURCE_URL__:")[-1].strip()
+                                    self._download_missing_source(url)
+
                                 # Package tracking
                                 if clean_line.startswith("__GINGER_PKG_MARKER__:"):
                                     if self.current_pkg and self.pkg_start_time:

@@ -20,5 +20,5 @@ make html
 make install
 make install-html
 
-cd .. && rm -rf "gmp-"*
+cleanup
 mark_built "$PKG_NAME"

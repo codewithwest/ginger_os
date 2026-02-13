@@ -15,5 +15,5 @@ make html
 make install
 make install-html
 
-cd .. && rm -rf "mpc-"*
+cleanup
 mark_built "$PKG_NAME"

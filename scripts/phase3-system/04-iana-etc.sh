@@ -8,5 +8,5 @@ log "PROCESS" "Installing Iana-Etc..."
 
 cp -v services protocols /etc
 
-cd .. && rm -rf "iana-etc-"*
+cleanup
 mark_built "$PKG_NAME"

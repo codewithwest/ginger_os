@@ -12,5 +12,5 @@ extract "libffi"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "libffi-"*
+cleanup
 mark_built "$PKG_NAME"

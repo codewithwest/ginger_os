@@ -14,5 +14,5 @@ extract "procps-ng"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "procps-ng-"*
+cleanup
 mark_built "$PKG_NAME"

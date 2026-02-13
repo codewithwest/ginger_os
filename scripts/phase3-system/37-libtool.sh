@@ -11,5 +11,5 @@ make install
 
 rm -fv /usr/lib/libltdl.a
 
-cd .. && rm -rf "libtool-"*
+cleanup
 mark_built "$PKG_NAME"

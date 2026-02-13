@@ -13,5 +13,5 @@ make
 
 make install
 
-cd .. && rm -rf "libisoburn-"*
+cleanup
 mark_built "$PKG_NAME"

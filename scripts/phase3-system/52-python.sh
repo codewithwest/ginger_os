@@ -21,7 +21,5 @@ root-user-action = ignore
 disable-pip-version-check = true
 EOF
 
-
-
-cd .. && rm -rf "Python-"*
+cleanup
 mark_built "$PKG_NAME"

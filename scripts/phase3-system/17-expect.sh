@@ -21,5 +21,5 @@ make $MAKEFLAGS
 make install
 ln -svf expect5.45.4/libexpect5.45.4.so /usr/lib
 
-cd .. && rm -rf "expect"*
+cleanup
 mark_built "$PKG_NAME"

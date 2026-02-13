@@ -14,5 +14,5 @@ make install
 
 install -v -m644 doc/*.{html,css} /usr/share/doc/expat-2.7.1
 
-cd .. && rm -rf "expat-"*
+cleanup
 mark_built "$PKG_NAME"

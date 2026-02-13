@@ -7,5 +7,5 @@ extract "make"
 ./configure --prefix=/usr
 make $MAKEFLAGS
 make install
-cd .. && rm -rf "make-"*
+cleanup
 mark_built "$PKG_NAME"

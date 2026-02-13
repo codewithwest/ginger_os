@@ -9,5 +9,5 @@ extract "gperf"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "gperf-"*
+cleanup
 mark_built "$PKG_NAME"

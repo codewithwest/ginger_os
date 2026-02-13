@@ -27,5 +27,5 @@ make install
 
 unset BUILD_ZLIB BUILD_BZIP2
 
-cd .. && rm -rf "perl-"*
+cleanup
 mark_built "$PKG_NAME"

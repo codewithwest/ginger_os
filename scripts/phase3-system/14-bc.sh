@@ -10,5 +10,5 @@ CC='gcc -std=c99' ./configure --prefix=/usr -G -O3 -r
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "bc-"*
+cleanup
 mark_built "$PKG_NAME"

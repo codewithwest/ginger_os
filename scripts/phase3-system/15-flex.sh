@@ -14,5 +14,5 @@ make install
 ln -sv flex   /usr/bin/lex
 ln -sv flex.1 /usr/share/man/man1/lex.1
 
-cd .. && rm -rf "flex-"*
+cleanup
 mark_built "$PKG_NAME"

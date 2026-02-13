@@ -19,5 +19,5 @@ sh Configure -des                                         \
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "perl-"*
+cleanup
 mark_built "$PKG_NAME"
