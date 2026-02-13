@@ -1,0 +1,22 @@
+import os
+import time
+from .constants import LOG_DIR
+
+class BuildStep:
+    def __init__(self, id, name, command, phase="General"):
+        self.id = id
+        self.name = name
+        self.command = command
+        self.phase = phase
+        self.status = "pending"  # pending, running, completed, failed
+        self.start_time = None
+        self.end_time = None
+        self.log_file = os.path.join(LOG_DIR, f"{id}.log")
+        self.packages_completed = []  # List of (name, duration)
+
+    def duration(self):
+        if self.start_time and self.end_time:
+            return self.end_time - self.start_time
+        if self.start_time:
+            return time.time() - self.start_time
+        return 0
