@@ -9,6 +9,7 @@ import shutil
 import termios
 import tty
 import json
+import signal
 from datetime import datetime
 from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, LFS_MOUNT
 from .models import BuildStep
@@ -90,6 +91,10 @@ class GingerEngine:
         # Telemetry
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.telemetry_file = os.path.join(STATE_DIR, "telemetry.json")
+
+        self.package_stepping = False
+        self.paused_for_package = False
+        self.current_process = None
 
     def _kb_listener(self):
         """Listen for keyboard commands during build."""
@@ -555,17 +560,17 @@ class GingerEngine:
                 process_returncode = 0
                 last_output_time = time.time()
             else:
-                # Use Popen to capture output in real-time
-                process = subprocess.Popen(
-                    step.command,
-                    cwd=GINGER_ROOT,
-                    shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    bufsize=1,  # Line buffered
-                    env=os.environ.copy()
-                )
+                        process = subprocess.Popen(
+                            step.command,
+                            cwd=GINGER_ROOT,
+                            shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            text=True,
+                            bufsize=1,  # Line buffered
+                            env=os.environ.copy()
+                        )
+                        self.current_process = process
             
             # Read output with timeout
             import select
@@ -630,6 +635,14 @@ class GingerEngine:
                                     self.current_pkg = pkg_name
                                     self.pkg_start_time = time.time()
                                     self.log(f"Building Package: {pkg_name}", "bold cyan")
+
+                                    # Interactive Stepping
+                                    if self.package_stepping and not self.dry_run:
+                                        self.paused_for_package = True
+                                        self.log(f"⏸ PAUSED before {pkg_name}. Press SPACE to continue.", "bold yellow")
+                                        os.kill(process.pid, signal.SIGSTOP)
+                                        while self.paused_for_package and not self.aborted:
+                                            time.sleep(0.1)
                         else:
                             # EOF
                             if process.poll() is not None:
@@ -678,11 +691,20 @@ class GingerEngine:
                 self.error_msg = f"{step.name} failed. Check {step.log_file}"
                 
             self._save_telemetry()
+            self.current_process = None
                 
         except Exception as e:
             step.status = "failed"
             self.log(f"!!! EXCEPTION in {step.name}: {str(e)}", "bold red")
             self.error_msg = str(e)
+
+    def resume_package(self):
+        """Resume process from package-level pause."""
+        if self.paused_for_package and self.current_process:
+            os.kill(self.current_process.pid, signal.SIGCONT)
+            self.paused_for_package = False
+            return True
+        return False
 
     def run(self):
         """

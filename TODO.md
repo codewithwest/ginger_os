@@ -98,10 +98,10 @@
   - Use single source of truth
   - Simplify skip logic in phase orchestrators
 
-- [ ] **Interactive Mode**: Add step-by-step build execution
-  - Allow running individual phases/packages
-  - Pause between steps for validation
-  - Manual marker management
+- [x] **Interactive Mode**: Add step-by-step build execution
+  - [x] Allow running individual phases/packages
+  - [x] Pause between steps for validation
+  - [x] Manual marker management
 
 ---
 

@@ -98,6 +98,12 @@ class GingerTUI:
             
             if self.auto_all:
                 stats_text.append("\n\n🤖 AUTO-RUN ACTIVE", style="bold bright_cyan blink")
+            
+            if self.engine.paused_for_package:
+                stats_text.append("\n\n⏸ PAUSED AT PACKAGE", style="bold bright_yellow blink")
+                stats_text.append("\nPress SPACE to continue", style="dim")
+            elif self.engine.package_stepping:
+                stats_text.append("\n\n📍 STEP-MODE ENABLED", style="bold bright_magenta")
         
         return Panel(
             Columns([
@@ -282,6 +288,10 @@ class GingerTUI:
             footer.append("a", style=auto_style)
             footer.append(f"={auto_label}  ", style="dim")
             
+            p_style = "bold bright_magenta" if self.engine.package_stepping else "bold bright_white"
+            footer.append("p", style=p_style)
+            footer.append("=pkg-step  ", style="dim")
+            
             footer.append("?", style="bold bright_magenta")
             footer.append("=help  ", style="dim")
             footer.append("q", style="bold bright_red")
@@ -378,6 +388,12 @@ class GingerTUI:
         elif key == 'a':  # Run all
             return 'run_all'
         
+        elif key == 'p':  # Toggle stepping
+            return 'toggle_stepping'
+        
+        elif key == ' ':  # Resume from pause
+            return 'resume'
+        
         elif key == 's':  # Skip to next pending
             for idx in range(self.selected_step + 1, len(self.engine.steps)):
                 if not self.engine._should_skip(self.engine.steps[idx]):
@@ -453,6 +469,10 @@ class GingerTUI:
                             self.run_step(self.selected_step, force=False)
                         elif action == 'force':
                             self.run_step(self.selected_step, force=True)
+                        elif action == 'toggle_stepping':
+                            self.engine.package_stepping = not self.engine.package_stepping
+                        elif action == 'resume':
+                            self.engine.resume_package()
         
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
