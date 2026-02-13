@@ -87,8 +87,14 @@ fetch_missing_source() {
         log "INFO" "Found URL for $PKG_PATTERN: $URL"
         log "PROCESS" "Downloading missing package on-the-fly..."
         cd "$GINGER_SOURCES"
-        wget -nc -4 -q "$URL"
-        return 0
+        # We use -v for the on-the-fly download to see what's happening
+        if wget -nc -4 --continue "$URL"; then
+            local PKG_FILE=$(basename "$URL")
+            if [ -s "$PKG_FILE" ]; then
+                log "INFO" "Successfully downloaded $PKG_FILE"
+                return 0
+            fi
+        fi
     fi
     return 1
 }
@@ -97,25 +103,25 @@ extract() {
     local PKG_PATTERN=$1
     
     # 1. Try to find local archive
-    local ARCHIVE_NAME=$(ls "$GINGER_SOURCES" 2>/dev/null | grep -iE "^${PKG_PATTERN}-?[0-9]" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+    # We use find to be more robust than ls | grep
+    local ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
     
-    if [ -z "$ARCHIVE_NAME" ]; then
-        ARCHIVE_NAME=$(ls "$GINGER_SOURCES" 2>/dev/null | grep -iE "^${PKG_PATTERN}" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
-    fi
-
-    # 2. If missing, attempt self-healing download
-    if [ -z "$ARCHIVE_NAME" ]; then
+    # If not found or if the file is basically empty/incomplete
+    if [ -z "$ARCHIVE_NAME" ] || [ ! -s "$ARCHIVE_NAME" ]; then
+        log "WARN" "Source archive for '$PKG_PATTERN' not found or empty in $GINGER_SOURCES."
         if fetch_missing_source "$PKG_PATTERN"; then
-            # Re-run search after download
-            ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}-?[0-9]" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
-            [ -z "$ARCHIVE_NAME" ] && ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+            log "INFO" "Recovery successful. Re-checking for archive..."
+            ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
         fi
     fi
 
-    if [ -z "$ARCHIVE_NAME" ]; then
-        log "ERROR" "No archive found matching pattern '$PKG_PATTERN' in $GINGER_SOURCES and fetch failed."
+    if [ -z "$ARCHIVE_NAME" ] || [ ! -f "$ARCHIVE_NAME" ]; then
+        log "ERROR" "CRITICAL: Could not find or download source for '$PKG_PATTERN'"
         exit 1
     fi
+    
+    # Just the basename for processing
+    ARCHIVE_NAME=$(basename "$ARCHIVE_NAME")
 
     # Determine the directory name (strip .tar.*)
     local DIR_NAME=$(echo "$ARCHIVE_NAME" | sed -E 's/\.(tar\.(gz|bz2|xz)|tgz)$//')
@@ -137,18 +143,33 @@ extract() {
     local CLEAN_SOURCES=$(echo "$GINGER_SOURCES" | sed 's|//|/|g')
     local SRC_PATH="${CLEAN_SOURCES%/}/$ARCHIVE_NAME"
     
-    if ! tar -xf "$SRC_PATH" 2>/dev/null; then
-        log "WARN" "Extraction failed for $SRC_PATH. Archive might be missing or corrupted."
-        log "PROCESS" "Attempting to re-download $PKG_PATTERN..."
+    log "PROCESS" "Attempting extraction of $SRC_PATH..."
+    set +e
+    tar -xf "$SRC_PATH" 2>/dev/null
+    local TAR_EXIT=$?
+    set -e
+
+    if [ $TAR_EXIT -ne 0 ]; then
+        log "WARN" "Primary extraction failed for $SRC_PATH."
+        log "PROCESS" "Archive might be missing or corrupted. Triggering self-healing..."
         
         if fetch_missing_source "$PKG_PATTERN"; then
             # Re-locate the archive (it might have a different name)
-            ARCHIVE_NAME=$(ls "$GINGER_SOURCES" | grep -iE "^${PKG_PATTERN}-?[0-9]" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
-            SRC_PATH="${CLEAN_SOURCES%/}/$ARCHIVE_NAME"
-            log "PROCESS" "Retrying extraction of fresh archive: $ARCHIVE_NAME"
-            tar -xf "$SRC_PATH"
+            local NEW_SEARCH=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+            if [ -n "$NEW_SEARCH" ]; then
+                ARCHIVE_NAME=$(basename "$NEW_SEARCH")
+                SRC_PATH="${CLEAN_SOURCES%/}/$ARCHIVE_NAME"
+                log "PROCESS" "Retrying extraction with fresh archive: $ARCHIVE_NAME"
+                if ! tar -xf "$SRC_PATH"; then
+                    log "ERROR" "CRITICAL: Extraction failed even after re-downloading $ARCHIVE_NAME"
+                    exit 1
+                fi
+            else
+                log "ERROR" "CRITICAL: fetch_missing_source reported success but archive is still missing!"
+                exit 1
+            fi
         else
-            log "ERROR" "Failed to extract AND failed to download fresh source for $PKG_PATTERN"
+            log "ERROR" "CRITICAL: Could not primary-extract AND could not download $PKG_PATTERN"
             exit 1
         fi
     fi
