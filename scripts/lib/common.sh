@@ -86,8 +86,16 @@ fetch_missing_source() {
     local URL=$(grep -iE "/${PKG_PATTERN}-?[0-9]" "$WGET_LIST" 2>/dev/null | head -n 1)
     
     # Fallback to direct GNU mirror if manifest search fails for gettext
-    if [ -z "$URL" ] && [[ "$PKG_PATTERN" == *"gettext"* ]]; then
-        URL="https://ftp.gnu.org/gnu/gettext/gettext-0.26.tar.xz"
+    if [ -z "$URL" ]; then
+        if [[ "$PKG_PATTERN" == *"gettext"* ]]; then
+            URL="https://ftp.gnu.org/gnu/gettext/gettext-0.26.tar.xz"
+        elif [[ "$PKG_PATTERN" == *"libburn"* ]]; then
+            URL="https://files.libburnia-project.org/releases/libburn-1.5.6.pl01.tar.gz"
+        elif [[ "$PKG_PATTERN" == *"libisofs"* ]]; then
+            URL="https://files.libburnia-project.org/releases/libisofs-1.5.6.pl01.tar.gz"
+        elif [[ "$PKG_PATTERN" == *"libisoburn"* ]]; then
+            URL="https://files.libburnia-project.org/releases/libisoburn-1.5.6.pl01.tar.gz"
+        fi
     fi
 
     if [ -n "$URL" ]; then
@@ -129,16 +137,24 @@ fetch_missing_source() {
 extract() {
     local PKG_PATTERN=$1
     
-    # 1. Try to find local archive
-    # We use find to be more robust than ls | grep
-    local ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+    # 1. Try to find local archive with smart filtering
+    # We prefer case-sensitive first, then case-insensitive
+    local ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" \
+        ! -name "*-docs-*" ! -name "*-html-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
     
-    # If not found or if the file is basically empty/incomplete
+    if [ -z "$ARCHIVE_NAME" ]; then
+        # Fallback to case-insensitive search
+        ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -iname "${PKG_PATTERN}*" \
+            ! -iname "*-docs-*" ! -iname "*-html-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
+    fi
+    
+    # If still not found or if the file is basically empty/incomplete
     if [ -z "$ARCHIVE_NAME" ] || [ ! -s "$ARCHIVE_NAME" ]; then
         log "WARN" "Source archive for '$PKG_PATTERN' not found or empty in $GINGER_SOURCES."
         if fetch_missing_source "$PKG_PATTERN"; then
             log "INFO" "Recovery successful. Re-checking for archive..."
-            ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+            ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -iname "${PKG_PATTERN}*" \
+                ! -iname "*-docs-*" ! -iname "*-html-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
         fi
     fi
 
