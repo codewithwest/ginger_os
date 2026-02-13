@@ -162,7 +162,11 @@ if [ "$found" -eq 1 ]; then
     export TERM=linux
     clear
     cd /mnt/iso/installer
-    exec /bin/bash /mnt/iso/installer/installer.sh
+    /bin/bash /mnt/iso/installer/installer.sh
+    
+    echo "Installation process finished."
+    echo "You can now reboot or power off."
+    exec /bin/sh
 else
     echo "ERROR: Could not find GingerOS installation media!"
     echo "Dropping to rescue shell. Type 'exit' to reboot."

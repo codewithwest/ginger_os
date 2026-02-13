@@ -42,12 +42,16 @@ ui_init_dashboard "Preparation" "Formatting" "Extraction" "Hardware Sync" "User 
 TARGET_DEV="${1:-}"
 if [ -z "$TARGET_DEV" ]; then
     ui_draw_header
-    echo -e "Usage: $0 /dev/sdX\n\nAvailable Disks:"
+    echo -e "${ELECTRIC_BLUE}${BOLD}--- DISK SELECTION ---${NC}"
+    echo -e "Available Disks:"
     lsblk -d -n -p -o NAME,SIZE,MODEL | grep -v "sr0"
-    exit 1
+    echo ""
+    ui_input "Enter target disk (e.g. /dev/sda)" TARGET_DEV
 fi
 
-[ ! -b "$TARGET_DEV" ] && ui_error "Device $TARGET_DEV is not a valid block device."
+if [ -z "$TARGET_DEV" ] || [ ! -b "$TARGET_DEV" ]; then
+    ui_error "Device '$TARGET_DEV' is not a valid block device."
+fi
 
 # --- USER CREDENTIALS ---
 ui_draw_header
