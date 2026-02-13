@@ -234,6 +234,12 @@ class GingerEngine:
              return self._check_phase_complete("phase4-boot", lfs_marker_dir)
              
         # 3. Dynamic state checks
+        if step.id == "05_download_sources":
+            # Integrity check: If sources directory is empty, we MUST NOT skip
+            sources_dir = os.path.join(GINGER_ROOT, "sources")
+            if not os.path.exists(sources_dir) or not os.listdir(sources_dir):
+                return False
+                
         if step.id == "04_prepare_image":
             # Check if image is already mounted to LFS
             try:
