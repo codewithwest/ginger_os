@@ -23,14 +23,14 @@ mountpoint -q $LFS/run || mount -vt tmpfs tmpfs $LFS/run
 if [ -h $LFS/dev/shm ]; then
   install -v -d -m 1777 $LFS$(realpath /dev/shm)
 else
-  mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
+  mountpoint -q $LFS/dev/shm || mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
 fi
 
 # Ensure scripts, config, and sources are accessible inside chroot
 log "INFO" "Mounting project scripts, config, and sources into chroot..."
 mkdir -p "$LFS/scripts" "$LFS/config" "$LFS/sources"
-mountpoint -q "$LFS/scripts" || mount --bind "$(dirname "$(readlink -f "$0")")/scripts" "$LFS/scripts"
-mountpoint -q "$LFS/config"  || mount --bind "$(dirname "$(readlink -f "$0")")/config"  "$LFS/config"
-mountpoint -q "$LFS/sources" || mount --bind "$(dirname "$(readlink -f "$0")")/sources" "$LFS/sources"
+mountpoint -q "$LFS/scripts" || mount --bind "$GINGER_SCRIPTS" "$LFS/scripts"
+mountpoint -q "$LFS/config"  || mount --bind "$GINGER_ROOT/config"  "$LFS/config"
+mountpoint -q "$LFS/sources" || mount --bind "$GINGER_SOURCES" "$LFS/sources"
 
 log "INFO" "Entering chroot..."
