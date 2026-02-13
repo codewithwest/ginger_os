@@ -242,6 +242,24 @@ ui_draw_full_dashboard() {
     tput ed
 }
 
+ui_stop_monitor() {
+    if [[ -n "$UI_MONITOR_PID" ]] && kill -0 "$UI_MONITOR_PID" 2>/dev/null; then
+        kill -SIGSTOP "$UI_MONITOR_PID" 2>/dev/null
+        tput rmcup
+        tput cnorm
+        printf "\e[?7h" # Re-enable wrap
+    fi
+}
+
+ui_resume_monitor() {
+    if [[ -n "$UI_MONITOR_PID" ]] && kill -0 "$UI_MONITOR_PID" 2>/dev/null; then
+        tput smcup
+        tput civis
+        printf "\e[?7l" # Disable wrap
+        kill -SIGCONT "$UI_MONITOR_PID" 2>/dev/null
+    fi
+}
+
 # ============================================================================
 # MINIMAL STREAM MODE (for narrow terminals)
 # ============================================================================
@@ -294,9 +312,9 @@ ui_set_active_log() {
 # PUBLIC API
 # ============================================================================
 
-ui_init() {
+ui_init_dashboard() {
     # Initialize UI with step names
-    # Usage: ui_init "Step 1" "Step 2" "Step 3"
+    # Usage: ui_init_dashboard "Step 1" "Step 2" "Step 3"
     
     # If we are a subscript and UI is already active, don't re-init steps
     if [[ "$$" != "$GINGER_UI_MASTER_PID" ]] && [[ -f "$UI_STATE_FILE" ]]; then
@@ -383,6 +401,69 @@ ui_finish() {
     sleep 0.5
     
     # Cleanup will be called by trap
+}
+
+ui_input() {
+    local prompt="$1"
+    local var_name="$2"
+    ui_stop_monitor
+    echo -ne "${ELECTRIC_BLUE}${BOLD}▸ $prompt: ${NC}"
+    read -r val
+    eval "$var_name=\"$val\""
+    ui_resume_monitor
+}
+
+ui_password() {
+    local prompt="$1"
+    local var_name="$2"
+    ui_stop_monitor
+    echo -ne "${LASER_YELLOW}${BOLD}🔑 $prompt: ${NC}"
+    read -rs val
+    echo
+    eval "$var_name=\"$val\""
+    ui_resume_monitor
+}
+
+ui_confirm() {
+    local prompt="$1"
+    ui_stop_monitor
+    echo -ne "${LASER_RED}${BOLD}❓ $prompt [y/N]: ${NC}"
+    read -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Aborted."
+        exit 1
+    fi
+    ui_resume_monitor
+}
+
+ui_draw_header() {
+    clear
+    echo -e "${ELECTRIC_BLUE}${BOLD}"
+    echo "  _____ _                         ____   ____"
+    echo " / ____(_)                       / __ \ / ____|"
+    echo "| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ "
+    echo "| | |_ | | '_ \ / _\` |/ _ \ '__|| |  | |\___ \\"
+    echo "| |__| | | | | | (_| |  __/ |   | |__| |____) |"
+    echo " \_____|_|_| |_|\__, |\___|_|    \____/|_____/ "
+    echo "                 __/ |                         "
+    echo "                |___/         Installer        "
+    echo -e "${NC}"
+}
+
+ui_spinner() {
+    local pid=$1
+    local msg=$2
+    local spin='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local i=0
+    tput civis
+    while kill -0 $pid 2>/dev/null; do
+        i=$(( (i+1) % 10 ))
+        printf "\r${ELECTRIC_BLUE}${spin:$i:1}${NC} $msg..."
+        sleep 0.1
+    done
+    tput cnorm
+    echo -e " [${LASER_GREEN}DONE${NC}]"
 }
 
 # ============================================================================

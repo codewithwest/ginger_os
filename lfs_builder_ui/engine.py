@@ -54,7 +54,7 @@ class GingerEngine:
             
             # Kernel & Boot
             BuildStep("14_kernel", "Kernel Build", "sudo chroot /mnt/lfs /bin/bash -c 'bash scripts/phases/build-phase4.sh'", "Kernel & Boot"),
-            BuildStep("15_grub", "Grub Setup", "bash scripts/phase4-boot/02-grub.sh", "Kernel & Boot"),
+            BuildStep("15_finalize", "Finalize System", "bash scripts/host/finalize-system.sh", "Kernel & Boot"),
             BuildStep("16_teardown", "Teardown", "bash scripts/image/teardown.sh", "Kernel & Boot")
         ]
         self.dry_run = dry_run

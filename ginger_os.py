@@ -199,7 +199,7 @@ class GingerTUI:
         
         if self.executing_step is not None:
             # Show live output during execution
-            log_content.append("🔴 LIVE OUTPUT\n\n", style="bold bright_red")
+            # log_content.append("🔴 LIVE OUTPUT\n\n", style="bold bright_red")
             
             # Show recent logs (last 30 lines)
             recent_logs = self.engine.logs[-30:] if len(self.engine.logs) > 30 else self.engine.logs
