@@ -21,6 +21,8 @@ from rich.text import Text
 from rich.align import Align
 from rich import box
 
+from rich.columns import Columns
+
 # Add to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lfs_builder_ui import GingerEngine
@@ -33,6 +35,7 @@ class GingerTUI:
         self.selected_step = 0
         self.running = True
         self.executing_step = None
+        self.current_start_time = 0
         self.show_help = False
         self.mode = "select"  # select, execute, logs
         self.log_scroll = 0
@@ -41,7 +44,7 @@ class GingerTUI:
         """Create the TUI layout"""
         layout = Layout()
         layout.split_column(
-            Layout(name="header", size=8),
+            Layout(name="header", size=10),
             Layout(name="body"),
             Layout(name="footer", size=3)
         )
@@ -59,20 +62,36 @@ class GingerTUI:
         
         return layout
     
+    def format_time(self, seconds):
+        mins, secs = divmod(int(seconds), 60)
+        return f"{mins:02d}:{secs:02d}"
+    
     def render_header(self):
         """Render header with logo and stats"""
         total = len(self.engine.steps)
         complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
         pending = total - complete
         
-        header_text = Text()
-        header_text.append("🌶️ GingerOS Command Center 🌶️\n", style="bold bright_cyan")
-        header_text.append(f"Total: {total}  ", style="dim")
-        header_text.append(f"✓ {complete}  ", style="bright_green")
-        header_text.append(f"○ {pending}", style="bright_yellow")
+        stats_text = Text()
+        
+        if self.executing_step is not None:
+            elapsed = time.time() - self.current_start_time
+            stats_text.append("🚀 EXECUTION IN PROGRESS\n", style="bold bright_red blink")
+            stats_text.append(f"Running: {self.engine.steps[self.executing_step].name}\n", style="bold bright_white")
+            stats_text.append(f"Time: {self.format_time(elapsed)}\n\n", style="bold bright_yellow")
+            stats_text.append("⚠️  PLEASE WAIT - SYSTEM BUSY", style="bold bright_red")
+        else:
+            stats_text.append("🌶️ GingerOS Command Center 🌶️\n", style="bold bright_cyan")
+            stats_text.append("LFS 12.4 Automata - Cyberpunk Edition\n\n", style="bold bright_green")
+            stats_text.append(f"Total: {total}  ", style="dim")
+            stats_text.append(f"✓ {complete}  ", style="bright_green")
+            stats_text.append(f"○ {pending}", style="bright_yellow")
         
         return Panel(
-            Align.center(header_text),
+            Columns([
+                Text(LOGO, style="bold bright_cyan"),
+                Align.center(stats_text, vertical="middle")
+            ]),
             border_style="bold bright_blue",
             box=box.ROUNDED
         )
@@ -265,6 +284,7 @@ class GingerTUI:
             return False
         
         self.executing_step = step_idx
+        self.current_start_time = time.time()
         self.engine.current_step_idx = step_idx
         
         # Execute in current thread (blocking)
