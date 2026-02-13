@@ -15,7 +15,7 @@ The entire build, from source collection to final ISO generation, is now driven 
 ### 1. Build the System
 The main build orchestrator assembles the LFS core toolchain and base system.
 ```bash
-sudo ./ginger_os.sh
+sudo python3 ginger_os.py
 ```
 
 ### 2. Generate the Installer ISO
