@@ -233,8 +233,8 @@ class GingerEngine:
             pass
         return None
 
-    def _check_phase_complete(self, script_subdir, marker_dir):
-        """Helper to check if all scripts in a directory have corresponding markers."""
+    def _check_phase_complete(self, script_subdir):
+        """Helper to check if all scripts in a directory have corresponding central markers."""
         scripts_dir = os.path.join(GINGER_ROOT, "scripts", script_subdir)
         if not os.path.exists(scripts_dir):
             return False
@@ -252,17 +252,12 @@ class GingerEngine:
             if script_subdir in ["phase3-system", "phase4-boot"]:
                 file_name = "-".join(file_name.split("-")[1:]) if "-" in file_name else file_name
 
-            possible_markers = [
-                os.path.join(marker_dir, f"{file_name}.built"),
-                os.path.join(marker_dir, f"{file_name}-temp.built")
-            ]
+            # Prioritize the central host marker as the single source of truth
+            possible_marker_names = [f"{file_name}.built", f"{file_name}-temp.built"]
             if pkg_name:
-                possible_markers.extend([
-                    os.path.join(marker_dir, f"{pkg_name}.built"),
-                    os.path.join(marker_dir, f"{pkg_name}-temp.built")
-                ])
+                possible_marker_names.extend([f"{pkg_name}.built", f"{pkg_name}-temp.built"])
             
-            if not any(os.path.exists(m) for m in possible_markers):
+            if not any(os.path.exists(os.path.join(STATE_DIR, m)) for m in possible_marker_names):
                 return False
         return True
 
@@ -294,16 +289,15 @@ class GingerEngine:
         if os.path.exists(central_marker):
             return True
             
-        # 3. Smart checks for major phases
-        lfs_marker_dir = f"{LFS_MOUNT}/var/lib/ginger"
+        # 3. Smart checks for major phases (checks all constituent packages)
         if step.id == "10_phase1_toolchain":
-            return self._check_phase_complete("phase1-tools", lfs_marker_dir)
+            return self._check_phase_complete("phase1-tools")
         if step.id == "11_phase2_toolchain":
-            return self._check_phase_complete("phase2-tools", lfs_marker_dir)
+            return self._check_phase_complete("phase2-tools")
         if step.id == "13_phase3_system":
-             return self._check_phase_complete("phase3-system", lfs_marker_dir)
+             return self._check_phase_complete("phase3-system")
         if step.id == "14_kernel":
-             return self._check_phase_complete("phase4-boot", lfs_marker_dir)
+             return self._check_phase_complete("phase4-boot")
              
         # 4. Dynamic state checks
         if step.id == "04_prepare_image":

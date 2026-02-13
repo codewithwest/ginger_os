@@ -86,16 +86,16 @@
 - [x] Add configuration file support (avoid hardcoded paths)
 - [x] Implement build telemetry (time per package, failure rates)
 - [x] Add `--dry-run` mode to preview build plan
-- [ ] Add web-based UI option for remote builds
+- [/] Add web-based UI option for remote builds (Architecture drafted)
 
 ---
 
 ## 🔧 REFACTORING
 
-- [ ] **Marker System**: Revert to master's simpler marker approach
-  - Remove dual marker system (host + LFS)
-  - Use single source of truth
-  - Simplify skip logic in phase orchestrators
+- [x] **Marker System**: Revert to master's simpler marker approach
+  - [x] Remove dual marker system (host + LFS)
+  - [x] Use single source of truth
+  - [x] Simplify skip logic in phase orchestrators
 
 - [x] **Interactive Mode**: Add step-by-step build execution
   - [x] Allow running individual phases/packages

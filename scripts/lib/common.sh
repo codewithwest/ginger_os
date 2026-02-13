@@ -55,16 +55,14 @@ check_built() {
 
 mark_built() {
     local PKG_NAME=$1
-    # 1. Always mark on the target filesystem if available
-    # We use a subshell or || true to ensure permission denied doesn't trigger set -e
-    if [ -d "$STATUS_DIR" ] || mkdir -p "$STATUS_DIR" 2>/dev/null; then
-        touch "$STATUS_DIR/$PKG_NAME.built" 2>/dev/null || true
-    fi
     
-    # 2. Also mark on the host state dir so the orchestrator can see it even if unmounted
-    # We MUST ensure this doesn't crash the script if running as a restricted 'lfs' user
+    # Use the host's state directory as the single source of truth.
+    # We MUST ensure this doesn't crash the script if running as a restricted 'lfs' user,
+    # though eventually we should ensure 'lfs' has write access to this specific dir.
     if [ -n "${GINGER_STATE_DIR:-}" ]; then
-        [ -d "$GINGER_STATE_DIR" ] || mkdir -p "$GINGER_STATE_DIR" 2>/dev/null || true
+        if [ ! -d "$GINGER_STATE_DIR" ]; then
+            mkdir -p "$GINGER_STATE_DIR" 2>/dev/null || true
+        fi
         touch "$GINGER_STATE_DIR/$PKG_NAME.built" 2>/dev/null || true
     fi
     

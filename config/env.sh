@@ -138,6 +138,14 @@ export GINGER_ROOT=$(echo "$GINGER_ROOT_RAW" | sed 's|^//|/|; s|/$||')
 # If GINGER_ROOT is empty (can happen at true root), make it /
 [ -z "$GINGER_ROOT" ] && GINGER_ROOT="/"
 
+# --- CRITICAL SAFETY CHECK (Issue #14) ---
+# Ensure GINGER_ROOT is a valid directory and contains expected structure
+if [ ! -d "$GINGER_ROOT/scripts" ] || [ ! -d "$GINGER_ROOT/config" ]; then
+    echo -e "${RED}ERROR: Invalid GINGER_ROOT detected: $GINGER_ROOT${NC}"
+    echo "This script must be run from within the GingerOS source tree."
+    exit 1
+fi
+
 export GINGER_SCRIPTS="${GINGER_ROOT%/}/scripts"
 export GINGER_SOURCES="${GINGER_ROOT%/}/sources"
 export GINGER_LOGS="${GINGER_ROOT%/}/logs"
