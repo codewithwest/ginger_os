@@ -1,304 +1,367 @@
 #!/usr/bin/env python3
+"""
+GingerOS Command-First TUI
+Build system controlled entirely by keyboard commands
+"""
+
 import sys
+import os
 import time
 import threading
-import signal
 import subprocess
-import argparse
+import termios
+import tty
+import select
 from rich.console import Console
 from rich.live import Live
-from rich.table import Table
+from rich.layout import Layout
 from rich.panel import Panel
-from lfs_builder_ui import GingerEngine, create_layout, update_ui, MASTER_LOG
+from rich.table import Table
+from rich.text import Text
+from rich.align import Align
+from rich import box
 
-def list_steps(engine):
-    """Display all available build steps"""
-    console = Console()
-    
-    table = Table(title="GingerOS Build Steps", show_header=True, header_style="bold cyan")
-    table.add_column("#", style="dim", width=4)
-    table.add_column("Step ID", style="cyan")
-    table.add_column("Name", style="green")
-    table.add_column("Phase", style="yellow")
-    table.add_column("Status", style="magenta")
-    
-    for idx, step in enumerate(engine.steps, 1):
-        status = "✓ Complete" if engine._should_skip(step) else "○ Pending"
-        table.add_row(str(idx), step.id, step.name, step.phase, status)
-    
-    console.print(table)
-    console.print(f"\n[dim]Total steps: {len(engine.steps)}[/dim]")
-    console.print("[dim]Use: python3 ginger_os.py --step <number> to run a specific step[/dim]")
-    console.print("[dim]Use: python3 ginger_os.py --interactive for step-by-step mode[/dim]")
+# Add to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lfs_builder_ui import GingerEngine
+from lfs_builder_ui.constants import LOGO
 
-def show_markers(engine):
-    """Display marker status for all steps"""
-    console = Console()
-    
-    console.print("\n[bold cyan]Marker Status:[/bold cyan]\n")
-    
-    for idx, step in enumerate(engine.steps, 1):
-        has_marker = engine._should_skip(step)
-        marker_symbol = "[green]✓[/green]" if has_marker else "[dim]○[/dim]"
-        console.print(f"{marker_symbol} [{idx:2d}] {step.name}")
-    
-    console.print("\n[dim]Markers are stored in: /mnt/lfs/var/lib/ginger/ and .build_state/[/dim]")
-
-def run_single_step(engine, step_num, force=False):
-    """Run a single step by number"""
-    console = Console()
-    
-    if step_num < 1 or step_num > len(engine.steps):
-        console.print(f"[bold red]Error: Step number must be between 1 and {len(engine.steps)}[/bold red]")
-        return False
-    
-    step = engine.steps[step_num - 1]
-    
-    # Show step info
-    console.print(Panel(
-        f"[bold]{step.name}[/bold]\n"
-        f"Phase: {step.phase}\n"
-        f"Command: [dim]{step.command}[/dim]",
-        title=f"Step {step_num}/{len(engine.steps)}",
-        border_style="cyan"
-    ))
-    
-    # Check if already complete
-    if engine._should_skip(step) and not force:
-        console.print("[yellow]⚠ Step already complete (marker exists)[/yellow]")
-        console.print("[dim]Use --force to run anyway[/dim]")
-        return True
-    
-    # Run the step
-    console.print(f"\n[bold green]▶ Running step...[/bold green]\n")
-    
-    engine.current_step_idx = step_num - 1
-    engine._execute_step(step)
-    
-    if step.status == "completed":
-        console.print(f"\n[bold green]✓ Step completed successfully[/bold green]")
-        return True
-    else:
-        console.print(f"\n[bold red]✗ Step failed[/bold red]")
-        console.print(f"[dim]Check log: {step.log_file}[/dim]")
-        return False
-
-def run_interactive_mode(engine):
-    """Run build in interactive keyboard-driven mode"""
-    console = Console()
-    
-    console.print(Panel(
-        "[bold cyan]Interactive Build Mode[/bold cyan]\n\n"
-        "Controls:\n"
-        "  [green]ENTER[/green]     - Run current step\n"
-        "  [yellow]s[/yellow]       - Skip current step\n"
-        "  [cyan]f[/cyan]       - Force run (ignore markers)\n"
-        "  [magenta]j[/magenta]       - Jump to step number\n"
-        "  [blue]l[/blue]       - List all steps\n"
-        "  [red]q[/red]       - Quit\n",
-        border_style="cyan"
-    ))
-    
-    current_idx = 0
-    
-    while current_idx < len(engine.steps):
-        step = engine.steps[current_idx]
-        step_num = current_idx + 1
+class GingerTUI:
+    def __init__(self):
+        self.console = Console()
+        self.engine = GingerEngine()
+        self.selected_step = 0
+        self.running = True
+        self.executing_step = None
+        self.show_help = False
+        self.mode = "select"  # select, execute, logs
+        self.log_scroll = 0
         
-        # Show current step
-        console.print(f"\n{'='*60}")
-        console.print(f"[bold]Step {step_num}/{len(engine.steps)}: {step.name}[/bold]")
-        console.print(f"Phase: [yellow]{step.phase}[/yellow]")
-        console.print(f"Command: [dim]{step.command}[/dim]")
+    def create_layout(self):
+        """Create the TUI layout"""
+        layout = Layout()
+        layout.split_column(
+            Layout(name="header", size=8),
+            Layout(name="body"),
+            Layout(name="footer", size=3)
+        )
         
-        # Check marker status
-        has_marker = engine._should_skip(step)
-        if has_marker:
-            console.print("[green]✓ Marker exists (already complete)[/green]")
-        else:
-            console.print("[dim]○ No marker (not yet run)[/dim]")
+        layout["body"].split_row(
+            Layout(name="steps", ratio=2),
+            Layout(name="details", ratio=3)
+        )
         
-        console.print(f"{'='*60}")
+        return layout
+    
+    def render_header(self):
+        """Render header with logo and stats"""
+        total = len(self.engine.steps)
+        complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
+        pending = total - complete
         
-        # Get user input
-        console.print("\n[cyan]Action?[/cyan] [dim](ENTER=run, s=skip, f=force, j=jump, l=list, q=quit)[/dim]: ", end="")
-        action = input().strip().lower()
+        header_text = Text()
+        header_text.append("🌶️ GingerOS Command Center 🌶️\n", style="bold bright_cyan")
+        header_text.append(f"Total: {total}  ", style="dim")
+        header_text.append(f"✓ {complete}  ", style="bright_green")
+        header_text.append(f"○ {pending}", style="bright_yellow")
         
-        if action == 'q':
-            console.print("[yellow]Exiting interactive mode[/yellow]")
-            break
+        return Panel(
+            Align.center(header_text),
+            border_style="bold bright_blue",
+            box=box.ROUNDED
+        )
+    
+    def render_steps(self):
+        """Render steps list"""
+        table = Table(
+            show_header=True,
+            header_style="bold bright_cyan",
+            box=box.SIMPLE_HEAVY,
+            expand=True
+        )
         
-        elif action == 'l':
-            list_steps(engine)
-            continue
+        table.add_column("#", width=4, justify="right")
+        table.add_column("Status", width=8)
+        table.add_column("Step", style="bright_white")
         
-        elif action == 'j':
-            console.print("Jump to step number: ", end="")
-            try:
-                jump_num = int(input().strip())
-                if 1 <= jump_num <= len(engine.steps):
-                    current_idx = jump_num - 1
-                    console.print(f"[green]Jumped to step {jump_num}[/green]")
-                else:
-                    console.print(f"[red]Invalid step number. Must be 1-{len(engine.steps)}[/red]")
-            except ValueError:
-                console.print("[red]Invalid input. Please enter a number.[/red]")
-            continue
-        
-        elif action == 's':
-            console.print("[yellow]Skipping step[/yellow]")
-            current_idx += 1
-            continue
-        
-        elif action == 'f' or action == '' or action == '\n':
-            # Force run or normal run
-            force = (action == 'f')
-            
-            if has_marker and not force:
-                console.print("[yellow]Step already complete. Use 'f' to force run.[/yellow]")
-                current_idx += 1
-                continue
-            
-            # Execute step
-            console.print(f"\n[bold green]▶ Running step...[/bold green]\n")
-            engine.current_step_idx = current_idx
-            engine._execute_step(step)
-            
-            if step.status == "completed":
-                console.print(f"\n[bold green]✓ Step completed successfully[/bold green]")
-                current_idx += 1
+        for idx, step in enumerate(self.engine.steps):
+            # Status
+            if self.engine._should_skip(step):
+                status = "[bright_green]✓ Done[/]"
+            elif self.executing_step == idx:
+                status = "[bright_cyan]▶ Run[/]"
             else:
-                console.print(f"\n[bold red]✗ Step failed[/bold red]")
-                console.print(f"[dim]Log: {step.log_file}[/dim]")
-                console.print("\n[yellow]Continue anyway?[/yellow] [dim](y/N)[/dim]: ", end="")
-                cont = input().strip().lower()
-                if cont == 'y':
-                    current_idx += 1
-                else:
-                    console.print("[red]Stopping at failed step[/red]")
-                    break
-        else:
-            console.print("[red]Invalid action. Try again.[/red]")
+                status = "[dim]○ Wait[/]"
+            
+            # Highlight selected
+            if idx == self.selected_step:
+                num = f"[black on bright_cyan]▶{idx+1:2d}[/]"
+                name = f"[black on bright_cyan]{step.name}[/]"
+            else:
+                num = f"{idx+1:2d}"
+                name = step.name
+            
+            table.add_row(num, status, name)
+        
+        return Panel(
+            table,
+            title="[bold bright_blue]Build Steps[/]",
+            border_style="bold bright_blue"
+        )
     
-    console.print("\n[bold cyan]Interactive mode finished[/bold cyan]")
+    def render_details(self):
+        """Render details panel"""
+        if self.show_help:
+            return self.render_help()
+        
+        step = self.engine.steps[self.selected_step]
+        
+        details = Text()
+        details.append(f"Step {self.selected_step + 1}: ", style="bold bright_cyan")
+        details.append(f"{step.name}\n\n", style="bold bright_white")
+        
+        details.append("Phase: ", style="bright_yellow")
+        details.append(f"{step.phase}\n", style="bright_white")
+        
+        details.append("Command: ", style="bright_yellow")
+        details.append(f"{step.command}\n\n", style="dim")
+        
+        details.append("Status: ", style="bright_yellow")
+        if self.engine._should_skip(step):
+            details.append("✓ Completed\n", style="bright_green")
+        elif self.executing_step == self.selected_step:
+            details.append("▶ Running...\n", style="bright_cyan")
+        else:
+            details.append("○ Pending\n", style="dim")
+        
+        # Show recent logs if executing
+        if self.executing_step == self.selected_step and self.engine.logs:
+            details.append("\n" + "─" * 50 + "\n", style="dim")
+            details.append("Recent Output:\n", style="bright_yellow")
+            for log_entry, style in self.engine.logs[-10:]:
+                details.append(log_entry + "\n", style=style or "bright_white")
+        
+        return Panel(
+            details,
+            title="[bold bright_blue]Details[/]",
+            border_style="bold bright_blue"
+        )
+    
+    def render_help(self):
+        """Render help panel"""
+        help_text = Text()
+        help_text.append("KEYBOARD COMMANDS\n\n", style="bold bright_cyan")
+        
+        help_text.append("Navigation:\n", style="bold bright_yellow")
+        help_text.append("  ↑/k      ", style="bright_white")
+        help_text.append("Move up\n", style="dim")
+        help_text.append("  ↓/j      ", style="bright_white")
+        help_text.append("Move down\n", style="dim")
+        help_text.append("  g/Home   ", style="bright_white")
+        help_text.append("Go to first\n", style="dim")
+        help_text.append("  G/End    ", style="bright_white")
+        help_text.append("Go to last\n\n", style="dim")
+        
+        help_text.append("Actions:\n", style="bold bright_yellow")
+        help_text.append("  ENTER    ", style="bright_white")
+        help_text.append("Run selected step\n", style="dim")
+        help_text.append("  f        ", style="bright_white")
+        help_text.append("Force run (ignore marker)\n", style="dim")
+        help_text.append("  d        ", style="bright_white")
+        help_text.append("Delete marker\n", style="dim")
+        help_text.append("  a        ", style="bright_white")
+        help_text.append("Run all pending steps\n", style="dim")
+        help_text.append("  s        ", style="bright_white")
+        help_text.append("Skip to next pending\n\n", style="dim")
+        
+        help_text.append("Other:\n", style="bold bright_yellow")
+        help_text.append("  ?        ", style="bright_white")
+        help_text.append("Toggle this help\n", style="dim")
+        help_text.append("  q/ESC    ", style="bright_white")
+        help_text.append("Quit\n", style="dim")
+        
+        return Panel(
+            help_text,
+            title="[bold bright_yellow]Help[/]",
+            border_style="bold bright_yellow"
+        )
+    
+    def render_footer(self):
+        """Render footer with shortcuts"""
+        footer = Text()
+        
+        if self.executing_step is not None:
+            footer.append("⚡ EXECUTING ", style="bold bright_cyan")
+            footer.append(f"Step {self.executing_step + 1}", style="bold bright_white")
+            footer.append(" | Press ", style="dim")
+            footer.append("Ctrl+C", style="bold bright_red")
+            footer.append(" to stop", style="dim")
+        else:
+            footer.append("↑↓/jk", style="bold bright_white")
+            footer.append("=nav  ", style="dim")
+            footer.append("ENTER", style="bold bright_green")
+            footer.append("=run  ", style="dim")
+            footer.append("f", style="bold bright_cyan")
+            footer.append("=force  ", style="dim")
+            footer.append("d", style="bold bright_red")
+            footer.append("=delete  ", style="dim")
+            footer.append("a", style="bold bright_yellow")
+            footer.append("=run-all  ", style="dim")
+            footer.append("?", style="bold bright_magenta")
+            footer.append("=help  ", style="dim")
+            footer.append("q", style="bold bright_red")
+            footer.append("=quit", style="dim")
+        
+        return Panel(
+            Align.center(footer),
+            border_style="bold bright_blue"
+        )
+    
+    def update_display(self, layout):
+        """Update all panels"""
+        layout["header"].update(self.render_header())
+        layout["steps"].update(self.render_steps())
+        layout["details"].update(self.render_details())
+        layout["footer"].update(self.render_footer())
+    
+    def run_step(self, step_idx, force=False):
+        """Execute a single step"""
+        step = self.engine.steps[step_idx]
+        
+        # Check if already complete
+        if self.engine._should_skip(step) and not force:
+            return False
+        
+        self.executing_step = step_idx
+        self.engine.current_step_idx = step_idx
+        
+        # Execute in current thread (blocking)
+        self.engine._execute_step(step)
+        
+        self.executing_step = None
+        return step.status == "completed"
+    
+    def delete_marker(self, step_idx):
+        """Delete marker for a step"""
+        step = self.engine.steps[step_idx]
+        from lfs_builder_ui.constants import STATE_DIR
+        
+        marker_paths = [
+            os.path.join(STATE_DIR, f"{step.id}.built"),
+            f"/mnt/lfs/var/lib/ginger/{step.id}.built",
+        ]
+        
+        for path in marker_paths:
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except:
+                    pass
+    
+    def run_all_pending(self):
+        """Run all pending steps"""
+        for idx, step in enumerate(self.engine.steps):
+            if not self.engine._should_skip(step):
+                success = self.run_step(idx, force=False)
+                if not success:
+                    break
+    
+    def handle_key(self, key):
+        """Handle keyboard input"""
+        # Navigation
+        if key in ['j', '\x1b[B']:  # j or DOWN
+            if self.selected_step < len(self.engine.steps) - 1:
+                self.selected_step += 1
+        
+        elif key in ['k', '\x1b[A']:  # k or UP
+            if self.selected_step > 0:
+                self.selected_step -= 1
+        
+        elif key == 'g':  # Go to first
+            self.selected_step = 0
+        
+        elif key == 'G':  # Go to last
+            self.selected_step = len(self.engine.steps) - 1
+        
+        # Actions
+        elif key == '\r' or key == '\n':  # ENTER - run step
+            return 'run'
+        
+        elif key == 'f':  # Force run
+            return 'force'
+        
+        elif key == 'd':  # Delete marker
+            return 'delete'
+        
+        elif key == 'a':  # Run all
+            return 'run_all'
+        
+        elif key == 's':  # Skip to next pending
+            for idx in range(self.selected_step + 1, len(self.engine.steps)):
+                if not self.engine._should_skip(self.engine.steps[idx]):
+                    self.selected_step = idx
+                    break
+        
+        # Other
+        elif key == '?':
+            self.show_help = not self.show_help
+        
+        elif key in ['q', '\x1b']:  # q or ESC
+            self.running = False
+        
+        return None
+    
+    def run(self):
+        """Main TUI loop"""
+        layout = self.create_layout()
+        
+        # Set up terminal
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        
+        try:
+            tty.setcbreak(fd)
+            
+            with Live(layout, refresh_per_second=10, screen=True) as live:
+                while self.running:
+                    # Update display
+                    self.update_display(layout)
+                    live.update(layout)
+                    
+                    # Check for input (non-blocking)
+                    if select.select([sys.stdin], [], [], 0.1)[0]:
+                        key = sys.stdin.read(1)
+                        
+                        # Handle arrow keys (multi-byte)
+                        if key == '\x1b':
+                            next_chars = sys.stdin.read(2)
+                            key = key + next_chars
+                        
+                        action = self.handle_key(key)
+                        
+                        # Handle actions that need terminal restoration
+                        if action in ['run', 'force', 'delete', 'run_all']:
+                            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                            
+                            if action == 'run':
+                                self.run_step(self.selected_step, force=False)
+                            elif action == 'force':
+                                self.run_step(self.selected_step, force=True)
+                            elif action == 'delete':
+                                self.delete_marker(self.selected_step)
+                            elif action == 'run_all':
+                                self.run_all_pending()
+                            
+                            tty.setcbreak(fd)
+        
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        
+        self.console.print("\n[bright_cyan]Build session ended[/]")
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='GingerOS Build System - LFS 12.4',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python3 ginger_os.py                    # Run full automated build
-  python3 ginger_os.py --list             # List all build steps
-  python3 ginger_os.py --markers          # Show marker status
-  python3 ginger_os.py --step 5           # Run step 5 only
-  python3 ginger_os.py --step 10 --force  # Force run step 10 (ignore markers)
-  python3 ginger_os.py --interactive      # Interactive step-by-step mode
-        """
-    )
-    
-    parser.add_argument('--interactive', '-i', action='store_true',
-                       help='Run in interactive keyboard-driven mode')
-    parser.add_argument('--step', '-s', type=int, metavar='N',
-                       help='Run specific step by number (1-16)')
-    parser.add_argument('--force', '-f', action='store_true',
-                       help='Force run step even if marker exists')
-    parser.add_argument('--list', '-l', action='store_true',
-                       help='List all build steps with status')
-    parser.add_argument('--markers', '-m', action='store_true',
-                       help='Show marker status for all steps')
-    
-    args = parser.parse_args()
-    
-    console = Console()
-    engine = GingerEngine()
-    
-    # Handle list command
-    if args.list:
-        list_steps(engine)
-        return
-    
-    # Handle markers command
-    if args.markers:
-        show_markers(engine)
-        return
-    
-    # Handle single step execution
-    if args.step:
-        success = run_single_step(engine, args.step, force=args.force)
-        sys.exit(0 if success else 1)
-    
-    # Handle interactive mode
-    if args.interactive:
-        run_interactive_mode(engine)
-        return
-    
-    # Default: Run full automated build with UI
-    layout = create_layout()
-    
-    def signal_handler(sig, frame):
-        engine.abort()
-        time.sleep(1)
-        sys.exit(0)
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    # Start paused - wait for user command
-    engine.paused_for_error = True  # Use this flag to pause at start
-    engine.is_running = True
-    
-    with Live(layout, refresh_per_second=4, screen=True) as live:
-        # Show initial state
-        update_ui(layout, engine)
-        live.update(layout)
-        
-        # Log welcome message
-        engine.log("🌶️ GingerOS Build System Ready", "bold cyan")
-        engine.log("=" * 60, "dim")
-        engine.log("CONTROLS:", "bold yellow")
-        engine.log("  SPACE or ENTER - Start/Resume build", "white")
-        engine.log("  N - Skip to next step", "white")
-        engine.log("  S - Skip current step", "white")
-        engine.log("  L - List all steps", "white")
-        engine.log("  ? - Show help", "white")
-        engine.log("  Q - Quit", "white")
-        engine.log("=" * 60, "dim")
-        engine.log("⏸ Press SPACE or ENTER to start the build...", "bold green")
-        
-        # Start threads
-        engine.sudo_thread.start()
-        engine.kb_thread.start()
-        
-        # Wait for user to unpause
-        while engine.paused_for_error and not engine.aborted:
-            update_ui(layout, engine)
-            live.update(layout)
-            time.sleep(0.1)
-        
-        # If not aborted, run the build
-        if not engine.aborted:
-            engine.paused_for_error = False  # Ensure we're unpaused
-            
-            # Run build in separate thread
-            build_thread = threading.Thread(target=engine.run)
-            build_thread.start()
-            
-            # Update UI while build runs
-            while build_thread.is_alive():
-                update_ui(layout, engine)
-                live.update(layout)
-                time.sleep(0.25)
-            
-            build_thread.join()
-    
-    # Final status
-    if engine.error_msg:
-        console.print(f"\n[bold red]Build failed: {engine.error_msg}[/bold red]")
-        sys.exit(1)
-    else:
-        console.print("\n[bold green]✓ Build completed successfully![/bold green]")
-        console.print(f"Master log: {MASTER_LOG}")
-        sys.exit(0)
+    tui = GingerTUI()
+    tui.run()
 
 if __name__ == "__main__":
     main()

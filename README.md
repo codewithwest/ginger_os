@@ -1,59 +1,90 @@
-# GingerOS - Cyberpunk Edition (Scripted LFS 12.4)
+# GingerOS - Command-First Build System
 
-GingerOS is a fully reproducible, automated, and **visually stunning** build system for Linux From Scratch (LFS) version 12.4. It transforms the manual work of building an OS into a professional dashboard-driven experience.
-
-## 🚀 The Cyberpunk Experience
-
-The entire build, from source collection to final ISO generation, is now driven by a high-tech terminal dashboard with:
-- **Neon Blue & Laser Green Theme**: A premium look for a premium system.
-- **Unified Roadmaps**: Real-time progress tracking across all 16+ build steps.
-- **Idempotent Engine**: Safely resume any step with a single command.
-- **Automated ISO Creation**: Build a bootable live environment in seconds.
-
-## 🛠 Usage guide
-
-### 1. Build the System
-The main build orchestrator assembles the LFS core toolchain and base system.
+## Launch
 ```bash
-sudo python3 ginger_os.py
+python3 ginger_os.py
 ```
 
-### 2. Generate the Installer ISO
-Once the core is built, package it into a bootable Cyberpunk-themed installer.
-```bash
-sudo ./make-iso.sh
+## Interface
+
+The TUI shows:
+- **Header**: Stats (total/complete/pending)
+- **Left Panel**: List of all build steps with status
+- **Right Panel**: Details of selected step + live output
+- **Footer**: Keyboard shortcuts
+
+## How It Works
+
+**YOU** control everything with keyboard commands. Nothing runs automatically.
+
+## Keyboard Commands
+
+### Navigation
+- **↑** or **k** - Move up
+- **↓** or **j** - Move down  
+- **g** or **Home** - Go to first step
+- **G** or **End** - Go to last step
+
+### Actions
+- **ENTER** - Run selected step (skips if already done)
+- **f** - Force run (ignore marker, run anyway)
+- **d** - Delete marker (reset step to pending)
+- **a** - Run ALL pending steps (auto-continues)
+- **s** - Skip to next pending step
+
+### Other
+- **?** - Toggle help panel
+- **q** or **ESC** - Quit
+
+## Workflow
+
+1. **Launch**: `python3 ginger_os.py`
+2. **Navigate**: Use **j/k** or arrow keys to select a step
+3. **Execute**: Press **ENTER** to run it
+4. **Watch**: See live output in the details panel
+5. **Continue**: Navigate to next step and repeat
+
+## Features
+
+✅ **Command-driven** - Nothing runs unless you tell it to
+✅ **Visual selection** - See exactly what you're running
+✅ **Live output** - Watch logs as step executes
+✅ **Smart skipping** - ENTER skips completed steps
+✅ **Force mode** - Press **f** to re-run anything
+✅ **Batch mode** - Press **a** to run all pending
+✅ **Bright colors** - Works great on transparent terminals
+
+## Examples
+
+### Run Steps One-by-One
+```
+1. Launch TUI
+2. Press j to move down
+3. Press ENTER to run
+4. Wait for completion
+5. Press j, ENTER for next
 ```
 
-### 3. Test in QEMU
-Launch your new system or test the installer immediately.
-```bash
-./qemu-run.sh
+### Run All Pending
+```
+1. Launch TUI
+2. Press a
+3. Watch it run all pending steps
 ```
 
-## 📋 New Reorganized Architecture
+### Re-run a Failed Step
+```
+1. Navigate to failed step
+2. Press d to delete marker
+3. Press ENTER to run again
+```
 
-The project has been refactored for maximum reusability and clarity:
-
-- **`scripts/`**: The engine of GingerOS.
-  - **`lib/`**: Shared logic for UI themes, disk management, and bash configurations.
-  - **`host/`**: Host requirement checks and environment setup.
-  - **`image/`**: Raw disk image preparation and teardown.
-  - **`iso/`**: Bootable media builders and the professional OS installer.
-  - **`phases/`**: Step-by-step LFS compilation phases.
-- **`docs/`**: Project documentation, VM configuration, and the official LFS book reference.
-- **`sources/`**: Parallel-downloaded terminal tarballs.
-- **`logs/`**: Detailed build output for every package.
-
-## 📦 Final Outputs
-
-- `gingeros-installer.iso`: A bootable live environment with a TUI installer.
-- `ginger_os.img`: The primary bootable raw image of your new system.
-- `gingeros-base-rootfs.tar.gz`: A portable payload that can be deployed to any machine.
-
-## 🛡 Design Philosophy
-- **User-Centric**: The installer now handles full user account setup and password configuration.
-- **Terminal Excellence**: Custom Bash profiles with Cyberpunk color schemes are applied to the final system.
-- **Safety First**: All builds occur in isolated loopback images to protect your host.
+### Force Re-run
+```
+1. Navigate to any step
+2. Press f to force run
+```
 
 ---
-*Built for speed. Designed for the terminal. GingerOS 12.4.*
+
+**Simple. Command-driven. Full control.**
