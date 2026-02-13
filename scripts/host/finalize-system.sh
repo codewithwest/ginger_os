@@ -67,6 +67,10 @@ sudo tar --xattrs --acls --one-file-system \
     --exclude=./tmp/* \
     --exclude=./sources/* \
     --exclude=./var/cache/* \
+    --exclude=./usr/src/* \
+    --exclude=./usr/share/doc/* \
+    --exclude=./usr/share/man/* \
+    --exclude=./tools/* \
     -C "$LFS" -cpzf "$OUTPUT_TAR" . || [ $? -eq 1 ]
 
 log "SUCCESS" "Host-side finalization complete."

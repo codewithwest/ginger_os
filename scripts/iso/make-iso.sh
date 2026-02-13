@@ -55,12 +55,12 @@ sudo rm -rf "$INITRD_WORK"
 # We pull these from the host system to ensure they matching the architecture
 ESSENTIAL_TOOLS=(
     bash id sh mount umount mkdir ls cat grep sed awk rm
-    parted mkfs.ext4 mke2fs tar lsblk blkid 
+    parted mkfs.ext4 mke2fs tar lsblk blkid wipefs
     useradd chpasswd groupadd chown chmod 
     grub-install grub-mkconfig find basename 
     tee sleep which clear ps kill tput 
     readlink dirname touch du df
-    head tail sort uniq
+    head tail sort uniq date wc tr cut xargs cp mv ln
 )
 
 # Create essential system directory structure
@@ -196,6 +196,9 @@ cp "$INITRD_WORK/root/.bashrc" "$INITRD_WORK/.bashrc" 2>/dev/null || true
 
 # Step 4: ISO Build
 echo "__GINGER_PKG_MARKER__: ISO Build"
+if [ -f "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" ]; then
+    echo "RootFS Tarball Size: $(du -sh "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" | cut -f1)"
+fi
 echo "ISO Directory Size: $(du -sh "$ISO_DIR" | cut -f1)"
 echo "Top 5 largest files in ISO:"
 find "$ISO_DIR" -type f -exec du -h {} + | sort -rh | head -n 5 || true
