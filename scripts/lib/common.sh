@@ -68,32 +68,38 @@ mark_built() {
 
 fetch_missing_source() {
     local PKG_PATTERN=$1
-    local WGET_LIST="${GINGER_SOURCES}/wget-list"
+    # Use a hard-coded path if we are inside chroot to be safe
+    local SRC_DIR="/sources"
+    [ -d "$SRC_DIR" ] || SRC_DIR="$GINGER_SOURCES"
+    
+    local WGET_LIST="${SRC_DIR}/wget-list"
     
     if [ ! -f "$WGET_LIST" ]; then
-        log "INFO" "wget-list missing, attempting to fetch it..."
-        wget -q -O "$WGET_LIST" "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/wget-list" || return 1
+        log "INFO" "wget-list missing, fetching manifest..."
+        wget -q -nc -O "$WGET_LIST" "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/wget-list" || true
     fi
 
-    log "PROCESS" "Archive missing for '$PKG_PATTERN'. Searching LFS manifest..."
-    local URL=$(grep -iE "/${PKG_PATTERN}-?[0-9]" "$WGET_LIST" | head -n 1)
+    log "PROCESS" "Searching manifest for '$PKG_PATTERN'..."
+    local URL=$(grep -iE "/${PKG_PATTERN}-?[0-9]" "$WGET_LIST" 2>/dev/null | head -n 1)
     
-    if [ -z "$URL" ]; then
-        # Try a broader match
-        URL=$(grep -iE "/${PKG_PATTERN}" "$WGET_LIST" | head -n 1)
+    # Fallback to direct GNU mirror if manifest search fails for gettext
+    if [ -z "$URL" ] && [[ "$PKG_PATTERN" == *"gettext"* ]]; then
+        URL="https://ftp.gnu.org/gnu/gettext/gettext-0.23.1.tar.gz"
     fi
 
     if [ -n "$URL" ]; then
-        log "INFO" "Found URL for $PKG_PATTERN: $URL"
-        log "PROCESS" "Downloading missing package on-the-fly..."
-        cd "$GINGER_SOURCES"
-        # We use -v for the on-the-fly download to see what's happening
-        if wget -nc -4 --continue "$URL"; then
-            local PKG_FILE=$(basename "$URL")
-            if [ -s "$PKG_FILE" ]; then
-                log "INFO" "Successfully downloaded $PKG_FILE"
-                return 0
-            fi
+        log "INFO" "Found download target: $URL"
+        log "PROCESS" "Downloading to $SRC_DIR..."
+        
+        # Save to a temp location first to ensure we don't end up with a 0-byte file
+        local PKG_NAME=$(basename "$URL")
+        if wget -4 --continue --tries=3 --timeout=15 -O "${SRC_DIR}/${PKG_NAME}.tmp" "$URL"; then
+             mv "${SRC_DIR}/${PKG_NAME}.tmp" "${SRC_DIR}/${PKG_NAME}"
+             log "INFO" "Successfully acquired $PKG_NAME"
+             return 0
+        else
+             rm -f "${SRC_DIR}/${PKG_NAME}.tmp"
+             log "ERROR" "Network Error: Could not reach $URL"
         fi
     fi
     return 1

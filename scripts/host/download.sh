@@ -40,52 +40,50 @@ fi
 
 # 4. Download packages sequentially
 echo "GINGER_PKG: Downloading Packages"
-log "INFO" "Sources missing or invalid. Downloading packages..."
+log "INFO" "Verifying all manifest packages exist locally..."
+
 total=$(grep -v '^#' wget-list | wc -l)
 current=0
+missing_count=0
+
 while read -r url; do
     current=$((current + 1))
     pkg=$(basename "$url")
-    if [ ! -f "$pkg" ]; then
+    
+    if [ ! -f "$pkg" ] || [ ! -s "$pkg" ]; then
         echo "GINGER_PKG: $pkg [$current/$total]"
-        log "INFO" "Downloading missing package: $pkg..."
-        wget -4 -q --continue --tries=5 --timeout=20 "$url"
-    else
-        # Optional: Print that we are skipping it to stay active in UI
-        if (( current % 10 == 0 )); then
-             echo "GINGER_PKG: Checking Sources [$current/$total]"
+        log "PROCESS" "Missing: $pkg. Downloading..."
+        if ! wget -4 -q --continue --tries=3 --timeout=15 "$url"; then
+            log "ERROR" "Failed to download $pkg"
+            exit 1
         fi
+        missing_count=$((missing_count + 1))
     fi
 done < <(grep -v '^#' wget-list)
 
+if [ "$missing_count" -eq 0 ]; then
+    log "INFO" "All $total manifest packages are already present."
+else
+    log "INFO" "Successfully acquired $missing_count missing packages."
+fi
+
 # ---------------------------------------------------------------------
-# Download Extra BLFS Packages (xorriso support)
+# Extra Tools Verification
 # ---------------------------------------------------------------------
 echo "GINGER_PKG: BLFS Tools"
-log "INFO" "Downloading extra BLFS packages (libburn, libisofs, libisoburn)..."
+for url in "${extra_urls[@]}"; do
+    pkg=$(basename "$url")
+    if [ ! -f "$pkg" ] || [ ! -s "$pkg" ]; then
+        log "PROCESS" "Downloading extra: $pkg..."
+        wget -4 -q -nc --continue "$url"
+    fi
+done
 
-# Libburn
-if [ ! -f "libburn-1.5.6.tar.gz" ]; then
-    wget -nc -q https://files.libburnia-project.org/releases/libburn-1.5.6.tar.gz
+log "INFO" "Final manifest verification..."
+if grep -v '^#' md5sums | xargs -P "$(nproc)" -I {} sh -c "echo '{}' | md5sum -c --status" 2>/dev/null; then
+    log "INFO" "Source acquisition complete and verified."
+    mark_built "05_download_sources"
+else
+    log "ERROR" "Some packages failed checksum verification. Check your logs/05_download_sources.log"
+    exit 1
 fi
-
-# Libisofs
-if [ ! -f "libisofs-1.5.6.tar.gz" ]; then
-    wget -nc -q https://files.libburnia-project.org/releases/libisofs-1.5.6.tar.gz
-fi
-
-# Libisoburn
-if [ ! -f "libisoburn-1.5.6.tar.gz" ]; then
-    wget -nc -q https://files.libburnia-project.org/releases/libisoburn-1.5.6.tar.gz
-fi
-
-echo "GINGER_PKG: Final Verification"
-log "INFO" "Performing final checksum verification..."
-# Use all available cores to verify checksums
-grep -v '^#' md5sums | xargs -P "$(nproc)" -I {} sh -c "echo '{}' | md5sum -c --status" || {
-  log "ERROR" "Checksum verification failed after download"
-  exit 1
-}
-
-log "INFO" "Source acquisition complete."
-mark_built "05_download_sources"
