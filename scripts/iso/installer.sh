@@ -21,7 +21,7 @@ if [ -z "$(command -v sudo 2>/dev/null)" ] || [ "$EUID" == "0" ] || [ "${USER:-}
 fi
 
 # --- DEPENDENCY CHECK ---
-REQUIRED_TOOLS=(parted mkfs.ext4 tar lsblk blkid useradd chpasswd grub-install)
+REQUIRED_TOOLS=(parted partprobe mkfs.ext4 tar lsblk blkid useradd chpasswd grub-install)
 MISSING_TOOLS=()
 for tool in "${REQUIRED_TOOLS[@]}"; do
     if ! command -v "$tool" &> /dev/null; then

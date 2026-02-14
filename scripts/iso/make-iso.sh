@@ -54,12 +54,13 @@ sudo rm -rf "$INITRD_WORK"
 # Essential tools needed for a functional Live environment and Installer
 ESSENTIAL_TOOLS=(
     bash id sh mount umount mkdir ls cat grep sed awk rm
-    parted mkfs.ext4 mke2fs tar lsblk blkid wipefs gzip udevadm chroot findmnt
+    parted partprobe mkfs.ext4 mke2fs tar lsblk blkid wipefs gzip udevadm chroot findmnt
     useradd chpasswd groupadd chown chmod
     grub-install grub-mkconfig find basename 
     tee sleep which clear ps kill tput 
     readlink dirname touch du df
     head tail sort uniq date wc tr cut xargs cp mv ln
+    python3
 )
 
 # Create essential system directory structure
@@ -103,6 +104,16 @@ mkdir -p "$INITRD_WORK/usr/share/terminfo/x"
 mkdir -p "$INITRD_WORK/usr/share/terminfo/l"
 [ -f "/usr/share/terminfo/x/xterm-256color" ] && cp -v "/usr/share/terminfo/x/xterm-256color" "$INITRD_WORK/usr/share/terminfo/x/"
 [ -f "/usr/share/terminfo/l/linux" ] && cp -v "/usr/share/terminfo/l/linux" "$INITRD_WORK/usr/share/terminfo/l/"
+
+# Copy Python libraries (Rich and dependencies)
+echo "Collecting Python libraries..."
+PY_DIST="/usr/lib/python3/dist-packages"
+mkdir -p "$INITRD_WORK/$PY_DIST"
+for lib in rich pygments typing_extensions.py markdown_it mdurl; do
+    if [ -e "$PY_DIST/$lib" ]; then
+        cp -rL "$PY_DIST/$lib" "$INITRD_WORK/$PY_DIST/"
+    fi
+done
 
 # Copy installers and helpers to ISO
 cp "$GINGER_ROOT/scripts/iso/ginger-installer-bin" "$ISO_DIR/installer/installer-bin"
@@ -158,11 +169,11 @@ if [ "$found" -eq 1 ]; then
     clear
     cd /mnt/iso/installer
     
-    # Try the standalone binary first
-    if ./installer-bin; then
+    # Try the Python installer first (with Rich UI)
+    if python3 ./installer.py; then
         echo "Installation Cycle Complete."
     else
-        echo "TUI encountered an issue. Falling back to Core-Bash..."
+        echo "Python Installer failed or not present. Falling back to Core-Bash..."
         /bin/bash ./installer.sh
     fi
     echo "Dropping to rescue shell. Type 'reboot' or 'poweroff'."

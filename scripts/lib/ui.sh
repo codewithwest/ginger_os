@@ -326,6 +326,14 @@ ui_init_dashboard() {
     if [[ "$$" != "$GINGER_UI_MASTER_PID" ]] && [[ -f "$UI_STATE_FILE" ]]; then
         return 0
     fi
+
+    # Disable background monitor in non-interactive mode
+    if [[ "${GINGER_NON_INTERACTIVE:-}" == "1" ]]; then
+        UI_STEPS=("$@")
+        UI_CURRENT_STEP=0
+        touch "$UI_LOG_FILE"
+        return 0
+    fi
     
     UI_STEPS=("$@")
     UI_CURRENT_STEP=0
@@ -378,6 +386,11 @@ ui_step() {
     UI_CURRENT_STEP=$1
     UI_STATUS_MSG="${2:-Processing...}"
     ui_save_state
+    
+    # Machine-readable output for parent TUIs
+    if [[ "${GINGER_NON_INTERACTIVE:-}" == "1" ]]; then
+        echo "__GINGER_STEP__:$1:${2:-Processing...}"
+    fi
 }
 
 ui_log() {
@@ -500,12 +513,22 @@ ui_progress_bar() {
             local empty=$(printf "%$((25 - filled))s" | tr ' ' ' ')
             
             # Draw the bar
-            printf "\r${ELECTRIC_BLUE}${BOLD}▸ %-25s${NC} ${pct}%% [${LASER_GREEN}${bar}${NC}${empty}]" "$msg"
-            last_pct=$pct
+            if [[ "${GINGER_NON_INTERACTIVE:-}" == "1" ]]; then
+                # Suppress progress bar in non-interactive mode to avoid terminal mess, 
+                # but maybe output percentage if needed
+                if [ "$((pct % 5))" -eq 0 ]; then
+                    echo "__GINGER_PROGRESS__:$pct:$msg"
+                fi
+            else
+                printf "\r${ELECTRIC_BLUE}${BOLD}▸ %-25s${NC} ${pct}%% [${LASER_GREEN}${bar}${NC}${empty}]" "$msg"
+                last_pct=$pct
+            fi
         fi
     done
     tput cnorm
-    echo -e " [${LASER_GREEN}DONE${NC}]"
+    if [[ "${GINGER_NON_INTERACTIVE:-}" != "1" ]]; then
+        echo -e " [${LASER_GREEN}DONE${NC}]"
+    fi
 }
 
 # ============================================================================

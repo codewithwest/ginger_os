@@ -1,198 +1,212 @@
 #!/usr/bin/env python3
-import curses
-import subprocess
 import os
 import sys
 import time
+import subprocess
 import threading
 import queue
+from rich.console import Console
+from rich.layout import Layout
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+from rich.align import Align
+from rich.live import Live
+from rich import box
+from rich.columns import Columns
 
-# --- CONFIGURATION ---
-ELECTRIC_BLUE = 39
-LASER_GREEN = 118
-LASER_RED = 196
-LASER_YELLOW = 226
+# --- CONFIGURATION & BRANDING ---
+LOGO = """
+  _____ _                         ____   ______
+ / ____(_)                       / __ \\ / ____|
+| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ 
+| | |_ | | '_ \\ / _` |/ _ \\ '__|| |  | |\\___ \\
+| |__| | | | | | (_| |  __/ |   | |__| |____) |
+ \\_____|_|_| |_|\\__, |\\___|_|    \\____/|_____/ 
+                 __/ |                         
+                |___/         v1.0 [Terminal UI Installer]
+"""
 
-class InstallerTUI:
-    def __init__(self, stdscr):
-        self.stdscr = stdscr
-        self.steps = ["Welcome", "Disk Selection", "User Setup", "Confirmation", "Installation"]
+THEME_COLOR = "bright_green"
+SECONDARY_COLOR = "bright_blue"
+ACCENT_COLOR = "bright_cyan"
+
+class GingerInstaller:
+    def __init__(self):
+        self.console = Console()
         self.data = {
             "target_dev": "",
             "username": "ginger",
             "password": "",
             "root_password": ""
         }
-        self.history = []
-        self.log_queue = queue.Queue()
+        self.steps = ["Welcome", "Partitioning", "Extractions", "Hardware Sync", "User Setup", "Bootloader"]
+        self.current_step_idx = 0
+        self.logs = collections.deque(maxlen=20)
         self.install_finished = False
         self.install_success = False
-        
-        # Setup colors
-        curses.start_color()
-        curses.use_default_colors()
-        curses.init_pair(1, ELECTRIC_BLUE, -1)   # Blue
-        curses.init_pair(2, LASER_GREEN, -1)     # Green
-        curses.init_pair(3, LASER_RED, -1)       # Red
-        curses.init_pair(4, LASER_YELLOW, -1)    # Yellow
-        
-        curses.curs_set(0) # Hide cursor
-        self.stdscr.keypad(True)
+        self.log_queue = queue.Queue()
 
-    def draw_header(self):
-        self.stdscr.clear()
-        h, w = self.stdscr.getmaxyx()
-        
-        logo = [
-            "  _____ _                         ____   ____",
-            " / ____(_)                       / __ \ / ____|",
-            "| |  __ _ _ __   __ _  ___ _ __ | |  | | (___ ",
-            "| | |_ | | '_ \ / _` |/ _ \ '__|| |  | |\___ \\",
-            "| |__| | | | | | (_| |  __/ |   | |__| |____) |",
-            " \_____|_|_| |_|\__, |\___|_|    \____/|_____/ ",
-            "                 __/ |",
-            "                |___/         Installer v2.0 (Python)"
-        ]
-        
-        for i, line in enumerate(logo):
-            if i < h:
-                self.stdscr.addstr(i + 1, 2, line[:w-4], curses.color_pair(1) | curses.A_BOLD)
-            
-        if len(logo) + 2 < h:
-            self.stdscr.addstr(len(logo) + 2, 2, "🌶️  GingerOS Linux From Scratch Installation 🌶️"[:w-4], curses.color_pair(2))
-        if len(logo) + 3 < h:
-            self.stdscr.hline(len(logo) + 3, 2, curses.ACS_HLINE, w - 4)
+    def create_layout(self):
+        layout = Layout()
+        layout.split_column(
+            Layout(name="header", size=10),
+            Layout(name="body", ratio=1),
+            Layout(name="footer", size=3)
+        )
+        layout["body"].split_row(
+            Layout(name="steps_col", ratio=1),
+            Layout(name="main_col", ratio=3)
+        )
+        return layout
 
-    def draw_footer(self, info=""):
-        h, w = self.stdscr.getmaxyx()
-        self.stdscr.hline(h - 3, 2, curses.ACS_HLINE, w - 4)
-        nav = "[ENTER] Next  [B] Back  [Q] Quit"
-        self.stdscr.addstr(h - 2, 2, nav, curses.A_DIM)
-        if info:
-            self.stdscr.addstr(h - 2, w - len(info) - 2, info, curses.color_pair(4))
-
-    def get_input(self, prompt, y, x, secret=False, default=""):
-        curses.curs_set(1)
-        self.stdscr.addstr(y, x, f"▸ {prompt}: ", curses.A_BOLD)
-        curses.noecho()
+    def render_header(self):
+        branding = Text(LOGO, style=f"bold {SECONDARY_COLOR}")
+        metrics = Text("\n\n GINGER_OS INSTALLER ENGINE\n", style="bold white")
+        metrics.append(f" STATE: [bold {THEME_COLOR}]READY[/]\n")
+        metrics.append(f" MODE: [bold {ACCENT_COLOR}]RICH_TUI[/]", style="dim")
         
-        input_str = default
-        if default:
-            if secret:
-                self.stdscr.addstr(y, x + len(prompt) + 4, "*" * len(default))
+        return Panel(
+            Columns([
+                Align.left(branding, vertical="middle"),
+                Align.right(metrics, vertical="middle")
+            ], expand=True),
+            border_style=THEME_COLOR,
+            box=box.DOUBLE_EDGE
+        )
+
+    def render_steps(self):
+        table = Table(show_header=False, box=box.SIMPLE, expand=True)
+        for i, step in enumerate(self.steps):
+            if i < self.current_step_idx:
+                style = f"{THEME_COLOR}"
+                prefix = "✔ "
+            elif i == self.current_step_idx:
+                style = f"bold {ACCENT_COLOR}"
+                prefix = "▶ "
             else:
-                self.stdscr.addstr(y, x + len(prompt) + 4, default)
+                style = "dim"
+                prefix = "○ "
+            table.add_row(Text(f"{prefix}{step}", style=style))
+        
+        return Panel(table, title=" SEQUENCE ", border_style=THEME_COLOR)
 
+    def render_footer(self):
+        footer = Text(" [ENTER] Accept/Next  [Q] Abort  [GingerOS Professional Deployment System]", style="dim italic")
+        return Panel(Align.center(footer), border_style=THEME_COLOR, box=box.SIMPLE)
+
+    def welcome_screen(self):
+        welcome_text = Text("\nWelcome to the GingerOS Professional Installation Suite.\n\n", style="bold white")
+        welcome_text.append("This system will deploy a high-performance Linux From Scratch\n")
+        welcome_text.append("environment directly to your hardware.\n\n")
+        welcome_text.append("Press [ENTER] to initiate the deployment sequence...", style=f"bold {THEME_COLOR} blink")
+        
+        body = Panel(Align.center(welcome_text, vertical="middle"), title=" WELCOME ", border_style=THEME_COLOR)
+        
+        layout = self.create_layout()
+        layout["header"].update(self.render_header())
+        layout["steps_col"].update(self.render_steps())
+        layout["main_col"].update(body)
+        layout["footer"].update(self.render_footer())
+        
+        self.console.clear()
+        self.console.print(layout)
+        input()
+
+    def disk_selection(self):
         while True:
-            ch = self.stdscr.getch()
-            if ch in [10, 13]: # Enter
-                break
-            elif ch in [curses.KEY_BACKSPACE, 127, 8]:
-                if len(input_str) > 0:
-                    input_str = input_str[:-1]
-                    self.stdscr.addstr(y, x + len(prompt) + 4 + len(input_str), " ")
-                    self.stdscr.move(y, x + len(prompt) + 4 + len(input_str))
-            elif ch == 27: # ESC or potential back navigation
-                curses.curs_set(0)
-                return None
-            elif 32 <= ch <= 126:
-                input_str += chr(ch)
-                if secret:
-                    self.stdscr.addstr(y, x + len(prompt) + 4 + len(input_str) - 1, "*")
-                else:
-                    self.stdscr.addstr(y, x + len(prompt) + 4 + len(input_str) - 1, chr(ch))
-        
-        curses.curs_set(0)
-        return input_str
+            # Get disks
+            try:
+                output = subprocess.check_output(["lsblk", "-d", "-n", "-p", "-o", "NAME,SIZE,MODEL"], text=True)
+                disks = [line.strip() for line in output.split('\n') if line.strip() and "sr0" not in line and "loop" not in line]
+            except:
+                disks = []
 
-    def step_welcome(self):
-        self.draw_header()
-        h, w = self.stdscr.getmaxyx()
-        self.stdscr.addstr(12, 4, "Welcome to the GingerOS Professional Installer.", curses.A_BOLD)
-        self.stdscr.addstr(14, 4, "This utility will guide you through partitioning your disk,")
-        self.stdscr.addstr(15, 4, "extracting the RootFS, and configuring your system environment.")
-        self.stdscr.addstr(17, 4, "Press [ENTER] to begin the journey...")
-        self.draw_footer()
-        
-        while True:
-            ch = self.stdscr.getch()
-            if ch in [10, 13]: return 1
-            if ch in [ord('q'), ord('Q')]: sys.exit(0)
-
-    def step_disk_selection(self):
-        self.draw_header()
-        self.stdscr.addstr(11, 4, "--- DISK SELECTION ---", curses.color_pair(1) | curses.A_BOLD)
-        
-        try:
-            output = subprocess.check_output(["lsblk", "-d", "-n", "-p", "-o", "NAME,SIZE,MODEL"], text=True)
-            disks = [line.strip() for line in output.split('\n') if line.strip() and "sr0" not in line and "loop" not in line]
-        except:
-            disks = ["Error retrieving disks"]
-
-        for i, disk in enumerate(disks):
-            self.stdscr.addstr(13 + i, 6, f"{i+1}. {disk}")
-
-        self.draw_footer("Detecting storage...")
-        
-        target = self.get_input("Target device path (e.g. /dev/sda)", 13 + len(disks) + 2, 4, default=self.data["target_dev"])
-        if target is None: return -1
-        if target:
-            self.data["target_dev"] = target
-            return 1
-        return 0
-
-    def step_user_setup(self):
-        self.draw_header()
-        self.stdscr.addstr(11, 4, "--- USER ACCOUNT SETUP ---", curses.color_pair(1) | curses.A_BOLD)
-        
-        u = self.get_input("Desired Username", 13, 4, default=self.data["username"])
-        if u is None: return -1
-        self.data["username"] = u
-        
-        p = self.get_input(f"Password for {self.data['username']}", 15, 4, secret=True)
-        if p is None: return -1
-        self.data["password"] = p
-        
-        rp = self.get_input("Root Password", 17, 4, secret=True)
-        if rp is None: return -1
-        self.data["root_password"] = rp
-        
-        self.draw_footer()
-        return 1
-
-    def step_confirmation(self):
-        self.draw_header()
-        self.stdscr.addstr(11, 4, "--- CONFIRMATION ---", curses.color_pair(3) | curses.A_BOLD)
-        
-        self.stdscr.addstr(13, 6, f"Target Disk: {self.data['target_dev']}", curses.color_pair(4))
-        self.stdscr.addstr(14, 6, f"Username:    {self.data['username']}")
-        self.stdscr.addstr(16, 4, "WARNING: ALL DATA ON THE TARGET DISK WILL BE DESTROYED!", curses.color_pair(3) | curses.A_BOLD)
-        self.stdscr.addstr(18, 4, "Type 'YES' to confirm and start installation:")
-        
-        self.draw_footer("Point of no return")
-        
-        confirm = self.get_input("Confirm", 19, 4)
-        if confirm == "YES":
-            return 1
-        elif confirm is None:
-            return -1
-        return 0
-
-    def run_installer_logic(self):
-        # This runs in a separate thread
-        try:
-            self.log_queue.put("Starting Disk Preparation...")
-            # We'll call the bash installer script with specific arguments or environment variables
-            # to skip the UI parts and just do the work.
-            env = os.environ.copy()
-            env["TARGET_DEV"] = self.data["target_dev"]
-            env["NEW_USER"] = self.data["username"]
-            env["NEW_PASS"] = self.data["password"]
-            env["ROOT_PASS"] = self.data["root_password"]
-            env["GINGER_NON_INTERACTIVE"] = "1"
+            table = Table(title="Available Storage Devices", border_style=ACCENT_COLOR)
+            table.add_column("Dev", style="bold yellow")
+            table.add_column("Size")
+            table.add_column("Model")
             
-            # For now, let's trigger the bash script in a "silent" mode.
-            # We need to make sure installer.sh handles these env vars.
+            for d in disks:
+                parts = d.split(None, 2)
+                if len(parts) >= 2:
+                    table.add_row(parts[0], parts[1], parts[2] if len(parts) > 2 else "")
+
+            layout = self.create_layout()
+            layout["header"].update(self.render_header())
+            layout["steps_col"].update(self.render_steps())
+            layout["main_col"].update(Panel(Align.center(table), title=" DISK_SELECTION ", border_style=THEME_COLOR))
+            layout["footer"].update(self.render_footer())
+            
+            self.console.clear()
+            self.console.print(layout)
+            
+            self.console.print(f"\n [bold {ACCENT_COLOR}]Enter target disk (e.g. /dev/sda):[/] ", end="")
+            dev = input().strip()
+            if os.path.exists(dev) and dev.startswith("/dev/"):
+                self.data["target_dev"] = dev
+                break
+            else:
+                self.console.print(f"[bold {LASER_RED}]Invalid device.[/] Press ENTER to retry.")
+                input()
+
+    def user_setup(self):
+        layout = self.create_layout()
+        layout["header"].update(self.render_header())
+        layout["steps_col"].update(self.render_steps())
+        
+        setup_panel = Panel(
+            Text("\nDefining System Administrator Credentials...\n", style="dim italic"),
+            title=" USER_PROVISIONING ",
+            border_style=THEME_COLOR
+        )
+        layout["main_col"].update(setup_panel)
+        layout["footer"].update(self.render_footer())
+        
+        self.console.clear()
+        self.console.print(layout)
+        
+        self.console.print(f" [bold {ACCENT_COLOR}]Username:[/] ", end="")
+        self.data["username"] = input().strip() or "ginger"
+        
+        self.console.print(f" [bold {ACCENT_COLOR}]Password for {self.data['username']}:[/] ", end="")
+        import getpass
+        self.data["password"] = getpass.getpass("")
+        
+        self.console.print(f" [bold {ACCENT_COLOR}]Root Password:[/] ", end="")
+        self.data["root_password"] = getpass.getpass("")
+
+    def confirmation(self):
+        conf_text = Text("\nFINAL DEPLOYMENT CONFIRMATION\n\n", style="bold red")
+        conf_text.append(f" TARGET DISK: {self.data['target_dev']}\n", style="bold white")
+        conf_text.append(f" ADMINISTRATOR: {self.data['username']}\n\n")
+        conf_text.append(" WARNING: ALL DATA ON THE TARGET DISK WILL BE DESTROYED!\n\n", style="bold yellow")
+        conf_text.append("Type 'YES' to confirm and begin installation: ", style="bold white")
+        
+        layout = self.create_layout()
+        layout["header"].update(self.render_header())
+        layout["steps_col"].update(self.render_steps())
+        layout["main_col"].update(Panel(Align.center(conf_text, vertical="middle"), title=" DEPLOY_AUTH ", border_style="red"))
+        layout["footer"].update(self.render_footer())
+        
+        self.console.clear()
+        self.console.print(layout)
+        
+        ans = input().strip()
+        if ans != "YES":
+            self.console.print("[bold red]Installation aborted by user.[/]")
+            sys.exit(0)
+
+    def run_backend(self):
+        env = os.environ.copy()
+        env["TARGET_DEV"] = self.data["target_dev"]
+        env["NEW_USER"] = self.data["username"]
+        env["NEW_PASS"] = self.data["password"]
+        env["ROOT_PASS"] = self.data["root_password"]
+        env["GINGER_NON_INTERACTIVE"] = "1"
+        
+        try:
+            # We call the bash installer script as the backend
             process = subprocess.Popen(
                 ["/bin/bash", "./installer.sh", self.data["target_dev"]],
                 env=env,
@@ -202,81 +216,87 @@ class InstallerTUI:
             )
             
             for line in process.stdout:
-                self.log_queue.put(line.strip())
+                line = line.strip()
+                if not line: continue
+                
+                # Check for step markers from the UI library
+                # The bash-ui uses ui_step <n>. We can match on progress or specific markers.
+                # Since installer.sh uses ui_step, it might output something we can catch.
+                # Actually ui_step calls ui_save_state which writes to a file.
+                # But it also calls ui_log which appends to UI_LOG_FILE.
+                # Let's just use the stdout for now.
+                
+                self.log_queue.put(line)
             
             process.wait()
             self.install_success = (process.returncode == 0)
         except Exception as e:
-            self.log_queue.put(f"CRITICAL ERROR: {str(e)}")
+            self.log_queue.put(f"ERROR: {str(e)}")
             self.install_success = False
         finally:
             self.install_finished = True
 
-    def step_installation(self):
-        self.draw_header()
-        self.stdscr.addstr(11, 4, "--- INSTALLATION IN PROGRESS ---", curses.color_pair(2) | curses.A_BOLD)
+    def installation_progress(self):
+        # Start backend thread
+        threading.Thread(target=self.run_backend, daemon=True).start()
         
-        h, w = self.stdscr.getmaxyx()
-        log_win = curses.newwin(h - 18, w - 8, 13, 4)
+        layout = self.create_layout()
+        layout["header"].update(self.render_header())
+        layout["steps_col"].update(self.render_steps())
         
-        # Start logic thread
-        threading.Thread(target=self.run_installer_logic, daemon=True).start()
-        
-        logs = []
-        while not self.install_finished:
-            try:
-                while True:
-                    line = self.log_queue.get_nowait()
-                    logs.append(line)
-                    if len(logs) > h - 20: logs.pop(0)
-            except queue.Empty:
-                pass
-            
-            log_win.clear()
-            for i, line in enumerate(logs):
-                log_win.addstr(i, 0, line[:w-10])
-            log_win.refresh()
-            
-            self.stdscr.addstr(h - 5, 4, f"Status: {'Processing...' if not self.install_finished else 'Finished'}")
-            self.stdscr.refresh()
-            time.sleep(0.1)
-            
-        self.draw_header()
+        with Live(layout, refresh_per_second=10, screen=True) as live:
+            while not self.install_finished:
+                # Update logs
+                try:
+                    while True:
+                        line = self.log_queue.get_nowait()
+                        self.logs.append(line)
+                        
+                        # Simple heuristic for step detection from bash output
+                        if "Step 0" in line or "Wiping" in line: self.current_step_idx = 1
+                        elif "Step 1" in line or "Formatting" in line: self.current_step_idx = 1
+                        elif "Step 2" in line or "Deploying" in line: self.current_step_idx = 2
+                        elif "Step 3" in line or "Synchronizing" in line: self.current_step_idx = 3
+                        elif "Step 4" in line or "User & Init" in line: self.current_step_idx = 4
+                        elif "Step 5" in line or "GRUB" in line: self.current_step_idx = 5
+                except queue.Empty:
+                    pass
+
+                log_content = Text()
+                for l in self.logs:
+                    log_content.append(" > ", style="cyan")
+                    log_content.append(f"{l}\n", style="white")
+                
+                layout["header"].update(self.render_header())
+                layout["steps_col"].update(self.render_steps())
+                layout["main_col"].update(Panel(log_content, title=" REALTIME_DEPLOY_STREAM ", border_style=ACCENT_COLOR))
+                time.sleep(0.1)
+
+        self.console.clear()
         if self.install_success:
-            self.stdscr.addstr(12, 4, "INSTALLATION SUCCESSFUL!", curses.color_pair(2) | curses.A_BOLD)
-            self.stdscr.addstr(14, 4, "GingerOS has been deployed to your disk.")
-            self.stdscr.addstr(15, 4, "Please remove the installation media and reboot.")
+            finish_text = Text("\nDEPLOYMENT SYNCHRONIZED SUCCESSFULLY!\n\n", style=f"bold {THEME_COLOR}")
+            finish_text.append("GingerOS is now operational on your hardware.\n")
+            finish_text.append("Eject media and initiate system ignition (Reboot).\n\n", style="dim")
+            self.console.print(Panel(Align.center(finish_text), border_style=THEME_COLOR))
         else:
-            self.stdscr.addstr(12, 4, "INSTALLATION FAILED!", curses.color_pair(3) | curses.A_BOLD)
-            self.stdscr.addstr(14, 4, "Check the logs above for details.")
-            
-        self.stdscr.addstr(18, 4, "Press [ENTER] to exit...")
-        while True:
-            ch = self.stdscr.getch()
-            if ch in [10, 13]: break
-        return 1
+            fail_text = Text("\nDEPLOYMENT CRITICAL FAILURE\n\n", style="bold red")
+            fail_text.append("Kernel deployment interrupted. Analyze logs for anomaly detection.\n")
+            self.console.print(Panel(Align.center(fail_text), border_style="red"))
+        
+        self.console.print("\nPress ENTER to exit.")
+        input()
 
     def run(self):
-        state = 0
-        while state < len(self.steps):
-            if state == 0: res = self.step_welcome()
-            elif state == 1: res = self.step_disk_selection()
-            elif state == 2: res = self.step_user_setup()
-            elif state == 3: res = self.step_confirmation()
-            elif state == 4: res = self.step_installation()
-            
-            if res == 1:
-                self.history.append(state)
-                state += 1
-            elif res == -1:
-                if self.history:
-                    state = self.history.pop()
-                else:
-                    state = 0 # Can't go back further than welcome
-            # if res is 0, we just repeat the current state
+        try:
+            self.welcome_screen()
+            self.disk_selection()
+            self.user_setup()
+            self.confirmation()
+            self.installation_progress()
+        except KeyboardInterrupt:
+            self.console.print("\n[bold red]Installation aborted.[/]")
+            sys.exit(1)
 
-def main():
-    curses.wrapper(lambda stdscr: InstallerTUI(stdscr).run())
-
+import collections
 if __name__ == "__main__":
-    main()
+    GingerInstaller().run()
