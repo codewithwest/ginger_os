@@ -36,20 +36,28 @@ sudo rm -rf "$INITRD_WORK"
 ESSENTIAL_TOOLS=(
     bash sh mount umount mkdir ls cat grep sed awk rm
     parted partprobe mkfs.ext4 tar lsblk blkid wipefs gzip udevadm
-    grub-install tee sleep which clear ps kill tput 
+    grub-install tee sleep which clear ps tput 
     readlink dirname touch du df
     head tail sort uniq date wc tr cut xargs cp mv ln
     python3
 )
 
-mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sys,tmp,var,root,usr/bin}
-ln -sf bin "$INITRD_WORK/sbin"
-
+echo "[INFO] Copying essential tools into initrd..."
 for tool in "${ESSENTIAL_TOOLS[@]}"; do
-    TOOL_PATH=$(command -v "$tool" || true)
-    [ -n "$TOOL_PATH" ] || { echo "Missing tool: $tool"; exit 1; }
-    cp -vL "$TOOL_PATH" "$INITRD_WORK/bin/"
+    TOOL_PATH="$(command -v "$tool" 2>/dev/null || true)"
+
+    if [ -z "$TOOL_PATH" ]; then
+        echo "[WARN] $tool not found as standalone binary on host, skipping"
+        continue
+    fi
+
+    if [ -f "$TOOL_PATH" ]; then
+        cp -vL "$TOOL_PATH" "$INITRD_WORK/bin/"
+    else
+        echo "[WARN] $tool resolved to '$TOOL_PATH' but is not a file, skipping"
+    fi
 done
+
 
 echo "Resolving library dependencies..."
 for file in "$INITRD_WORK/bin/"*; do
