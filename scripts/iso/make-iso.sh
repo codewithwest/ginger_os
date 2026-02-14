@@ -53,10 +53,11 @@ ln -sf ../lib "$INITRD_WORK/usr/lib"
 ln -sf ../lib64 "$INITRD_WORK/usr/lib64"
 
 for tool in "${ESSENTIAL_TOOLS[@]}"; do
-    TOOL_PATH=$(command -v "$tool" || true)
+    # Use 'type -P' to find the executable path, ignoring shell builtins and aliases
+    TOOL_PATH=$(type -P "$tool" || true)
     
     if [ -z "$TOOL_PATH" ]; then
-        echo "[WARN] Missing tool: $tool"
+        echo "[WARN] Missing tool '$tool' (or only available as builtin), skipping"
         continue
     fi
     
