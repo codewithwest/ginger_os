@@ -44,13 +44,13 @@ class GingerTUI:
         self.log_scroll = 0
         self.auto_all = False
         self.last_auto_step = None
-        self.border_style = "self.border_style"
+        self.theme_color = "bright_green"
         
     def create_layout(self):
         """Create the high-tech Neural-Link layout"""
         layout = Layout()
         layout.split_column(
-            Layout(name="header", size=16),
+            Layout(name="header", size=12),
             Layout(name="body", ratio=1),
             Layout(name="footer", size=3)
         )
@@ -84,7 +84,8 @@ class GingerTUI:
         pulsar = self.get_neural_pulsar()
         
         # Left Side: Original Branding
-        branding = Text("\n" + LOGO.strip(), style="bold bright_blue")
+        branding = Text("\n" + LOGO.strip() + "\n", style=f"bold {self.theme_color}")
+        branding.append(f" {pulsar} NEURAL_CORE_V1.1_LOADED", style="dim cyan")
         # Right Side: Deployment Metrics + AI Thoughts
         metrics = Text()
         if self.executing_step is not None:
@@ -115,7 +116,7 @@ class GingerTUI:
                 # Package Timer
                 if self.engine.pkg_start_time:
                     pkg_elapsed = time.time() - self.engine.pkg_start_time
-                    pkg_line.append(f" [⏱ {self.format_time(pkg_elapsed)}]", style=self.border_style)
+                    pkg_line.append(f" [⏱ {self.format_time(pkg_elapsed)}]", style=self.theme_color)
                 
                 if self.engine.total_pkg_count > 0:
                     pkg_line.append(f" ({self.engine.current_pkg_idx}/{self.engine.total_pkg_count})", style="dim")
@@ -129,7 +130,7 @@ class GingerTUI:
                     bar_width = 44
                     filled = int(prog * bar_width)
                     bar = "█" * filled + "░" * (bar_width - filled)
-                    metrics.append(f" [{bar}] ", style="bright_cyan")
+                    metrics.append(f" [{bar}] ", style=self.theme_color)
                     metrics.append(f"{int(prog*100)}%\n", style="dim")
             
             metrics.append("\n") 
@@ -139,12 +140,12 @@ class GingerTUI:
             state = states[int(time.time() / 2) % len(states)]
             ai_thought = self._get_ai_thought(step.name)
             metrics.append(f" 🧠 CORE_LOG (AI_{state}): ", style="bold bright_magenta")
-            metrics.append("\n"+ai_thought, style="italic dim bright_blue \n")
-            metrics.append(f"\n {pulsar} NEURAL_CORE_V1.1_LOADED", style="self.border_style")
+            metrics.append("\n" + ai_thought, style="italic dim bright_blue")
+            
         else:
             # Idle timers
             idle_line = Text()
-            idle_line.append("🟢 NEURAL_CORE_READY ", style="bold self.border_style")
+            idle_line.append("🟢 NEURAL_CORE_READY ", style=f"bold {self.theme_color}")
             if self.engine.overall_start_time:
                 overall_elapsed = time.time() - self.engine.overall_start_time
                 idle_line.append(f" [TOTAL_RUNTIME: {self.format_time(overall_elapsed)}]", style="dim bright_blue")
@@ -165,7 +166,7 @@ class GingerTUI:
                 Align.left(branding, vertical="middle"),
                 Align.right(metrics, vertical="middle")
             ], expand=True),
-            border_style=self.border_style,
+            border_style=self.theme_color,
             box=box.DOUBLE_EDGE,
             title="[bold dim blue] NEURAL_SYSTEM_INTERFACE [/]"
         )
@@ -207,11 +208,11 @@ class GingerTUI:
                 row_style = "on blue3"
                 slot_txt = f"[bold bright_cyan]{idx+1:02d}[/]"
             elif is_completed:
-                state = "[self.border_style]✔ COMPLETE[/]"
+                state = f"[bold {self.theme_color}]✔ COMPLETE[/]"
                 row_style = ""
                 slot_txt = f"[dim]{idx+1:02d}[/]"
             else:
-                state = "[dim] ◐ PENDING[/]"
+                state = "[dim]◐ PENDING[/]"
                 row_style = "dim"
                 slot_txt = f"{idx+1:02d}"
 
@@ -230,7 +231,7 @@ class GingerTUI:
         return Panel(
             table,
             title="[bold bright_cyan] 0x_SEQUENCE [/]",
-            border_style=self.border_style,
+            border_style=self.theme_color,
             box=box.ROUNDED
         )
 
@@ -261,7 +262,7 @@ class GingerTUI:
                 if self.engine.pkg_start_time:
                     p_elapsed = time.time() - self.engine.pkg_start_time
                     stats.append(f"  ETR_PKG: ", style="dim")
-                    stats.append(f"{self.format_time(p_elapsed)}\n", style=self.border_style)
+                    stats.append(f"{self.format_time(p_elapsed)}\n", style=self.theme_color)
 
             stats.append(f"\n» UPTIME: {self.format_time(elapsed)}\n", style="bold bright_yellow")
             
@@ -273,12 +274,12 @@ class GingerTUI:
             # Show summary
             complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
             total = len(self.engine.steps)
-            stats.append(f"\n STABILITY_INDEX: {int((complete/total)*100)}%\n", style=self.border_style)
+            stats.append(f"\n STABILITY_INDEX: {int((complete/total)*100)}%\n", style=self.theme_color)
             
         return Panel(
             Align.center(stats, vertical="middle"),
             title=f"[bold bright_magenta]══ DEPLOYMENT_MONITOR ══[/]",
-            border_style=self.border_style,
+            border_style=self.theme_color,
             box=box.HEAVY
         )
 
@@ -305,7 +306,7 @@ class GingerTUI:
         return Panel(
             Align.center(help_text, vertical="middle"),
             title="[bold bright_yellow]══ HELP_ENVIRONMENT ══[/]",
-            border_style=self.border_style,
+            border_style=self.theme_color,
             box=box.DOUBLE_EDGE
         )
 
@@ -426,7 +427,7 @@ class GingerTUI:
             
         return Panel(
             Align.center(footer, vertical="middle"),
-            border_style=self.border_style,
+            border_style=self.theme_color,
             box=box.SIMPLE
         )
     
