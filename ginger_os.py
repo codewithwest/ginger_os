@@ -79,7 +79,7 @@ class GingerTUI:
         return simple_frames[idx]
 
     def render_header(self):
-        """Full-width high-tech header with spaced metrics and AI thoughts"""
+        """Full-width high-tech header with spaced metrics, timers and AI thoughts"""
         pulsar = self.get_neural_pulsar()
         
         # Left Side: Original Branding
@@ -90,14 +90,21 @@ class GingerTUI:
         metrics = Text()
         if self.executing_step is not None:
             step = self.engine.steps[self.executing_step]
-            elapsed = time.time() - self.current_start_time
+            phase_elapsed = time.time() - self.current_start_time
             
-            # Section 1: Core Status & Uptime
+            # Section 1: Core Status & System Timers
             stat_line = Text()
             stat_line.append("🚀 SYSTEM_BUSY ", style="bold bright_red blink")
-            stat_line.append(f" PHASE_UPTIME: {self.format_time(elapsed)}", style="bold bright_yellow")
+            
+            # Overall System Uptime
+            if self.engine.overall_start_time:
+                overall_elapsed = time.time() - self.engine.overall_start_time
+                stat_line.append(f" SYS_UPTIME: {self.format_time(overall_elapsed)}", style="bold bright_blue")
+                stat_line.append(" | ", style="dim")
+                
+            stat_line.append(f"PHASE_RUN: {self.format_time(phase_elapsed)}", style="bold bright_yellow")
             metrics.append(stat_line)
-            metrics.append("\n\n") # Double space for breathing room
+            metrics.append("\n\n") 
             
             # Section 2: Deployment Coordinates
             metrics.append(f" MODULE: {step.name}\n", style="bold bright_white")
@@ -105,8 +112,15 @@ class GingerTUI:
             if self.engine.current_pkg:
                 pkg_line = Text()
                 pkg_line.append(f" TARGET: {self.engine.current_pkg}", style="bright_yellow")
+                
+                # Package Timer
+                if self.engine.pkg_start_time:
+                    pkg_elapsed = time.time() - self.engine.pkg_start_time
+                    pkg_line.append(f" [⏱ {self.format_time(pkg_elapsed)}]", style="bright_green")
+                
                 if self.engine.total_pkg_count > 0:
                     pkg_line.append(f" ({self.engine.current_pkg_idx}/{self.engine.total_pkg_count})", style="dim")
+                
                 metrics.append(pkg_line)
                 metrics.append("\n")
                 
@@ -119,7 +133,7 @@ class GingerTUI:
                     metrics.append(f" [{bar}] ", style="bright_cyan")
                     metrics.append(f"{int(prog*100)}%\n", style="dim")
             
-            metrics.append("\n") # Space before AI thought
+            metrics.append("\n") 
             
             # Section 3: AI Copilot Insight
             states = ["ANALYZING", "OPTIMIZING", "MONITORING", "SECURING"]
@@ -129,7 +143,15 @@ class GingerTUI:
             metrics.append(ai_thought, style="italic dim magenta")
             
         else:
-            metrics.append("\n🟢 NEURAL_CORE_READY\n", style="bold bright_green")
+            # Idle timers
+            idle_line = Text()
+            idle_line.append("🟢 NEURAL_CORE_READY ", style="bold bright_green")
+            if self.engine.overall_start_time:
+                overall_elapsed = time.time() - self.engine.overall_start_time
+                idle_line.append(f" [TOTAL_RUNTIME: {self.format_time(overall_elapsed)}]", style="dim bright_blue")
+            
+            metrics.append(idle_line)
+            metrics.append("\n")
             metrics.append("Waiting for sequence binary initiation sequence...\n\n", style="dim italic")
             
             # Idle AI state
