@@ -14,6 +14,8 @@ echo "[INFO] Installing GingerOS to $TARGET_DEV"
 
 # Partition (MBR)
 echo "[INFO] Partitioning disk..."
+# Wipe existing signatures to prevent UUID confusion
+wipefs -a "$TARGET_DEV" || true
 parted -s "$TARGET_DEV" mklabel msdos
 parted -s "$TARGET_DEV" mkpart primary ext4 1MiB 100%
 partprobe "$TARGET_DEV"
@@ -23,6 +25,11 @@ sleep 2
 # Format
 echo "[INFO] Formatting root partition..."
 mkfs.ext4 -F "$ROOT_PART"
+
+# Re-read UUID to ensure we get the new one
+partprobe "$TARGET_DEV"
+udevadm settle
+sleep 2
 
 # Mount
 mkdir -p "$MNT"
@@ -39,14 +46,30 @@ cp /mnt/iso/boot/vmlinuz "$MNT/boot/vmlinuz-ginger"
 
 # Wait for device nodes and UUIDs
 udevadm settle
-partprobe "$TARGET_DEV"
-sleep 2
+sleep 1
 
-ROOT_UUID=$(blkid -s UUID -o value "$ROOT_PART" || true)
+# Robust UUID detection
+echo "[INFO] Detecting UUID..."
+ROOT_UUID=""
+for i in {1..5}; do
+    ROOT_UUID=$(blkid -s UUID -o value "$ROOT_PART")
+    if [ -n "$ROOT_UUID" ]; then
+        break
+    fi
+    echo "[WARN] Retrying UUID detection ($i/5)..."
+    sleep 1
+done
+
 if [ -z "$ROOT_UUID" ]; then
-  echo "[ERROR] Failed to detect UUID"
+    # Fallback to lsblk if blkid fails
+    ROOT_UUID=$(lsblk -no UUID "$ROOT_PART" | head -n1)
+fi
+
+if [ -z "$ROOT_UUID" ]; then
+  echo "[ERROR] Failed to detect UUID for $ROOT_PART"
   exit 1
 fi
+echo "[INFO] Detected Root UUID: $ROOT_UUID"
 
 # Prepare chroot mounts for GRUB
 echo "[INFO] Installing GRUB..."
