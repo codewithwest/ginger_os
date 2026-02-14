@@ -49,16 +49,16 @@ class GingerTUI:
         """Create the high-tech Neural-Link layout"""
         layout = Layout()
         layout.split_column(
-            Layout(name="header", size=7),
+            Layout(name="header", size=11),
             Layout(name="main_grid", ratio=1),
-            Layout(name="terminal", size=10),
+            Layout(name="terminal", size=16),
             Layout(name="footer", size=3)
         )
         
         layout["main_grid"].split_row(
-            Layout(name="steps", ratio=1),
+            Layout(name="steps", ratio=1.2),
             Layout(name="dashboard", ratio=2),
-            Layout(name="matrix", ratio=1)
+            Layout(name="matrix", ratio=0.8)
         )
         
         layout["dashboard"].split_column(
@@ -81,22 +81,39 @@ class GingerTUI:
         return simple_frames[idx]
 
     def render_header(self):
-        """Render high-tech header"""
+        """Render high-tech header with original logo and side-timers"""
         pulsar = self.get_neural_pulsar()
         
-        branding = Text()
-        branding.append(f" {pulsar} ", style="bold bright_cyan")
-        branding.append("GINGER_OS // ", style="bold bright_white")
-        branding.append("NEURAL_CORE_V1.1", style="dim cyan")
+        # Left Side: Original Branding
+        branding = Text(LOGO.strip() + "\n", style="bold bright_cyan")
+        branding.append(f" {pulsar} NEURAL_CORE_V1.1", style="dim cyan")
         
-        status_info = Text()
+        # Right Side: Live Metrics
+        metrics = Text()
         if self.executing_step is not None:
-            status_info.append(" [ SYSTEM_BUSY ] ", style="bold bright_red blink")
+            elapsed = time.time() - self.current_start_time
+            metrics.append("\n🚀 SYSTEM_BUSY\n", style="bold bright_red blink")
+            
+            if self.engine.current_pkg:
+                pkg_progress = ""
+                if self.engine.total_pkg_count > 0:
+                    pkg_progress = f" ({self.engine.current_pkg_idx}/{self.engine.total_pkg_count})"
+                metrics.append(f"📦 {self.engine.current_pkg}{pkg_progress}\n", style="bold bright_white")
+                
+                if self.engine.pkg_start_time:
+                    p_elapsed = time.time() - self.engine.pkg_start_time
+                    metrics.append(f"   PKG: {self.format_time(p_elapsed)}  ", style="bright_cyan")
+            
+            metrics.append(f"PHASE: {self.format_time(elapsed)}\n", style="bold bright_yellow")
         else:
-            status_info.append(" [ CORE_READY ] ", style="bold bright_green")
+            metrics.append("\n🟢 CORE_READY\n", style="bold bright_green")
+            metrics.append("Waiting for sequence...\n", style="dim italic")
             
         return Panel(
-            Align.center(branding + status_info, vertical="middle"),
+            Columns([
+                branding,
+                Align.right(metrics, vertical="middle")
+            ], expand=True),
             border_style="bright_blue",
             box=box.DOUBLE_EDGE
         )
@@ -106,7 +123,7 @@ class GingerTUI:
         table = Table(
             show_header=True,
             header_style="bold bright_cyan",
-            box=box.SIMPLE_HEAD,
+            box=box.SIMPLE,
             expand=True,
             padding=(0, 1)
         )
@@ -121,22 +138,22 @@ class GingerTUI:
             
             # Status styling
             if is_active:
-                state = "[bold bright_cyan]ACTIVE[/]"
+                state = "[bold bright_cyan]▶ RUNNING[/]"
                 row_style = "on blue3"
-                slot_txt = f"[black on bright_cyan] {idx+1:02d} [/]"
+                slot_txt = f"[bold bright_cyan]{idx+1:02d}[/]"
             elif is_completed:
-                state = "[bright_green]STABLE[/]"
+                state = "[bright_green]✔ STABLE[/]"
                 row_style = ""
-                slot_txt = f"{idx+1:02d}"
+                slot_txt = f"[dim]{idx+1:02d}[/]"
             else:
-                state = "[dim]LOCKED[/]"
+                state = "[dim]○ PENDING[/]"
                 row_style = "dim"
                 slot_txt = f"{idx+1:02d}"
 
             # Highlight cursor
             if idx == self.selected_step and self.executing_step is None:
-                row_style = "on gray23"
-                slot_txt = f"[bold bright_yellow]>{idx+1:02d}[/]"
+                row_style = "on gray19"
+                slot_txt = f"[bold bright_yellow]{idx+1:02d}[/]"
 
             table.add_row(
                 slot_txt,
@@ -147,7 +164,7 @@ class GingerTUI:
             
         return Panel(
             table,
-            title="[bold bright_cyan]══ SEQUENCE_STACK ══[/]",
+            title="[bold bright_cyan] 0x_SEQUENCE [/]",
             border_style="bright_blue",
             box=box.ROUNDED
         )
@@ -265,39 +282,35 @@ class GingerTUI:
     def render_matrix(self):
         """System metrics matrix with stability gauge"""
         matrix = Text()
-        matrix.append("\n 🖥️  HOST_RESOURCES\n", style="bold bright_white")
+        matrix.append("\n 🖥️  HOST\n", style="bold bright_white")
         
         try:
             load = os.getloadavg()
-            matrix.append(f"  CPU_LOAD: ", style="bright_cyan")
-            matrix.append(f"{load[0]:.2f}\n", style="bold bright_white")
+            matrix.append(f"  LOAD: {load[0]:.2f}\n", style="bright_cyan")
         except: pass
         
         # Disk stats
         host_disk = self.engine.storage_stats.get("host", 0)
         lfs_disk = self.engine.storage_stats.get("lfs", 0)
         
-        def disk_bar(val):
-            filled = int(val / 10)
-            return "█" * filled + "░" * (10 - filled)
+        def mini_bar(val):
+            filled = int(val / 20)
+            return "█" * filled + "░" * (5 - filled)
             
-        matrix.append(f"\n 💿  STORAGE_NODES\n", style="bold bright_white")
-        matrix.append(f"  HOST: [{disk_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_cyan" if host_disk < 90 else "bright_red")
-        matrix.append(f"  LFS:  [{disk_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style="bright_green")
+        matrix.append(f"\n 💿  STORAGE\n", style="bold bright_white")
+        matrix.append(f"  H: [{mini_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_cyan" if host_disk < 90 else "bright_red")
+        matrix.append(f"  L: [{mini_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style="bright_green")
         
-        # Stability / Build Index
+        # Build Index
         complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
         total = len(self.engine.steps)
         stability = (complete/total) * 100
-        matrix.append(f"\n 🛡️  CORE_STABILITY\n", style="bold bright_white")
-        matrix.append(f"  INDEX: [{disk_bar(stability)}] {stability:.0f}%\n", style="bold bright_green")
-        
-        matrix.append(f"\n 🛰️  ENCRYPTION\n", style="dim")
-        matrix.append("  AES-256_ACTIVE\n", style="dim italic green")
+        matrix.append(f"\n 🛡️  STABLE\n", style="bold bright_white")
+        matrix.append(f"  {stability:.0f}%\n", style="bold bright_green")
         
         return Panel(
             matrix,
-            title="[bold bright_white]══ SYSTEM_MATRIX ══[/]",
+            title="[bold bright_white]══ SYS_MX ══[/]",
             border_style="bright_white",
             box=box.ROUNDED
         )
