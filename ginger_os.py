@@ -138,8 +138,8 @@ class GingerTUI:
             state = states[int(time.time() / 2) % len(states)]
             ai_thought = self._get_ai_thought(step.name)
             metrics.append(f" 🧠 CORE_LOG (AI_{state}): ", style="bold bright_magenta")
-            metrics.append("\n"+ai_thought, style="italic dim magenta \n")
-            metrics.append(f" {pulsar} NEURAL_CORE_V1.1_LOADED", style="dim cyan")
+            metrics.append("\n"+ai_thought, style="italic dim bright_blue \n")
+            metrics.append(f"\n {pulsar} NEURAL_CORE_V1.1_LOADED", style="bright_cyan")
 
             
         else:
@@ -195,9 +195,9 @@ class GingerTUI:
             padding=(0, 1)
         )
         
-        table.add_column("SLOT", width=6, justify="center", style="dim")
+        table.add_column("SLOT", width=3, justify="center", style="dim")
         table.add_column("MODULE", style="bright_white")
-        table.add_column("STATE", width=10, justify="right")
+        table.add_column("STATE", width=8, justify="right")
         
         for idx, step in enumerate(self.engine.steps):
             is_active = self.executing_step == idx
@@ -365,7 +365,7 @@ class GingerTUI:
             return "█" * filled + "░" * (5 - filled)
             
         matrix.append(f"\n 💿  STORAGE\n", style="bold bright_white")
-        matrix.append(f"  Host Disk: [{mini_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_cyan" if host_disk < 90 else "bright_red")
+        matrix.append(f"  Host Disk: [{mini_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_blue" if host_disk < 90 else "bright_red")
         matrix.append(f"  LFS Disk: [{mini_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style="bright_green")
         
         # Build Index
