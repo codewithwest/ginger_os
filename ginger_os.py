@@ -348,7 +348,7 @@ class GingerTUI:
         return Panel(
             Align.center(footer, vertical="middle"),
             border_style="dim cyan",
-            box=box.PLAIN
+            box=box.SIMPLE
         )
     
     def update_display(self, layout):
