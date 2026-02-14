@@ -114,6 +114,12 @@ MNT="/mnt/gingeros_install"
 sudo mkdir -p "$MNT"
 sudo mount "$PART" "$MNT"
 
+# Ensure 64-bit library compatibility
+if [ ! -d "$MNT/lib64" ] && [ -d "$MNT/lib" ]; then
+    ui_log "Creating /lib64 symlink for 64-bit compatibility..."
+    sudo ln -s lib "$MNT/lib64"
+fi
+
 # Read file count for progress bar
 TOTAL_FILES=$(cat "${SCRIPT_DIR}/file_count.txt" 2>/dev/null || echo "10000")
 ui_log "Deploying GingerOS files (Total: $TOTAL_FILES)..."
