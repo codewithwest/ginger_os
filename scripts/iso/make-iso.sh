@@ -30,41 +30,38 @@ fi
 [ -z "${KERNEL_IMG:-}" ] && { echo "Kernel not found!"; exit 1; }
 cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 
-# Step 2: Initrd
 echo "__GINGER_PKG_MARKER__: Initrd"
-echo "Assembling Minimal Live Environment..."
 sudo rm -rf "$INITRD_WORK"
 
-# Create essential system directory structure FIRST
-mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sys,tmp,var,root}
-(cd "$INITRD_WORK" && ln -sf bin sbin && mkdir -p usr && cd usr && ln -sf ../bin bin && ln -sf ../bin sbin)
-
-# Essential tools needed for a functional Live environment and Installer
 ESSENTIAL_TOOLS=(
     bash sh mount umount mkdir ls cat grep sed awk rm
     parted partprobe mkfs.ext4 tar lsblk blkid wipefs gzip udevadm
-    grub-install tee sleep which clear ps tput 
+    grub-install tee sleep which clear ps kill tput 
     readlink dirname touch du df
     head tail sort uniq date wc tr cut xargs cp mv ln
     python3
 )
 
-echo "[INFO] Copying essential tools into initrd..."
-for tool in "${ESSENTIAL_TOOLS[@]}"; do
-    TOOL_PATH="$(command -v "$tool" 2>/dev/null || true)"
+# Create essential system directory structure
+mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sys,tmp,var,root,usr}
 
+# Create merged usr compatibility symlinks and standard layout
+ln -sf bin "$INITRD_WORK/sbin"
+ln -sf ../bin "$INITRD_WORK/usr/bin"
+ln -sf ../bin "$INITRD_WORK/usr/sbin"
+ln -sf ../lib "$INITRD_WORK/usr/lib"
+ln -sf ../lib64 "$INITRD_WORK/usr/lib64"
+
+for tool in "${ESSENTIAL_TOOLS[@]}"; do
+    TOOL_PATH=$(command -v "$tool" || true)
+    
     if [ -z "$TOOL_PATH" ]; then
-        echo "[WARN] $tool not found as standalone binary on host, skipping"
+        echo "[WARN] Missing tool: $tool"
         continue
     fi
-
-    if [ -f "$TOOL_PATH" ]; then
-        cp -vL "$TOOL_PATH" "$INITRD_WORK/bin/"
-    else
-        echo "[WARN] $tool resolved to '$TOOL_PATH' but is not a file, skipping"
-    fi
+    
+    cp -vL "$TOOL_PATH" "$INITRD_WORK/bin/"
 done
-
 
 echo "Resolving library dependencies..."
 for file in "$INITRD_WORK/bin/"*; do
