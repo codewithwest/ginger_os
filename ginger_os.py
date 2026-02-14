@@ -83,7 +83,7 @@ class GingerTUI:
         pulsar = self.get_neural_pulsar()
         
         # Left Side: Original Branding
-        branding = Text("\n" + LOGO.strip() + "\n\n", style="bold bright_cyan")
+        branding = Text("\n" + LOGO.strip() + "\n\n", style="bold bright_blue")
         # Right Side: Deployment Metrics + AI Thoughts
         metrics = Text()
         if self.executing_step is not None:
@@ -139,7 +139,7 @@ class GingerTUI:
             ai_thought = self._get_ai_thought(step.name)
             metrics.append(f" 🧠 CORE_LOG (AI_{state}): ", style="bold bright_magenta")
             metrics.append("\n"+ai_thought, style="italic dim magenta \n")
-            branding.append(f" {pulsar} NEURAL_CORE_V1.1_LOADED", style="dim cyan")
+            metrics.append(f" {pulsar} NEURAL_CORE_V1.1_LOADED", style="dim cyan")
 
             
         else:
@@ -157,9 +157,9 @@ class GingerTUI:
             # Idle AI state
             metrics.append(" 🧠 COGNITION_STANDBY: ", style="bold bright_magenta")
             if self.auto_all:
-                metrics.append("Autonomous sequence engaged. Standing by for synchronization.", style="italic dim magenta")
+                metrics.append("Autonomous sequence engaged. Standing by for synchronization.", style="italic dim bright_magenta")
             else:
-                metrics.append("Awaiting operator 'EXECUTE' directive.", style="italic dim magenta")
+                metrics.append("Awaiting operator 'EXECUTE' directive.", style="italic dim bright_ magenta")
             metrics.append("\n") # Breathing room at bottom
             
         return Panel(
