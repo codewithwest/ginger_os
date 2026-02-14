@@ -39,7 +39,7 @@ ESSENTIAL_TOOLS=(
     grub-install tee sleep which clear ps kill tput 
     readlink dirname touch du df
     head tail sort uniq date wc tr cut xargs cp mv ln
-    python3
+    python3 chmod
 )
 
 # Create essential system directory structure
