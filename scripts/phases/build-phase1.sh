@@ -11,11 +11,12 @@ PHASE1_TOOLS_DIR="$SCRIPT_DIR/../phase1-tools"
 
 # Collect scripts
 SCRIPTS=("$PHASE1_TOOLS_DIR"/*.sh)
-
-# Note: We just print status lines that the Main Orchestrator will log.
-# We don't use the full UI library here because the LFS user environment is minimal.
+TOTAL_PKGS=${#SCRIPTS[@]}
+CURRENT_PKG_IDX=0
 
 for script in "${SCRIPTS[@]}"; do
+    CURRENT_PKG_IDX=$((CURRENT_PKG_IDX + 1))
+    
     # derive internal PKG_NAME from the script file if possible for better matching
     # otherwise fallback to filename
     SCRIPT_PKG_NAME=$(grep -E "^PKG_NAME=" "$script" | cut -d'"' -f2 || echo "")
@@ -24,10 +25,13 @@ for script in "${SCRIPTS[@]}"; do
     # Check both names for consistency
     if [[ -f "/mnt/lfs/var/lib/ginger/${FILE_PKG_NAME}.built" ]] || \
        [[ -n "$SCRIPT_PKG_NAME" && -f "/mnt/lfs/var/lib/ginger/${SCRIPT_PKG_NAME}.built" ]]; then
+        # Still report progress even if skipping
+        echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME (Skipped)"
         continue
     fi
     
     echo "__GINGER_PKG_MARKER__: $FILE_PKG_NAME"
+    echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME"
     echo "Building: $FILE_PKG_NAME"
 
     # Run the build script

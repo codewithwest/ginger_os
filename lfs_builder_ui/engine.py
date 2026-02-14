@@ -60,6 +60,8 @@ class GingerEngine:
         self.dry_run = dry_run
         self.current_step_idx = 0
         self.current_pkg = ""
+        self.current_pkg_idx = 0
+        self.total_pkg_count = 0
         self.pkg_start_time = None
         self.phase_start_time = None
         self.overall_start_time = None
@@ -510,6 +512,8 @@ class GingerEngine:
                     return
         
         self.current_pkg = ""
+        self.current_pkg_idx = 0
+        self.total_pkg_count = 0
         self.pkg_start_time = None
         step.packages_completed = []
         
@@ -599,6 +603,26 @@ class GingerEngine:
                                 if "__GINGER_MISSING_SOURCE_URL__:" in clean_line:
                                     url = clean_line.split("__GINGER_MISSING_SOURCE_URL__:")[-1].strip()
                                     self._download_missing_source(url)
+
+                                # Package progress parsing (e.g. __GINGER_PKG_COUNT__: 3/17 : PackageName)
+                                if "__GINGER_PKG_COUNT__:" in clean_line:
+                                    try:
+                                        parts = clean_line.split(":")
+                                        count_part = parts[1].strip()
+                                        pkg_name_part = parts[2].strip() if len(parts) > 2 else ""
+                                        
+                                        curr, total = count_part.split("/")
+                                        self.current_pkg_idx = int(curr)
+                                        self.total_pkg_count = int(total)
+                                        
+                                        if pkg_name_part:
+                                            self.current_pkg = pkg_name_part.replace("(Skipped)", "").strip()
+                                            # If it's not a skip message, mark start time if not already set for this package
+                                            if "(Skipped)" not in pkg_name_part:
+                                                if not self.pkg_start_time:
+                                                    self.pkg_start_time = time.time()
+                                    except:
+                                        pass
 
                                 # Package tracking
                                 if clean_line.startswith("__GINGER_PKG_MARKER__:"):

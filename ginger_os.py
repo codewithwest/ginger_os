@@ -82,8 +82,20 @@ class GingerTUI:
         if self.executing_step is not None:
             elapsed = time.time() - self.current_start_time
             stats_text.append("🚀 EXECUTION IN PROGRESS\n", style="bold bright_green blink")
-            # stats_text.append(f"Running: {self.engine.steps[self.executing_step].name}\n", style="bold bright_white") # Removed per user request
-            stats_text.append(f"Time: {self.format_time(elapsed)}\n\n", style="bold bright_yellow")
+            
+            # Show package-level details if available
+            if self.engine.current_pkg:
+                pkg_progress = ""
+                if self.engine.total_pkg_count > 0:
+                    pkg_progress = f" ({self.engine.current_pkg_idx}/{self.engine.total_pkg_count})"
+                
+                stats_text.append(f"📦 {self.engine.current_pkg}{pkg_progress}\n", style="bold bright_white")
+                
+                if self.engine.pkg_start_time:
+                    pkg_elapsed = time.time() - self.engine.pkg_start_time
+                    stats_text.append(f"   Package Timer: {self.format_time(pkg_elapsed)}\n", style="bright_cyan")
+            
+            stats_text.append(f"Phase Timer: {self.format_time(elapsed)}\n\n", style="bold bright_yellow")
             stats_text.append("⚠️  PLEASE WAIT - SYSTEM BUSY", style="bold bright_red")
         else:
             if self.dry_run:

@@ -129,7 +129,10 @@ sudo tar --xattrs --acls -C "$MNT" -xvzpf "$TARBALL" | ui_progress_bar "$TOTAL_F
 
 ui_step 3
 ui_log "Synchronizing hardware IDs (Universal UUID Mode)..."
-NEW_UUID=$(disk_get_uuid "$PART")
+sudo udevadm settle
+sudo partprobe "$TARGET_DEV"
+sleep 2
+NEW_UUID=$(blkid -s UUID -o value "$PART")
 
 cat << EOF | sudo tee "$MNT/etc/fstab" >/dev/null
 # <file system> <mount point>   <type>  <options>       <dump>  <pass>
@@ -185,8 +188,11 @@ insmod ext2
 
 search --no-floppy --fs-uuid --set=root $NEW_UUID
 
-menuentry 'GingerOS Professional' {
+menuentry 'GingerOS v1.0.0' {
     linux /boot/$KERNEL_IMG root=UUID=$NEW_UUID rw rootdelay=5 console=tty0
+}
+menuentry 'GingerOS Emergency Shell' {
+    linux /boot/$KERNEL_IMG root=UUID=$NEW_UUID rw rootdelay=10 init=/bin/sh
 }
 EOF
 

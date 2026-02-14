@@ -11,8 +11,11 @@ PHASE2_TOOLS_DIR="$SCRIPT_DIR/../phase2-tools"
 
 # Collect scripts
 SCRIPTS=("$PHASE2_TOOLS_DIR"/*.sh)
+TOTAL_PKGS=${#SCRIPTS[@]}
+CURRENT_PKG_IDX=0
 
 for script in "${SCRIPTS[@]}"; do
+    CURRENT_PKG_IDX=$((CURRENT_PKG_IDX + 1))
     SCRIPT_PKG_NAME=$(grep -E "^PKG_NAME=" "$script" | cut -d'"' -f2 || echo "")
     FILE_PKG_NAME=$(basename "$script" .sh)
     
@@ -20,10 +23,12 @@ for script in "${SCRIPTS[@]}"; do
     if [[ -f "/mnt/lfs/var/lib/ginger/${FILE_PKG_NAME}-temp.built" ]] || \
        [[ -n "$SCRIPT_PKG_NAME" && -f "/mnt/lfs/var/lib/ginger/${SCRIPT_PKG_NAME}-temp.built" ]] || \
        [[ -n "$SCRIPT_PKG_NAME" && -f "/mnt/lfs/var/lib/ginger/${SCRIPT_PKG_NAME}.built" ]]; then
+        echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME (Skipped)"
         continue
     fi
     
     echo "__GINGER_PKG_MARKER__: ${FILE_PKG_NAME}"
+    echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME"
     echo "Building: ${FILE_PKG_NAME} (Temporary Tools)"
 
     # Run the build script
