@@ -124,8 +124,8 @@ ui_log "Creating user accounts and Init config..."
 echo "root:$ROOT_PASS" | sudo chroot "$MNT" chpasswd
 
 # FIX: Create /etc/inittab as a FILE, not a directory
-sudo rm -rf "$LFS/etc/inittab.d"
-sudo rm -f "$LFS/etc/inittab"
+sudo rm -rf "$MNT/etc/inittab.d"
+sudo rm -f "$MNT/etc/inittab"
 
 # 2. Pre-stage a basic inittab so the first boot works even if installer fails
 cat << EOF | sudo tee "$MNT/etc/inittab" >/dev/null
