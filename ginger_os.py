@@ -84,7 +84,7 @@ class GingerTUI:
         pulsar = self.get_neural_pulsar()
         
         # Left Side: Original Branding
-        branding = Text("\n" + LOGO.strip() + "\n\n", style="bold bright_blue")
+        branding = Text("\n" + LOGO.strip(), style="bold bright_blue")
         # Right Side: Deployment Metrics + AI Thoughts
         metrics = Text()
         if self.executing_step is not None:
@@ -126,7 +126,7 @@ class GingerTUI:
                 # Progress Bar
                 if self.engine.total_pkg_count > 0:
                     prog = self.engine.current_pkg_idx / self.engine.total_pkg_count
-                    bar_width = 50
+                    bar_width = 44
                     filled = int(prog * bar_width)
                     bar = "█" * filled + "░" * (bar_width - filled)
                     metrics.append(f" [{bar}] ", style="bright_cyan")
@@ -141,8 +141,6 @@ class GingerTUI:
             metrics.append(f" 🧠 CORE_LOG (AI_{state}): ", style="bold bright_magenta")
             metrics.append("\n"+ai_thought, style="italic dim bright_blue \n")
             metrics.append(f"\n {pulsar} NEURAL_CORE_V1.1_LOADED", style="self.border_style")
-
-            
         else:
             # Idle timers
             idle_line = Text()
@@ -160,8 +158,7 @@ class GingerTUI:
             if self.auto_all:
                 metrics.append("Autonomous sequence engaged. Standing by for synchronization.", style="italic dim bright_magenta")
             else:
-                metrics.append("Awaiting operator 'EXECUTE' directive.", style="italic dim bright_ magenta")
-            metrics.append("\n") # Breathing room at bottom
+                metrics.append("Awaiting operator 'EXECUTE' directive.", style="italic dim bright_magenta")
             
         return Panel(
             Columns([
