@@ -186,7 +186,7 @@ class GingerTUI:
         return f"Executing directive: {step_name}. Monitoring syscalls."
 
     def render_steps(self):
-        """Modern cyber-table for build steps"""
+        """Modern table for build steps"""
         table = Table(
             show_header=True,
             header_style="bold bright_cyan",

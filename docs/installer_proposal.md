@@ -1,7 +1,7 @@
 # Proposal: GingerOS Python-Based Professional Installer
 
 ## 🎯 Executive Summary
-While the current bash-based installer provides a functional and visually appealing "Cyberpunk" experience, it is inherently limited by shell scripting constraints. We propose a native Python-based installer to provide a robust, hardware-aware, and premium installation experience.
+While the current bash-based installer provides a functional and visually appealing experience, it is inherently limited by shell scripting constraints. We propose a native Python-based installer to provide a robust, hardware-aware, and premium installation experience.
 
 ## 🚀 Why Python?
 

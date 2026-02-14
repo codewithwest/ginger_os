@@ -45,7 +45,7 @@ def update_ui(layout: Layout, engine):
             Columns([
                 # Use bright colors for transparent terminals
                 Text(LOGO, style=f"bold {GINGER_BLUE}"),
-                Text("\n\n🌶️ GingerOS Build System\nLFS 12.4 Automata\nCyberpunk Edition", style=f"bold {LASER_GREEN}", justify="center")
+                Text("\n\n🌶️ GingerOS Build System\nLFS 12.4", style=f"bold {LASER_GREEN}", justify="center")
             ])
         ),
         border_style=f"bold {LASER_BLUE}"
