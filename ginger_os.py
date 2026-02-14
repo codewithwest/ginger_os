@@ -49,21 +49,11 @@ class GingerTUI:
         """Create the high-tech Neural-Link layout"""
         layout = Layout()
         layout.split_column(
-            Layout(name="top", size=13),
+            Layout(name="header", size=14),
             Layout(name="body", ratio=1),
             Layout(name="footer", size=3)
         )
         
-        layout["top"].split_row(
-            Layout(name="header", ratio=12), # Logo Area
-            Layout(name="monitor_area", ratio=28) # Deployment Monitor + Copilot
-        )
-        
-        layout["monitor_area"].split_column(
-            Layout(name="neural_stats", ratio=1), # DEPLOYMENT_MONITOR
-            Layout(name="ai_copilot", size=4)      # AI_COPILOT_STREAM
-        )
-
         layout["body"].split_row(
             Layout(name="left_col", ratio=12),
             Layout(name="terminal", ratio=28) # Live Log Terminal
@@ -89,19 +79,87 @@ class GingerTUI:
         return simple_frames[idx]
 
     def render_header(self):
-        """Render high-tech header with logo and branding"""
+        """Full-width high-tech header with logo, metrics, and AI thoughts"""
         pulsar = self.get_neural_pulsar()
         
-        # Original Branding
+        # Left Side: Original Branding
         branding = Text(LOGO.strip() + "\n", style="bold bright_cyan")
         branding.append(f" {pulsar} NEURAL_CORE_V1.1_LOADED", style="dim cyan")
         
+        # Right Side: Deployment Metrics + AI Thoughts
+        metrics = Text()
+        if self.executing_step is not None:
+            step = self.engine.steps[self.executing_step]
+            elapsed = time.time() - self.current_start_time
+            
+            # Status & Timers
+            stat_line = Text()
+            stat_line.append("🚀 SYSTEM_BUSY ", style="bold bright_red blink")
+            stat_line.append(f" PHASE: {self.format_time(elapsed)}", style="bold bright_yellow")
+            metrics.append(stat_line)
+            metrics.append("\n")
+            
+            # Phase Name
+            metrics.append(f" » PHASE: {step.name}\n", style="bold bright_white")
+            
+            # Package & Progress
+            if self.engine.current_pkg:
+                pkg_line = Text()
+                pkg_line.append(f" » TARGET: {self.engine.current_pkg}", style="bright_yellow")
+                if self.engine.total_pkg_count > 0:
+                    pkg_line.append(f" ({self.engine.current_pkg_idx}/{self.engine.total_pkg_count})", style="dim")
+                metrics.append(pkg_line)
+                metrics.append("\n")
+                
+                # Progress Bar
+                if self.engine.total_pkg_count > 0:
+                    prog = self.engine.current_pkg_idx / self.engine.total_pkg_count
+                    bar_width = 40
+                    filled = int(prog * bar_width)
+                    bar = "█" * filled + "░" * (bar_width - filled)
+                    metrics.append(f"   [{bar}] ", style="bright_cyan")
+                    metrics.append(f"{int(prog*100)}%\n", style="dim")
+            
+            # AI Thought (Single line)
+            states = ["ANALYZING", "OPTIMIZING", "MONITORING", "SECURING"]
+            state = states[int(time.time() / 2) % len(states)]
+            ai_thought = self._get_ai_thought(step.name)
+            metrics.append(f" 🧠 {state}: ", style="bold bright_magenta")
+            metrics.append(ai_thought, style="italic dim magenta")
+            
+        else:
+            metrics.append("\n🟢 CORE_READY\n", style="bold bright_green")
+            metrics.append("Waiting for sequence binary initiation...\n", style="dim italic")
+            
+            # Idle AI state
+            metrics.append(" 🧠 STANDBY: ", style="bold bright_magenta")
+            if self.auto_all:
+                metrics.append("Autonomous sequence engaged. Standing by for sync.", style="italic dim magenta")
+            else:
+                metrics.append("Awaiting operator 'EXECUTE' directive.", style="italic dim magenta")
+            
         return Panel(
-            Align.center(branding, vertical="middle"),
+            Columns([
+                branding,
+                Align.right(metrics, vertical="middle")
+            ], expand=True),
             border_style="bright_blue",
             box=box.DOUBLE_EDGE,
-            title="[bold dim blue] SYSTEM_ID [/]"
+            title="[bold dim blue] SYSTEM_INTERFACE [/]"
         )
+
+    def _get_ai_thought(self, step_name):
+        """Generates a context-aware AI phrase"""
+        step_lower = step_name.lower()
+        if "host" in step_lower:
+            return "Verifying ecosystem dependencies. Host env stable."
+        elif "toolchain" in step_lower:
+            return "Synthesizing binary primitives. Mitigating entropy."
+        elif "kernel" in step_lower:
+            return "Orchestrating system heart. Calibrating scheduler."
+        elif "chroot" in step_lower:
+            return "Establishing isolated environment logic."
+        return f"Executing directive: {step_name}. Monitoring syscalls."
 
     def render_steps(self):
         """Modern cyber-table for build steps"""
@@ -355,22 +413,30 @@ class GingerTUI:
         layout["header"].update(self.render_header())
         layout["steps"].update(self.render_steps())
         
-        # Dashboard (Monitor Area) handles help toggle
+        # Grid handles help toggle
         if self.show_help:
-            layout["monitor_area"].update(self.render_help())
+            # We can overlay help or change body. For now, overlay dashboard area logic
+            # but since dashboard is gone, we'll just update body if help is on?
+            # Actually, standardizing on a dedicated help render inside the dashboard spot
+            # was better. Let's make the 'steps' or 'matrix' area show help if needed,
+            # or better: use the full body for help.
+            layout["body"].update(self.render_help())
         else:
-            # Ensure the monitor area is split if it was showing help
-            if not isinstance(layout["monitor_area"].renderable, Layout):
-                layout["monitor_area"].split_column(
-                    Layout(name="neural_stats", ratio=1),
-                    Layout(name="ai_copilot", size=4)
+            # Ensure the body is split back to columns if help was closed
+            if not isinstance(layout["body"].renderable, Layout):
+                layout["body"].split_row(
+                    Layout(name="left_col", ratio=12),
+                    Layout(name="terminal", ratio=28)
                 )
+                layout["left_col"].split_column(
+                    Layout(name="steps", ratio=2),
+                    Layout(name="matrix", ratio=1)
+                )
+
+            layout["steps"].update(self.render_steps())
+            layout["matrix"].update(self.render_matrix())
+            layout["terminal"].update(self.render_terminal())
             
-            layout["neural_stats"].update(self.render_dashboard())
-            layout["ai_copilot"].update(self.render_ai_copilot())
-            
-        layout["matrix"].update(self.render_matrix())
-        layout["terminal"].update(self.render_terminal())
         layout["footer"].update(self.render_footer())
     
     def run_step(self, step_idx, force=False):
