@@ -2,7 +2,6 @@
 # GingerOS - ISO Builder
 set -euo pipefail
 
-# Source libraries
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 source "${SCRIPT_DIR}/../lib/disk.sh"
 source "${SCRIPT_DIR}/../lib/bash_config.sh"
@@ -11,210 +10,118 @@ GINGER_ROOT="$(cd "${SCRIPT_DIR}/../../" && pwd)"
 ISO_DIR="$GINGER_ROOT/iso_work"
 ISO_OUTPUT="$GINGER_ROOT/gingeros-installer.iso"
 INITRD_WORK="$GINGER_ROOT/initrd_work"
-LFS="/mnt/lfs"
 
-# --- HELPERS ---
 cleanup() {
     sudo rm -rf "$ISO_DIR" "$INITRD_WORK"
 }
 trap cleanup EXIT
 
-# --- BUILD PROCESS ---
-
-# Step 0: Cleanup
 echo "__GINGER_PKG_MARKER__: Preparation"
-echo "Preparing build arena..."
 cleanup
 mkdir -p "$ISO_DIR/boot/grub" "$ISO_DIR/installer"
 
-# Low space protection
-FREE_BLOCKS=$(df -k "$GINGER_ROOT" | awk 'NR==2 {print $4}')
-if [ "$FREE_BLOCKS" -lt 5000000 ]; then
-    echo "Low space detected. Purging heavy artifacts..."
-    sudo rm -rf "$GINGER_ROOT/ginger_os.img" 2>/dev/null || true
-fi
-
-# Step 1: Environment
-echo "__GINGER_PKG_MARKER__: Environment"
-echo "Collecting Kernel..."
-# Prefer vmlinuz-ginger (finalized), fallback to any vmlinuz-*
+echo "__GINGER_PKG_MARKER__: Kernel"
 if [ -f "$GINGER_ROOT/vmlinuz-ginger" ]; then
     KERNEL_IMG="$GINGER_ROOT/vmlinuz-ginger"
 else
-    KERNEL_IMG=$(ls "$GINGER_ROOT/vmlinuz-"* 2>/dev/null | head -n 1)
+    KERNEL_IMG=$(ls "$GINGER_ROOT"/vmlinuz-* 2>/dev/null | head -n 1 || true)
 fi
 
-[ -z "$KERNEL_IMG" ] && { echo "Kernel not found!"; exit 1; }
+[ -z "${KERNEL_IMG:-}" ] && { echo "Kernel not found!"; exit 1; }
 cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 
-# Step 2: Initrd
 echo "__GINGER_PKG_MARKER__: Initrd"
-echo "Assembling Minimal Live Environment..."
 sudo rm -rf "$INITRD_WORK"
-# Essential tools needed for a functional Live environment and Installer
+
 ESSENTIAL_TOOLS=(
-    bash id sh mount umount mkdir ls cat grep sed awk rm
-    parted partprobe mkfs.ext4 mke2fs tar lsblk blkid wipefs gzip udevadm chroot findmnt
-    useradd chpasswd groupadd chown chmod
-    grub-install grub-mkconfig find basename 
-    tee sleep which clear ps kill tput 
+    bash sh mount umount mkdir ls cat grep sed awk rm
+    parted partprobe mkfs.ext4 tar lsblk blkid wipefs gzip udevadm
+    grub-install tee sleep which clear ps kill tput 
     readlink dirname touch du df
     head tail sort uniq date wc tr cut xargs cp mv ln
-    python3 sync
+    python3
 )
 
-# Create essential system directory structure
-mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sys,tmp,var,root}
-(cd "$INITRD_WORK" && ln -sf bin sbin && mkdir -p usr && cd usr && ln -sf ../bin bin && ln -sf ../bin sbin)
+mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sys,tmp,var,root,usr/bin}
+ln -sf bin "$INITRD_WORK/sbin"
 
 for tool in "${ESSENTIAL_TOOLS[@]}"; do
-    TOOL_PATH=$(which "$tool" 2>/dev/null || true)
-    if [ -n "$TOOL_PATH" ] && [ -f "$TOOL_PATH" ]; then
-        cp -vL "$TOOL_PATH" "$INITRD_WORK/bin/"
-    else
-        echo "Critical tool $tool not found on host system!"
-        exit 1
-    fi
+    TOOL_PATH=$(command -v "$tool" || true)
+    [ -n "$TOOL_PATH" ] || { echo "Missing tool: $tool"; exit 1; }
+    cp -vL "$TOOL_PATH" "$INITRD_WORK/bin/"
 done
 
 echo "Resolving library dependencies..."
-# Copy only the libraries needed by our minimal binaries
 for file in "$INITRD_WORK/bin/"*; do
-    [ -f "$file" ] || continue
-    LIBS=$(ldd "$file" 2>/dev/null | grep -o '/[^ ]*' | grep '\.so' || true)
-    for lib in $LIBS; do
-        LIB_BASENAME=$(basename "$lib")
-        TARGET_DIR="$INITRD_WORK/$(dirname "$lib" | sed 's|^/||')"
-        [ -f "$TARGET_DIR/$LIB_BASENAME" ] && continue
-        mkdir -p "$TARGET_DIR"
-        [ -f "$lib" ] && cp -L "$lib" "$TARGET_DIR/" 2>/dev/null || true
+    ldd "$file" 2>/dev/null | awk '{print $3}' | grep '^/' | while read -r lib; do
+        dest="$INITRD_WORK$(dirname "$lib")"
+        mkdir -p "$dest"
+        cp -L "$lib" "$dest/" 2>/dev/null || true
     done
 done
 
-# CRITICAL: Ensure the dynamic linker and terminfo are present
-echo "Ensuring dynamic linker and terminfo are present..."
-DYNAMIC_LINKER="/lib64/ld-linux-x86-64.so.2"
-if [ -f "$DYNAMIC_LINKER" ]; then
+# Dynamic linker
+if [ -f /lib64/ld-linux-x86-64.so.2 ]; then
     mkdir -p "$INITRD_WORK/lib64"
-    cp -L "$DYNAMIC_LINKER" "$INITRD_WORK/lib64/" || { echo "Failed to copy dynamic linker!"; exit 1; }
+    cp -L /lib64/ld-linux-x86-64.so.2 "$INITRD_WORK/lib64/"
 fi
 
-# Copy xterm-256color and linux terminfo for professional UI support
-mkdir -p "$INITRD_WORK/usr/share/terminfo/x"
-mkdir -p "$INITRD_WORK/usr/share/terminfo/l"
-[ -f "/usr/share/terminfo/x/xterm-256color" ] && cp -v "/usr/share/terminfo/x/xterm-256color" "$INITRD_WORK/usr/share/terminfo/x/"
-[ -f "/usr/share/terminfo/l/linux" ] && cp -v "/usr/share/terminfo/l/linux" "$INITRD_WORK/usr/share/terminfo/l/"
-
-# Copy Python libraries (Rich and dependencies)
-echo "Collecting Python libraries..."
-PY_DIST="/usr/lib/python3/dist-packages"
-mkdir -p "$INITRD_WORK/$PY_DIST"
-for lib in rich pygments typing_extensions.py markdown_it mdurl; do
-    if [ -e "$PY_DIST/$lib" ]; then
-        cp -rL "$PY_DIST/$lib" "$INITRD_WORK/$PY_DIST/"
-    fi
-done
-
-# Copy installers and helpers to ISO
+# Copy installer payload
 cp "$GINGER_ROOT/scripts/iso/ginger-installer-bin" "$ISO_DIR/installer/installer-bin"
 cp "$GINGER_ROOT/scripts/iso/installer.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/scripts/lib/ui.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/scripts/lib/disk.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/scripts/lib/bash_config.sh" "$ISO_DIR/installer/"
 
-# Step 4: Packaging
-echo "__GINGER_PKG_MARKER__: Packaging"
-echo "Creating Live Initrd and Payload..."
-# Create init script with error handling
+# Rootfs payload
+if [ -f "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" ]; then
+    cp "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/"
+fi
+
+# Init script
 cat << 'EOF' > "$INITRD_WORK/init"
 #!/bin/sh
-# GingerOS Live Init - Minimal Boot Environment
-
-echo "=== GingerOS Installer Boot ==="
+echo "=== GingerOS Installer Boot (Terminal Debug) ==="
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
-echo "Mounting kernel filesystems..."
 
-mount -t proc proc /proc || echo "WARNING: Failed to mount /proc"
-mount -t sysfs sysfs /sys || echo "WARNING: Failed to mount /sys"
-mount -t devtmpfs devtmpfs /dev || echo "WARNING: Failed to mount /dev"
-
-echo "Kernel filesystems mounted."
-echo "Searching for installation media..."
+mount -t proc proc /proc || true
+mount -t sysfs sysfs /sys || true
+mount -t devtmpfs devtmpfs /dev || true
 
 mkdir -p /mnt/iso
 
-# Try to find and mount the ISO
-found=0
-for dev in /dev/sr0 /dev/sr1 /dev/sda /dev/sdb /dev/sdc; do
+for dev in /dev/sr0 /dev/vda /dev/sda /dev/sdb /dev/sdc; do
     if [ -b "$dev" ]; then
-        echo "Trying $dev..."
-        if mount -t iso9660 -o ro "$dev" /mnt/iso 2>/dev/null; then
-            if [ -f /mnt/iso/installer/installer-bin ]; then
-                echo "Found GingerOS installer on $dev"
-                found=1
-                break
-            else
-                echo "No installer found on $dev, unmounting..."
-                umount /mnt/iso 2>/dev/null
+        if mount -o ro "$dev" /mnt/iso 2>/dev/null; then
+            if [ -f /mnt/iso/installer/installer.sh ]; then
+                echo "Found GingerOS ISO on $dev"
+                cd /mnt/iso/installer
+                chmod +x installer.sh installer-bin || true
+                exec /bin/bash ./installer.sh
             fi
+            umount /mnt/iso 2>/dev/null
         fi
     fi
 done
 
-if [ "$found" -eq 1 ]; then
-    echo "Launching GingerOS Professional Installer..."
-    chmod +x /mnt/iso/installer/installer-bin
-    chmod +x /mnt/iso/installer/installer.sh
-    export TERM=linux
-    clear
-    cd /mnt/iso/installer
-    
-    # Try the Python installer first (with Rich UI)
-    if python3 ./installer.py; then
-        echo "Installation Cycle Complete."
-    else
-        echo "Python Installer failed or not present. Falling back to Core-Bash..."
-        /bin/bash ./installer.sh
-    fi
-    echo "Dropping to rescue shell. Type 'reboot' or 'poweroff'."
-    exec /bin/sh
-else
-    echo "ERROR: Could not find GingerOS installation media!"
-    echo "Dropping to rescue shell. Type 'exit' to reboot."
-    exec /bin/sh
-fi
+echo "ERROR: GingerOS ISO not found."
+exec /bin/sh
 EOF
 chmod +x "$INITRD_WORK/init"
+
 (cd "$INITRD_WORK" && find . | cpio -o -H newc | gzip -c > "$ISO_DIR/boot/initrd.img")
 
-# Apply bash config to Live environment
-write_bash_config "$INITRD_WORK/root/.bashrc" "root" "true"
-cp "$INITRD_WORK/root/.bashrc" "$INITRD_WORK/.bashrc" 2>/dev/null || true
-
-if [ -f "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" ]; then
-    cp "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" "$ISO_DIR/installer/"
-    echo "Calculating file count for progress bar..."
-    tar -tzf "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" | wc -l > "$ISO_DIR/installer/file_count.txt"
-fi
-
-# Step 4: ISO Build
-echo "__GINGER_PKG_MARKER__: ISO Build"
-if [ -f "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" ]; then
-    echo "RootFS Tarball Size: $(du -sh "$GINGER_ROOT/gingeros-base-rootfs.tar.gz" | cut -f1)"
-fi
-echo "ISO Directory Size: $(du -sh "$ISO_DIR" | cut -f1)"
-echo "Top 5 largest files in ISO:"
-find "$ISO_DIR" -type f -exec du -h {} + | sort -rh | head -n 5 || true
-
-echo "Generating final ISO..."
 cat << EOF > "$ISO_DIR/boot/grub/grub.cfg"
 set default=0
 set timeout=5
-menuentry "GingerOS Installer" {
-    linux /boot/vmlinuz root=/dev/ram0 rw console=tty0 console=ttyS0 loglevel=7
+terminal_input console
+terminal_output console
+
+menuentry "GingerOS Installer (Terminal Debug)" {
+    linux /boot/vmlinuz root=/dev/ram0 rw console=tty0 console=ttyS0,115200 loglevel=7 debug earlyprintk=serial
     initrd /boot/initrd.img
 }
 EOF
-grub-mkrescue -o "$ISO_OUTPUT" "$ISO_DIR" >/dev/null 2>&1
 
+grub-mkrescue -o "$ISO_OUTPUT" "$ISO_DIR"
 echo "SUCCESS! ISO created at: $ISO_OUTPUT"
