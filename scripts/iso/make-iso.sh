@@ -52,7 +52,6 @@ echo "__GINGER_PKG_MARKER__: Initrd"
 echo "Assembling Minimal Live Environment..."
 sudo rm -rf "$INITRD_WORK"
 # Essential tools needed for a functional Live environment and Installer
-# We pull these from the host system to ensure they matching the architecture
 ESSENTIAL_TOOLS=(
     bash id sh mount umount mkdir ls cat grep sed awk rm
     parted mkfs.ext4 mke2fs tar lsblk blkid wipefs gzip udevadm chroot findmnt
@@ -70,8 +69,6 @@ mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sys,tmp,var,root}
 for tool in "${ESSENTIAL_TOOLS[@]}"; do
     TOOL_PATH=$(which "$tool" 2>/dev/null || true)
     if [ -n "$TOOL_PATH" ] && [ -f "$TOOL_PATH" ]; then
-        # Use -L to dereference symlinks (e.g. sh -> dash) and ensure 
-        # the actual binary is copied to /bin.
         cp -vL "$TOOL_PATH" "$INITRD_WORK/bin/"
     else
         echo "Critical tool $tool not found on host system!"
@@ -83,22 +80,13 @@ echo "Resolving library dependencies..."
 # Copy only the libraries needed by our minimal binaries
 for file in "$INITRD_WORK/bin/"*; do
     [ -f "$file" ] || continue
-    
-    # Get list of required libraries
     LIBS=$(ldd "$file" 2>/dev/null | grep -o '/[^ ]*' | grep '\.so' || true)
-    
     for lib in $LIBS; do
         LIB_BASENAME=$(basename "$lib")
         TARGET_DIR="$INITRD_WORK/$(dirname "$lib" | sed 's|^/||')"
-        
-        # Skip if already copied
         [ -f "$TARGET_DIR/$LIB_BASENAME" ] && continue
-        
         mkdir -p "$TARGET_DIR"
-        
-        if [ -f "$lib" ]; then
-            cp -L "$lib" "$TARGET_DIR/" 2>/dev/null || true
-        fi
+        [ -f "$lib" ] && cp -L "$lib" "$TARGET_DIR/" 2>/dev/null || true
     done
 done
 
@@ -108,9 +96,6 @@ DYNAMIC_LINKER="/lib64/ld-linux-x86-64.so.2"
 if [ -f "$DYNAMIC_LINKER" ]; then
     mkdir -p "$INITRD_WORK/lib64"
     cp -L "$DYNAMIC_LINKER" "$INITRD_WORK/lib64/" || { echo "Failed to copy dynamic linker!"; exit 1; }
-else
-    echo "Dynamic linker not found at $DYNAMIC_LINKER"
-    exit 1
 fi
 
 # Copy xterm-256color and linux terminfo for professional UI support
@@ -118,6 +103,13 @@ mkdir -p "$INITRD_WORK/usr/share/terminfo/x"
 mkdir -p "$INITRD_WORK/usr/share/terminfo/l"
 [ -f "/usr/share/terminfo/x/xterm-256color" ] && cp -v "/usr/share/terminfo/x/xterm-256color" "$INITRD_WORK/usr/share/terminfo/x/"
 [ -f "/usr/share/terminfo/l/linux" ] && cp -v "/usr/share/terminfo/l/linux" "$INITRD_WORK/usr/share/terminfo/l/"
+
+# Copy installers and helpers to ISO
+cp "$GINGER_ROOT/scripts/iso/ginger-installer-bin" "$ISO_DIR/installer/installer-bin"
+cp "$GINGER_ROOT/scripts/iso/installer.sh" "$ISO_DIR/installer/"
+cp "$GINGER_ROOT/scripts/lib/ui.sh" "$ISO_DIR/installer/"
+cp "$GINGER_ROOT/scripts/lib/disk.sh" "$ISO_DIR/installer/"
+cp "$GINGER_ROOT/scripts/lib/bash_config.sh" "$ISO_DIR/installer/"
 
 # Step 4: Packaging
 echo "__GINGER_PKG_MARKER__: Packaging"
@@ -146,7 +138,7 @@ for dev in /dev/sr0 /dev/sr1 /dev/sda /dev/sdb /dev/sdc; do
     if [ -b "$dev" ]; then
         echo "Trying $dev..."
         if mount -t iso9660 -o ro "$dev" /mnt/iso 2>/dev/null; then
-            if [ -f /mnt/iso/installer/installer.sh ]; then
+            if [ -f /mnt/iso/installer/installer-bin ]; then
                 echo "Found GingerOS installer on $dev"
                 found=1
                 break
@@ -159,19 +151,19 @@ for dev in /dev/sr0 /dev/sr1 /dev/sda /dev/sdb /dev/sdc; do
 done
 
 if [ "$found" -eq 1 ]; then
-    echo "Launching GingerOS installer..."
+    echo "Launching GingerOS Professional Installer..."
+    chmod +x /mnt/iso/installer/installer-bin
     chmod +x /mnt/iso/installer/installer.sh
     export TERM=linux
     clear
     cd /mnt/iso/installer
-    if /bin/bash /mnt/iso/installer/installer.sh; then
-        echo "--------------------------------------------------"
-        echo "   INSTALLATION SUCCESSFUL! YOU CAN REBOOT NOW   "
-        echo "--------------------------------------------------"
+    
+    # Try the standalone binary first
+    if ./installer-bin; then
+        echo "Installation Cycle Complete."
     else
-        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-        echo "   INSTALLATION FAILED! CHECK /tmp/ginger_build.log"
-        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        echo "TUI encountered an issue. Falling back to Core-Bash..."
+        /bin/bash ./installer.sh
     fi
     echo "Dropping to rescue shell. Type 'reboot' or 'poweroff'."
     exec /bin/sh
@@ -183,11 +175,6 @@ fi
 EOF
 chmod +x "$INITRD_WORK/init"
 (cd "$INITRD_WORK" && find . | cpio -o -H newc | gzip -c > "$ISO_DIR/boot/initrd.img")
-
-cp "$GINGER_ROOT/scripts/iso/installer.sh" "$ISO_DIR/installer/"
-cp "$GINGER_ROOT/scripts/lib/ui.sh" "$ISO_DIR/installer/"
-cp "$GINGER_ROOT/scripts/lib/disk.sh" "$ISO_DIR/installer/"
-cp "$GINGER_ROOT/scripts/lib/bash_config.sh" "$ISO_DIR/installer/"
 
 # Apply bash config to Live environment
 write_bash_config "$INITRD_WORK/root/.bashrc" "root" "true"

@@ -5,4 +5,5 @@ vmlinuz-*
 *.tar.gz
 
 **/*.pyc
+**/venv
 

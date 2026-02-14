@@ -38,34 +38,49 @@ fi
 # Step Configuration
 ui_init_dashboard "Preparation" "Formatting" "Extraction" "Hardware Sync" "User Setup" "Bootloader"
 
-# --- DISK SELECTION ---
-TARGET_DEV="${1:-}"
-if [ -z "$TARGET_DEV" ]; then
+# --- NON-INTERACTIVE MODE (for Python TUI) ---
+if [[ "${GINGER_NON_INTERACTIVE:-}" == "1" ]]; then
+    ui_log "Non-interactive mode detected. Using environment variables."
+    TARGET_DEV="${TARGET_DEV:-${1:-}}"
+    NEW_USER="${NEW_USER:-}"
+    NEW_PASS="${NEW_PASS:-}"
+    ROOT_PASS="${ROOT_PASS:-}"
+    
+    if [[ -z "$TARGET_DEV" || -z "$NEW_USER" || -z "$NEW_PASS" || -z "$ROOT_PASS" ]]; then
+        ui_error "Missing required environment variables for non-interactive mode."
+        exit 1
+    fi
+else
+    # --- DISK SELECTION ---
+    TARGET_DEV="${1:-}"
+    if [ -z "$TARGET_DEV" ]; then
+        ui_draw_header
+        echo -e "${ELECTRIC_BLUE}${BOLD}--- DISK SELECTION ---${NC}"
+        echo -e "Available Disks:"
+        lsblk -d -n -p -o NAME,SIZE,MODEL | grep -v "sr0"
+        echo ""
+        ui_input "Enter target disk (e.g. /dev/sda)" TARGET_DEV
+    fi
+
+    if [ -z "$TARGET_DEV" ] || [ ! -b "$TARGET_DEV" ]; then
+        ui_error "Device '$TARGET_DEV' is not a valid block device."
+    fi
+
+    # --- USER CREDENTIALS ---
     ui_draw_header
-    echo -e "${ELECTRIC_BLUE}${BOLD}--- DISK SELECTION ---${NC}"
-    echo -e "Available Disks:"
-    lsblk -d -n -p -o NAME,SIZE,MODEL | grep -v "sr0"
-    echo ""
-    ui_input "Enter target disk (e.g. /dev/sda)" TARGET_DEV
+    echo -e "${ELECTRIC_BLUE}${BOLD}--- USER ACCOUNT SETUP ---${NC}"
+    ui_input "Desired Username" NEW_USER
+    ui_password "Password for $NEW_USER" NEW_PASS
+    ui_password "Root Password" ROOT_PASS
+
+    # --- SAFETY WARNING ---
+    ui_draw_header
+    echo -e "${RED}${BOLD}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!${NC}"
+    echo -e "${RED}  WARNING: ALL DATA ON $TARGET_DEV WILL BE WIPED!  ${NC}"
+    echo -e "${RED}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!${NC}"
+    ui_confirm "Are you absolutely sure you want to proceed?"
 fi
 
-if [ -z "$TARGET_DEV" ] || [ ! -b "$TARGET_DEV" ]; then
-    ui_error "Device '$TARGET_DEV' is not a valid block device."
-fi
-
-# --- USER CREDENTIALS ---
-ui_draw_header
-echo -e "${ELECTRIC_BLUE}${BOLD}--- USER ACCOUNT SETUP ---${NC}"
-ui_input "Desired Username" NEW_USER
-ui_password "Password for $NEW_USER" NEW_PASS
-ui_password "Root Password" ROOT_PASS
-
-# --- SAFETY WARNING ---
-ui_draw_header
-echo -e "${RED}${BOLD}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!${NC}"
-echo -e "${RED}  WARNING: ALL DATA ON $TARGET_DEV WILL BE WIPED!  ${NC}"
-echo -e "${RED}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!${NC}"
-ui_confirm "Are you absolutely sure you want to proceed?"
 
 # --- INSTALLATION ---
 TARBALL=$(find . -maxdepth 1 -name "gingeros-base-rootfs.tar.gz" | head -n 1)
