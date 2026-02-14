@@ -49,21 +49,29 @@ class GingerTUI:
         """Create the high-tech Neural-Link layout"""
         layout = Layout()
         layout.split_column(
-            Layout(name="header", size=11),
-            Layout(name="main_grid", ratio=1),
-            Layout(name="terminal", size=16),
+            Layout(name="top", size=13),
+            Layout(name="body", ratio=1),
             Layout(name="footer", size=3)
         )
         
-        layout["main_grid"].split_row(
-            Layout(name="steps", ratio=12),
-            Layout(name="dashboard", ratio=20),
-            Layout(name="matrix", ratio=8)
+        layout["top"].split_row(
+            Layout(name="header", ratio=12), # Logo Area
+            Layout(name="monitor_area", ratio=28) # Deployment Monitor + Copilot
         )
         
-        layout["dashboard"].split_column(
-            Layout(name="neural_stats", ratio=1),
-            Layout(name="ai_copilot", size=6)
+        layout["monitor_area"].split_column(
+            Layout(name="neural_stats", ratio=1), # DEPLOYMENT_MONITOR
+            Layout(name="ai_copilot", size=4)      # AI_COPILOT_STREAM
+        )
+
+        layout["body"].split_row(
+            Layout(name="left_col", ratio=12),
+            Layout(name="terminal", ratio=28) # Live Log Terminal
+        )
+
+        layout["left_col"].split_column(
+            Layout(name="steps", ratio=2), # SEQUENCE
+            Layout(name="matrix", ratio=1)  # SYS_MX
         )
         
         return layout
@@ -81,41 +89,18 @@ class GingerTUI:
         return simple_frames[idx]
 
     def render_header(self):
-        """Render high-tech header with original logo and side-timers"""
+        """Render high-tech header with logo and branding"""
         pulsar = self.get_neural_pulsar()
         
-        # Left Side: Original Branding
+        # Original Branding
         branding = Text(LOGO.strip() + "\n", style="bold bright_cyan")
-        branding.append(f" {pulsar} NEURAL_CORE_V1.1", style="dim cyan")
+        branding.append(f" {pulsar} NEURAL_CORE_V1.1_LOADED", style="dim cyan")
         
-        # Right Side: Live Metrics
-        metrics = Text()
-        if self.executing_step is not None:
-            elapsed = time.time() - self.current_start_time
-            metrics.append("\n🚀 SYSTEM_BUSY\n", style="bold bright_red blink")
-            
-            if self.engine.current_pkg:
-                pkg_progress = ""
-                if self.engine.total_pkg_count > 0:
-                    pkg_progress = f" ({self.engine.current_pkg_idx}/{self.engine.total_pkg_count})"
-                metrics.append(f"📦 {self.engine.current_pkg}{pkg_progress}\n", style="bold bright_white")
-                
-                if self.engine.pkg_start_time:
-                    p_elapsed = time.time() - self.engine.pkg_start_time
-                    metrics.append(f"   PKG: {self.format_time(p_elapsed)}  ", style="bright_cyan")
-            
-            metrics.append(f"PHASE: {self.format_time(elapsed)}\n", style="bold bright_yellow")
-        else:
-            metrics.append("\n🟢 CORE_READY\n", style="bold bright_green")
-            metrics.append("Waiting for sequence...\n", style="dim italic")
-            
         return Panel(
-            Columns([
-                branding,
-                Align.right(metrics, vertical="middle")
-            ], expand=True),
+            Align.center(branding, vertical="middle"),
             border_style="bright_blue",
-            box=box.DOUBLE_EDGE
+            box=box.DOUBLE_EDGE,
+            title="[bold dim blue] SYSTEM_ID [/]"
         )
 
     def render_steps(self):
@@ -298,8 +283,8 @@ class GingerTUI:
             return "█" * filled + "░" * (5 - filled)
             
         matrix.append(f"\n 💿  STORAGE\n", style="bold bright_white")
-        matrix.append(f"  H: [{mini_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_cyan" if host_disk < 90 else "bright_red")
-        matrix.append(f"  L: [{mini_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style="bright_green")
+        matrix.append(f"  Host Disk: [{mini_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_cyan" if host_disk < 90 else "bright_red")
+        matrix.append(f"  LFS Disk: [{mini_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style="bright_green")
         
         # Build Index
         complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
@@ -319,8 +304,9 @@ class GingerTUI:
         """Live log terminal with scanline effect simulator"""
         log_content = Text()
         
-        if self.executing_step is not None:
-            recent_logs = self.engine.logs[-15:] if len(self.engine.logs) > 15 else self.engine.logs
+        if self.engine.logs:
+            # We can show more logs now in the side panel
+            recent_logs = self.engine.logs[-28:] if len(self.engine.logs) > 28 else self.engine.logs
             for log_entry, style in recent_logs:
                 # Truncate and prefix
                 if len(log_entry) > 100: log_entry = log_entry[:97] + "..."
@@ -369,15 +355,15 @@ class GingerTUI:
         layout["header"].update(self.render_header())
         layout["steps"].update(self.render_steps())
         
-        # Dashboard handles help toggle
+        # Dashboard (Monitor Area) handles help toggle
         if self.show_help:
-            layout["dashboard"].update(self.render_help())
+            layout["monitor_area"].update(self.render_help())
         else:
-            # Restore grid if was showing help
-            if not isinstance(layout["dashboard"].renderable, Layout):
-                layout["dashboard"].split_column(
+            # Ensure the monitor area is split if it was showing help
+            if not isinstance(layout["monitor_area"].renderable, Layout):
+                layout["monitor_area"].split_column(
                     Layout(name="neural_stats", ratio=1),
-                    Layout(name="ai_copilot", size=6)
+                    Layout(name="ai_copilot", size=4)
                 )
             
             layout["neural_stats"].update(self.render_dashboard())
