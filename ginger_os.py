@@ -83,7 +83,7 @@ class GingerTUI:
         pulsar = self.get_neural_pulsar()
         
         # Left Side: Original Branding
-        branding = Text(LOGO.strip() + "\n", style="bold bright_cyan")
+        branding = Text("\n" + LOGO.strip() + "\n\n", style="bold bright_cyan")
         branding.append(f" {pulsar} NEURAL_CORE_V1.1_LOADED", style="dim cyan")
         
         # Right Side: Deployment Metrics + AI Thoughts
@@ -141,6 +141,7 @@ class GingerTUI:
             ai_thought = self._get_ai_thought(step.name)
             metrics.append(f" 🧠 CORE_LOG (AI_{state}): ", style="bold bright_magenta")
             metrics.append(ai_thought, style="italic dim magenta")
+            metrics.append("\n") # Breathing room at bottom
             
         else:
             # Idle timers
@@ -151,7 +152,7 @@ class GingerTUI:
                 idle_line.append(f" [TOTAL_RUNTIME: {self.format_time(overall_elapsed)}]", style="dim bright_blue")
             
             metrics.append(idle_line)
-            metrics.append("\n")
+            metrics.append("\n\n")
             metrics.append("Waiting for sequence binary initiation sequence...\n\n", style="dim italic")
             
             # Idle AI state
@@ -160,10 +161,11 @@ class GingerTUI:
                 metrics.append("Autonomous sequence engaged. Standing by for synchronization.", style="italic dim magenta")
             else:
                 metrics.append("Awaiting operator 'EXECUTE' directive.", style="italic dim magenta")
+            metrics.append("\n") # Breathing room at bottom
             
         return Panel(
             Columns([
-                branding,
+                Align.left(branding, vertical="middle"),
                 Align.right(metrics, vertical="middle")
             ], expand=True),
             border_style="bright_blue",
