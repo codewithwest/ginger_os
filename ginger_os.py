@@ -349,7 +349,7 @@ class GingerTUI:
     def render_matrix(self):
         """System metrics matrix with stability gauge"""
         matrix = Text()
-        matrix.append("\n 🖥️  HOST\n", style="bold bright_white")
+        matrix.append("\n 🖥️ HOST\n", style="bold bright_white")
         
         try:
             load = os.getloadavg()
@@ -364,7 +364,7 @@ class GingerTUI:
             filled = int(val / 10)
             return "█" * filled + "░" * (10 - filled)
             
-        matrix.append(f"\n 💿  STORAGE\n", style="bold bright_white")
+        matrix.append(f"\n 💿 STORAGE\n", style="bold bright_white")
         matrix.append(f"  Host Disk: [{mini_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_blue" if host_disk < 90 else "bright_red")
         matrix.append(f"  LFS Disk: [{mini_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style=self.theme_color)
         
@@ -372,7 +372,7 @@ class GingerTUI:
         complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
         total = len(self.engine.steps)
         stability = (complete/total) * 100
-        matrix.append(f"\n 🛡️  STABLE\n", style="bold bright_white")
+        matrix.append(f"\n 🛡️ STABLE\n", style=f"bold {self.theme_color}")
         matrix.append(f"  {stability:.0f}%\n", style="bold " + self.theme_color)
         
         return Panel(
