@@ -44,6 +44,7 @@ class GingerTUI:
         self.log_scroll = 0
         self.auto_all = False
         self.last_auto_step = None
+        self.border_style = "self.border_style"
         
     def create_layout(self):
         """Create the high-tech Neural-Link layout"""
@@ -114,7 +115,7 @@ class GingerTUI:
                 # Package Timer
                 if self.engine.pkg_start_time:
                     pkg_elapsed = time.time() - self.engine.pkg_start_time
-                    pkg_line.append(f" [⏱ {self.format_time(pkg_elapsed)}]", style="bright_green")
+                    pkg_line.append(f" [⏱ {self.format_time(pkg_elapsed)}]", style=self.border_style)
                 
                 if self.engine.total_pkg_count > 0:
                     pkg_line.append(f" ({self.engine.current_pkg_idx}/{self.engine.total_pkg_count})", style="dim")
@@ -139,13 +140,13 @@ class GingerTUI:
             ai_thought = self._get_ai_thought(step.name)
             metrics.append(f" 🧠 CORE_LOG (AI_{state}): ", style="bold bright_magenta")
             metrics.append("\n"+ai_thought, style="italic dim bright_blue \n")
-            metrics.append(f"\n {pulsar} NEURAL_CORE_V1.1_LOADED", style="bright_cyan")
+            metrics.append(f"\n {pulsar} NEURAL_CORE_V1.1_LOADED", style="self.border_style")
 
             
         else:
             # Idle timers
             idle_line = Text()
-            idle_line.append("🟢 NEURAL_CORE_READY ", style="bold bright_green")
+            idle_line.append("🟢 NEURAL_CORE_READY ", style="bold self.border_style")
             if self.engine.overall_start_time:
                 overall_elapsed = time.time() - self.engine.overall_start_time
                 idle_line.append(f" [TOTAL_RUNTIME: {self.format_time(overall_elapsed)}]", style="dim bright_blue")
@@ -167,7 +168,7 @@ class GingerTUI:
                 Align.left(branding, vertical="middle"),
                 Align.right(metrics, vertical="middle")
             ], expand=True),
-            border_style="bright_blue",
+            border_style=self.border_style,
             box=box.DOUBLE_EDGE,
             title="[bold dim blue] NEURAL_SYSTEM_INTERFACE [/]"
         )
@@ -209,11 +210,11 @@ class GingerTUI:
                 row_style = "on blue3"
                 slot_txt = f"[bold bright_cyan]{idx+1:02d}[/]"
             elif is_completed:
-                state = "[bright_green]✔ STABLE[/]"
+                state = "[self.border_style]✔ COMPLETE[/]"
                 row_style = ""
                 slot_txt = f"[dim]{idx+1:02d}[/]"
             else:
-                state = "[dim]○ PENDING[/]"
+                state = "[dim] ◐ PENDING[/]"
                 row_style = "dim"
                 slot_txt = f"{idx+1:02d}"
 
@@ -232,7 +233,7 @@ class GingerTUI:
         return Panel(
             table,
             title="[bold bright_cyan] 0x_SEQUENCE [/]",
-            border_style="bright_blue",
+            border_style=self.border_style,
             box=box.ROUNDED
         )
 
@@ -263,7 +264,7 @@ class GingerTUI:
                 if self.engine.pkg_start_time:
                     p_elapsed = time.time() - self.engine.pkg_start_time
                     stats.append(f"  ETR_PKG: ", style="dim")
-                    stats.append(f"{self.format_time(p_elapsed)}\n", style="bright_green")
+                    stats.append(f"{self.format_time(p_elapsed)}\n", style=self.border_style)
 
             stats.append(f"\n» UPTIME: {self.format_time(elapsed)}\n", style="bold bright_yellow")
             
@@ -275,12 +276,12 @@ class GingerTUI:
             # Show summary
             complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
             total = len(self.engine.steps)
-            stats.append(f"\n STABILITY_INDEX: {int((complete/total)*100)}%\n", style="bright_green")
+            stats.append(f"\n STABILITY_INDEX: {int((complete/total)*100)}%\n", style=self.border_style)
             
         return Panel(
             Align.center(stats, vertical="middle"),
             title=f"[bold bright_magenta]══ DEPLOYMENT_MONITOR ══[/]",
-            border_style="bright_magenta",
+            border_style=self.border_style,
             box=box.HEAVY
         )
 
@@ -307,7 +308,7 @@ class GingerTUI:
         return Panel(
             Align.center(help_text, vertical="middle"),
             title="[bold bright_yellow]══ HELP_ENVIRONMENT ══[/]",
-            border_style="bright_yellow",
+            border_style=self.border_style,
             box=box.DOUBLE_EDGE
         )
 
@@ -341,7 +342,7 @@ class GingerTUI:
         return Panel(
             thoughts,
             title="[bold bright_magenta] AI_COPILOT_STREAM [/]",
-            border_style="dim magenta",
+            border_style=self.border_style,
             box=box.SQUARE,
             padding=(1, 2)
         )
@@ -366,19 +367,19 @@ class GingerTUI:
             
         matrix.append(f"\n 💿  STORAGE\n", style="bold bright_white")
         matrix.append(f"  Host Disk: [{mini_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_blue" if host_disk < 90 else "bright_red")
-        matrix.append(f"  LFS Disk: [{mini_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style="bright_green")
+        matrix.append(f"  LFS Disk: [{mini_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style="self.border_style")
         
         # Build Index
         complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
         total = len(self.engine.steps)
         stability = (complete/total) * 100
         matrix.append(f"\n 🛡️  STABLE\n", style="bold bright_white")
-        matrix.append(f"  {stability:.0f}%\n", style="bold bright_green")
+        matrix.append(f"  {stability:.0f}%\n", style="bold " + self.border_style)
         
         return Panel(
             matrix,
             title="[bold bright_white]══ SYS_MX ══[/]",
-            border_style="bright_white",
+            border_style=self.border_style,
             box=box.ROUNDED
         )
 
@@ -402,7 +403,7 @@ class GingerTUI:
         return Panel(
             log_content,
             title="[bold bright_cyan]══ TERMINAL_STREAM ══[/]",
-            border_style="dim cyan",
+            border_style=self.border_style,
             box=box.SQUARE
         )
 
@@ -412,7 +413,7 @@ class GingerTUI:
         
         # (Key, Label, Color)
         commands = [
-            ("↵", "EXECUTE", "bright_green"),
+            ("↵", "EXECUTE", self.border_style),
             ("A", "AUTO", "bright_cyan"),
             ("P", "STEP", "bright_magenta"),
             ("F", "FORCE", "bright_yellow"),
@@ -428,7 +429,7 @@ class GingerTUI:
             
         return Panel(
             Align.center(footer, vertical="middle"),
-            border_style="dim cyan",
+            border_style=self.border_style,
             box=box.SIMPLE
         )
     
