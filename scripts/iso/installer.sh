@@ -111,11 +111,13 @@ ui_step 3
 ui_log "Synchronizing hardware IDs..."
 NEW_UUID=$(disk_get_uuid "$PART")
 cat << EOF | sudo tee "$MNT/etc/fstab" >/dev/null
-UUID=$NEW_UUID / ext4 defaults 1 1
-proc /proc proc nosuid,noexec,nodev 0 0
-sysfs /sys sysfs nosuid,noexec,nodev 0 0
-devpts /dev/pts devpts gid=5,mode=620 0 0
-tmpfs /run tmpfs defaults 0 0
+# <file system> <mount point>   <type>  <options>       <dump>  <pass>
+UUID=$NEW_UUID /               ext4    defaults        1       1
+proc           /proc           proc    nosuid,noexec,nodev 0       0
+sysfs          /sys            sysfs   nosuid,noexec,nodev 0       0
+devpts         /dev/pts        devpts  gid=5,mode=620  0       0
+tmpfs          /run            tmpfs   defaults        0       0
+devtmpfs       /dev            devtmpfs mode=0755,nosuid 0     0
 EOF
 
 # Step 4: User & Init Setup
@@ -160,8 +162,7 @@ insmod part_msdos
 insmod ext2
 search --no-floppy --fs-uuid --set=root $NEW_UUID
 menuentry 'GingerOS' {
-    linux /boot/$KERNEL_IMG root=UUID=$NEW_UUID rw rootdelay=5 console=tty0
-}
+    linux /boot/$KERNEL_IMG root=/dev/sda1 rw rootdelay=1 console=tty0}
 EOF
 
 # Install GRUB to MBR
