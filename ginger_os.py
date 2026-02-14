@@ -45,6 +45,7 @@ class GingerTUI:
         self.auto_all = False
         self.last_auto_step = None
         self.theme_color = "bright_green"
+        self.theme_secondary_color = "bright_blue"
         
     def create_layout(self):
         """Create the high-tech Neural-Link layout"""
@@ -168,7 +169,7 @@ class GingerTUI:
             ], expand=True),
             border_style=self.theme_color,
             box=box.DOUBLE_EDGE,
-            title="[bold dim blue] NEURAL_SYSTEM_INTERFACE [/]"
+            title=f"[bold {self.theme_secondary_color}] NEURAL_SYSTEM_INTERFACE [/]"
         )
 
     def _get_ai_thought(self, step_name):
@@ -194,9 +195,9 @@ class GingerTUI:
             padding=(0, 1)
         )
         
-        table.add_column("SLOT", width=3, justify="center", style="dim")
+        table.add_column("SLOT", width=2, justify="center", style="dim")
         table.add_column("MODULE", style="bright_white")
-        table.add_column("STATE", width=8, justify="right")
+        table.add_column("STATE", width=10, justify="right")
         
         for idx, step in enumerate(self.engine.steps):
             is_active = self.executing_step == idx
@@ -230,7 +231,7 @@ class GingerTUI:
             
         return Panel(
             table,
-            title="[bold bright_cyan] 0x_SEQUENCE [/]",
+            title=f"[bold {self.theme_secondary_color}] 0x_SEQUENCE [/]",
             border_style=self.theme_color,
             box=box.ROUNDED
         )
@@ -278,7 +279,7 @@ class GingerTUI:
             
         return Panel(
             Align.center(stats, vertical="middle"),
-            title=f"[bold bright_magenta]══ DEPLOYMENT_MONITOR ══[/]",
+            title=f"[bold {self.theme_secondary_color}]══ DEPLOYMENT_MONITOR ══[/]",
             border_style=self.theme_color,
             box=box.HEAVY
         )
@@ -305,7 +306,7 @@ class GingerTUI:
             
         return Panel(
             Align.center(help_text, vertical="middle"),
-            title="[bold bright_yellow]══ HELP_ENVIRONMENT ══[/]",
+            title=f"[bold {self.theme_secondary_color}]══ HELP_ENVIRONMENT ══[/]",
             border_style=self.theme_color,
             box=box.DOUBLE_EDGE
         )
@@ -339,7 +340,7 @@ class GingerTUI:
             
         return Panel(
             thoughts,
-            title="[bold bright_magenta] AI_COPILOT_STREAM [/]",
+            title=f"[bold {self.theme_secondary_color}] AI_COPILOT_STREAM [/]",
             border_style=self.theme_color,
             box=box.SQUARE,
             padding=(1, 2)
@@ -365,7 +366,7 @@ class GingerTUI:
             
         matrix.append(f"\n 💿  STORAGE\n", style="bold bright_white")
         matrix.append(f"  Host Disk: [{mini_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_blue" if host_disk < 90 else "bright_red")
-        matrix.append(f"  LFS Disk: [{mini_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style="self.theme_color")
+        matrix.append(f"  LFS Disk: [{mini_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style=self.theme_color)
         
         # Build Index
         complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
@@ -376,7 +377,7 @@ class GingerTUI:
         
         return Panel(
             matrix,
-            title="[bold bright_white]══ SYS_MX ══[/]",
+            title=f"[bold {self.theme_secondary_color}]══ SYS_MX ══[/]",
             border_style=self.theme_color,
             box=box.ROUNDED
         )
@@ -400,7 +401,7 @@ class GingerTUI:
             
         return Panel(
             log_content,
-            title="[bold bright_cyan]══ TERMINAL_STREAM ══[/]",
+            title=f"[bold {self.theme_secondary_color}]══ TERMINAL_STREAM ══[/]",
             border_style=self.theme_color,
             box=box.SQUARE
         )
