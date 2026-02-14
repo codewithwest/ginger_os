@@ -200,6 +200,33 @@ class GingerTUI:
             box=box.HEAVY
         )
 
+    def render_help(self):
+        """High-tech help panel overlay"""
+        help_text = Text()
+        help_text.append(" [ NEURAL_LINK_COMMANDS ]\n\n", style="bold bright_cyan")
+        
+        cmds = [
+            ("ENTER", "Initiate Module Sequence"),
+            ("A", "Toggle Autonomous Deploy"),
+            ("P", "Toggle Package Stepping"),
+            ("F", "Force Module Re-build"),
+            ("D", "Purge Module State"),
+            ("S", "Skip to Next Pending"),
+            ("?", "Toggle Neural Help"),
+            ("Q", "Terminate Session")
+        ]
+        
+        for key, desc in cmds:
+            help_text.append(f" {key:5s} ", style="bold black on bright_white")
+            help_text.append(f" » {desc}\n", style="dim")
+            
+        return Panel(
+            Align.center(help_text, vertical="middle"),
+            title="[bold bright_yellow]══ HELP_ENVIRONMENT ══[/]",
+            border_style="bright_yellow",
+            box=box.DOUBLE_EDGE
+        )
+
     def render_ai_copilot(self):
         """AI Assistant thought log with dynamic states"""
         thoughts = Text()
@@ -328,98 +355,23 @@ class GingerTUI:
         """Update all specific Neural UI panels"""
         layout["header"].update(self.render_header())
         layout["steps"].update(self.render_steps())
-        layout["dashboard"].split_column(
-            Layout(self.render_dashboard(), ratio=1),
-            Layout(self.render_ai_copilot(), size=6)
-        )
+        
+        # Dashboard handles help toggle
+        if self.show_help:
+            layout["dashboard"].update(self.render_help())
+        else:
+            # Restore grid if was showing help
+            if not isinstance(layout["dashboard"].renderable, Layout):
+                layout["dashboard"].split_column(
+                    Layout(name="neural_stats", ratio=1),
+                    Layout(name="ai_copilot", size=6)
+                )
+            
+            layout["neural_stats"].update(self.render_dashboard())
+            layout["ai_copilot"].update(self.render_ai_copilot())
+            
         layout["matrix"].update(self.render_matrix())
         layout["terminal"].update(self.render_terminal())
-        layout["footer"].update(self.render_footer())
-    
-    def render_help(self):
-        """Render help panel"""
-        help_text = Text()
-        help_text.append("KEYBOARD COMMANDS\n\n", style="bold bright_cyan")
-        
-        help_text.append("Navigation:\n", style="bold bright_yellow")
-        help_text.append("  ↑/k      ", style="bright_white")
-        help_text.append("Move up\n", style="dim")
-        help_text.append("  ↓/j      ", style="bright_white")
-        help_text.append("Move down\n", style="dim")
-        help_text.append("  g/Home   ", style="bright_white")
-        help_text.append("Go to first\n", style="dim")
-        help_text.append("  G/End    ", style="bright_white")
-        help_text.append("Go to last\n\n", style="dim")
-        
-        help_text.append("Actions:\n", style="bold bright_yellow")
-        help_text.append("  ENTER    ", style="bright_white")
-        help_text.append("Run selected step\n", style="dim")
-        help_text.append("  f        ", style="bright_white")
-        help_text.append("Force run (ignore marker)\n", style="dim")
-        help_text.append("  d        ", style="bright_white")
-        help_text.append("Delete marker\n", style="dim")
-        help_text.append("  a        ", style="bright_white")
-        help_text.append("Run all pending steps\n", style="dim")
-        help_text.append("  s        ", style="bright_white")
-        help_text.append("Skip to next pending\n\n", style="dim")
-        
-        help_text.append("Other:\n", style="bold bright_yellow")
-        help_text.append("  ?        ", style="bright_white")
-        help_text.append("Toggle this help\n", style="dim")
-        help_text.append("  q/ESC    ", style="bright_white")
-        help_text.append("Quit\n", style="dim")
-        
-        return Panel(
-            help_text,
-            title="[bold bright_yellow]Help[/]",
-            border_style="bold bright_yellow"
-        )
-    
-    def render_footer(self):
-        """Render footer with shortcuts"""
-        footer = Text()
-        
-        if self.executing_step is not None:
-            footer.append("⚡ EXECUTING ", style="bold bright_cyan")
-            footer.append(f"Step {self.executing_step + 1}", style="bold bright_white")
-            footer.append(" | Press ", style="dim")
-            footer.append("Ctrl+C", style="bold bright_red")
-            footer.append(" to stop", style="dim")
-        else:
-            footer.append("↑↓/jk", style="bold bright_white")
-            footer.append("=nav  ", style="dim")
-            footer.append("ENTER", style="bold bright_green")
-            footer.append("=run  ", style="dim")
-            footer.append("f", style="bold bright_cyan")
-            footer.append("=force  ", style="dim")
-            footer.append("d", style="bold bright_red")
-            footer.append("=delete  ", style="dim")
-            
-            auto_style = "bold bright_cyan" if self.auto_all else "bold bright_white"
-            auto_label = "AUTO-ON" if self.auto_all else "auto"
-            footer.append("a", style=auto_style)
-            footer.append(f"={auto_label}  ", style="dim")
-            
-            p_style = "bold bright_magenta" if self.engine.package_stepping else "bold bright_white"
-            footer.append("p", style=p_style)
-            footer.append("=pkg-step  ", style="dim")
-            
-            footer.append("?", style="bold bright_magenta")
-            footer.append("=help  ", style="dim")
-            footer.append("q", style="bold bright_red")
-            footer.append("=quit", style="dim")
-        
-        return Panel(
-            Align.center(footer),
-            border_style="bold bright_blue"
-        )
-    
-    def update_display(self, layout):
-        """Update all panels"""
-        layout["header"].update(self.render_header())
-        layout["steps"].update(self.render_steps())
-        layout["details"].update(self.render_details())
-        layout["logs"].update(self.render_logs())
         layout["footer"].update(self.render_footer())
     
     def run_step(self, step_idx, force=False):
@@ -602,31 +554,31 @@ class GingerTUI:
 def main():
     parser = argparse.ArgumentParser(description="GingerOS Command-First TUI")
     parser.add_argument("-n", "--dry-run", action="store_true", help="Preview build without executing commands")
-    parser.add_argument("-w", "--web", action="store_true", help="Start the remote monitoring Web UI")
+    parser.add_argument("--no-web", action="store_true", help="Disable the remote monitoring Web UI")
+    parser.add_argument("--host", type=str, default="127.0.0.1", help="Web UI host (default: 127.0.0.1)")
     parser.add_argument("-p", "--port", type=int, default=8000, help="Web UI port (default: 8000)")
     args = parser.parse_args()
     
     tui = GingerTUI(dry_run=args.dry_run)
     
-    if args.web:
+    # Start Web UI by default unless explicitly disabled
+    if not args.no_web:
         try:
             import fastapi
             import uvicorn
+            from lfs_builder_ui.server import start_server
+            
+            web_thread = threading.Thread(
+                target=start_server, 
+                args=(tui.engine, args.host, args.port), 
+                daemon=True
+            )
+            web_thread.start()
+            # Small delay to let the server start
+            time.sleep(0.5)
+            tui.engine.log(f"NEURAL_LINK: Dashboard active at http://{args.host}:{args.port}", "bold green")
         except ImportError:
-            print("\nError: Web UI dependencies missing.")
-            print("Please install them with: pip install fastapi uvicorn")
-            sys.exit(1)
-
-        from lfs_builder_ui.server import start_server
-        web_thread = threading.Thread(
-            target=start_server, 
-            args=(tui.engine, "0.0.0.0", args.port), 
-            daemon=True
-        )
-        web_thread.start()
-        # Small delay to let the server start before logging to terminal
-        time.sleep(0.5)
-        tui.engine.log(f"Web UI Dashboard: Active at http://localhost:{args.port}", "bold green")
+            tui.engine.log("SYSTEM_WARNING: Web UI dependencies (fastapi, uvicorn) missing. Dashboard disabled.", "yellow")
 
     tui.run()
 
