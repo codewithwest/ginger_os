@@ -86,7 +86,6 @@ class GingerTUI:
         
         # Left Side: Original Branding
         branding = Text("\n" + LOGO.strip() + "\n", style=f"bold {self.theme_color}")
-        branding.append(f" {pulsar} NEURAL_CORE_V1.1_LOADED", style="dim cyan")
         # Right Side: Deployment Metrics + AI Thoughts
         metrics = Text()
         if self.executing_step is not None:
@@ -141,7 +140,8 @@ class GingerTUI:
             state = states[int(time.time() / 2) % len(states)]
             ai_thought = self._get_ai_thought(step.name)
             metrics.append(f" 🧠 CORE_LOG (AI_{state}): ", style="bold bright_magenta")
-            metrics.append("\n" + ai_thought, style="italic dim bright_blue")
+            metrics.append("\n" + ai_thought + "\n", style="italic dim bright_blue")
+            metrics.append(f" {pulsar} NEURAL_CORE_V1.1_LOADED", style="dim cyan")
             
         else:
             # Idle timers
