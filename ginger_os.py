@@ -46,196 +46,295 @@ class GingerTUI:
         self.last_auto_step = None
         
     def create_layout(self):
-        """Create the TUI layout"""
+        """Create the high-tech Neural-Link layout"""
         layout = Layout()
         layout.split_column(
-            Layout(name="header", size=10),
-            Layout(name="body"),
+            Layout(name="header", size=7),
+            Layout(name="main_grid", ratio=1),
+            Layout(name="terminal", size=10),
             Layout(name="footer", size=3)
         )
         
-        layout["body"].split_row(
+        layout["main_grid"].split_row(
             Layout(name="steps", ratio=1),
-            Layout(name="right", ratio=3)
+            Layout(name="dashboard", ratio=2),
+            Layout(name="matrix", ratio=1)
         )
         
-        # Split right side into details and logs
-        layout["right"].split_column(
-            Layout(name="details", size=8),
-            Layout(name="logs")
+        layout["dashboard"].split_column(
+            Layout(name="neural_stats", ratio=1),
+            Layout(name="ai_copilot", size=6)
         )
         
         return layout
-    
+
     def format_time(self, seconds):
         mins, secs = divmod(int(seconds), 60)
         return f"{mins:02d}:{secs:02d}"
-    
+
+    def get_neural_pulsar(self):
+        """Generates an animated AI 'pulsar' character"""
+        frames = ["󱐋", "󱐌", "󱐍", "󱐎", "󱐏", "󱐐", "󱐑"]
+        # Use simpler characters if the terminal doesn't support nerd fonts
+        simple_frames = ["|", "/", "-", "\\"]
+        idx = int(time.time() * 8) % len(simple_frames)
+        return simple_frames[idx]
+
     def render_header(self):
-        """Render header with logo and stats"""
-        total = len(self.engine.steps)
-        complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
-        pending = total - complete
+        """Render high-tech header"""
+        pulsar = self.get_neural_pulsar()
         
-        stats_text = Text()
+        branding = Text()
+        branding.append(f" {pulsar} ", style="bold bright_cyan")
+        branding.append("GINGER_OS // ", style="bold bright_white")
+        branding.append("NEURAL_CORE_V1.1", style="dim cyan")
         
+        status_info = Text()
         if self.executing_step is not None:
-            elapsed = time.time() - self.current_start_time
-            stats_text.append("🚀 EXECUTION IN PROGRESS\n", style="bold bright_green blink")
-            
-            # Show package-level details if available
-            if self.engine.current_pkg:
-                pkg_progress = ""
-                if self.engine.total_pkg_count > 0:
-                    pkg_progress = f" ({self.engine.current_pkg_idx}/{self.engine.total_pkg_count})"
-                
-                stats_text.append(f"📦 {self.engine.current_pkg}{pkg_progress}\n", style="bold bright_white")
-                
-                if self.engine.pkg_start_time:
-                    pkg_elapsed = time.time() - self.engine.pkg_start_time
-                    stats_text.append(f"   Package Timer: {self.format_time(pkg_elapsed)}\n", style="bright_cyan")
-            
-            stats_text.append(f"Phase Timer: {self.format_time(elapsed)}\n\n", style="bold bright_yellow")
-            stats_text.append("⚠️  PLEASE WAIT - SYSTEM BUSY", style="bold bright_red")
+            status_info.append(" [ SYSTEM_BUSY ] ", style="bold bright_red blink")
         else:
-            if self.dry_run:
-                stats_text.append("🧪 DRY-RUN MODE ACTIVE 🧪\n", style="bold bright_yellow blink")
-                stats_text.append("No changes will be made\n\n", style="bold bright_white")
-            else:
-                stats_text.append("🌶️ GingerOS Command Center 🌶️\n", style="bold bright_cyan")
-                stats_text.append("LFS 12.4 Automata - Cyberpunk Edition\n\n", style="bold bright_green")
+            status_info.append(" [ CORE_READY ] ", style="bold bright_green")
             
-            stats_text.append(f"Total: {total}  ", style="dim")
-            stats_text.append(f"✓ {complete}  ", style="bright_green")
-            stats_text.append(f"○ {pending}", style="bright_yellow")
-            
-            if self.auto_all:
-                stats_text.append("\n\n🤖 AUTO-RUN ACTIVE", style="bold bright_cyan blink")
-            
-            if self.engine.paused_for_package:
-                stats_text.append("\n\n⏸ PAUSED AT PACKAGE", style="bold bright_yellow blink")
-                stats_text.append("\nPress SPACE to continue", style="dim")
-            elif self.engine.package_stepping:
-                stats_text.append("\n\n📍 STEP-MODE ENABLED", style="bold bright_magenta")
-        
         return Panel(
-            Columns([
-                Text(LOGO, style="bold bright_cyan"),
-                Align.center(stats_text, vertical="middle")
-            ]),
-            border_style="bold bright_blue",
-            box=box.ROUNDED
+            Align.center(branding + status_info, vertical="middle"),
+            border_style="bright_blue",
+            box=box.DOUBLE_EDGE
         )
-    
+
     def render_steps(self):
-        """Render steps list"""
+        """Modern cyber-table for build steps"""
         table = Table(
             show_header=True,
             header_style="bold bright_cyan",
-            box=box.SIMPLE, # Cleaner look
-            padding=(0, 1), # Tighter spacing
-            expand=True
+            box=box.SIMPLE_HEAD,
+            expand=True,
+            padding=(0, 1)
         )
         
-        table.add_column("#", width=3, justify="right")
-        table.add_column("Status", width=6, justify="center")
-        table.add_column("Step", style="bright_white")
-        
-        # Spinner for animation
-        spinner_chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-        spinner_idx = int(time.time() * 12) % len(spinner_chars)
-        spinner = spinner_chars[spinner_idx]
+        table.add_column("SLOT", width=6, justify="center", style="dim")
+        table.add_column("MODULE", style="bright_white")
+        table.add_column("STATE", width=10, justify="right")
         
         for idx, step in enumerate(self.engine.steps):
-            # Status Icons Only
-            if self.executing_step == idx:
-                status = f"[bold bright_cyan]{spinner}[/]"
-            elif self.engine._should_skip(step):
-                status = "[bold bright_green]✓[/]"
-            else:
-                status = "[dim]○[/]"
+            is_active = self.executing_step == idx
+            is_completed = self.engine._should_skip(step)
             
-            # Highlight selected
-            if idx == self.selected_step:
-                num = f"[black on bright_cyan]{idx+1:2d}[/]"
-                # Only highlight the name background to look good
-                name = f"[black on bright_cyan]{step.name}[/]"
-                # Or highlight entire row? Table doesn't support row style easily per cell without manual. 
-                # Let's keep it simple.
+            # Status styling
+            if is_active:
+                state = "[bold bright_cyan]ACTIVE[/]"
+                row_style = "on blue3"
+                slot_txt = f"[black on bright_cyan] {idx+1:02d} [/]"
+            elif is_completed:
+                state = "[bright_green]STABLE[/]"
+                row_style = ""
+                slot_txt = f"{idx+1:02d}"
             else:
-                num = f"{idx+1:2d}"
-                name = step.name
+                state = "[dim]LOCKED[/]"
+                row_style = "dim"
+                slot_txt = f"{idx+1:02d}"
+
+            # Highlight cursor
+            if idx == self.selected_step and self.executing_step is None:
+                row_style = "on gray23"
+                slot_txt = f"[bold bright_yellow]>{idx+1:02d}[/]"
+
+            table.add_row(
+                slot_txt,
+                step.name,
+                state,
+                style=row_style
+            )
             
-            table.add_row(num, status, name)
-        
         return Panel(
             table,
-            title="[bold bright_blue]Build Steps[/]",
-            border_style="bold bright_blue"
+            title="[bold bright_cyan]══ SEQUENCE_STACK ══[/]",
+            border_style="bright_blue",
+            box=box.ROUNDED
         )
-    
-    def render_details(self):
-        """Render details panel"""
-        if self.show_help:
-            return self.render_help()
+
+    def render_dashboard(self):
+        """Central dashboard with rich progress and gauges"""
+        stats = Text()
         
-        step = self.engine.steps[self.selected_step]
-        
-        details = Text()
-        details.append(f"Step {self.selected_step + 1}: ", style="bold bright_cyan")
-        details.append(f"{step.name}\n", style="bold bright_white")
-        
-        details.append("Phase: ", style="bright_yellow")
-        details.append(f"{step.phase}\n", style="bright_white")
-        
-        details.append("Command: ", style="bright_yellow")
-        details.append(f"{step.command}\n", style="dim")
-        
-        details.append("Status: ", style="bright_yellow")
-        if self.engine._should_skip(step):
-            details.append("✓ Completed", style="bright_green")
-        elif self.executing_step == self.selected_step:
-            details.append("▶ Running...", style="bright_cyan")
+        if self.executing_step is not None:
+            step = self.engine.steps[self.executing_step]
+            elapsed = time.time() - self.current_start_time
+            
+            stats.append(f"\n» CURRENT_PHASE: ", style="bold bright_cyan")
+            stats.append(f"{step.name}\n", style="bold bright_white")
+            
+            # Sub-module progress
+            if self.engine.current_pkg:
+                stats.append(f"» TARGET: ", style="bright_yellow")
+                stats.append(f"{self.engine.current_pkg}\n", style="bright_white")
+                
+                if self.engine.total_pkg_count > 0:
+                    prog = self.engine.current_pkg_idx / self.engine.total_pkg_count
+                    bar_width = 30
+                    filled = int(prog * bar_width)
+                    bar = "█" * filled + "░" * (bar_width - filled)
+                    stats.append(f"  [{bar}] ", style="bright_cyan")
+                    stats.append(f"{self.engine.current_pkg_idx}/{self.engine.total_pkg_count}\n", style="dim")
+                
+                if self.engine.pkg_start_time:
+                    p_elapsed = time.time() - self.engine.pkg_start_time
+                    stats.append(f"  ETR_PKG: ", style="dim")
+                    stats.append(f"{self.format_time(p_elapsed)}\n", style="bright_green")
+
+            stats.append(f"\n» UPTIME: {self.format_time(elapsed)}\n", style="bold bright_yellow")
+            
         else:
-            details.append("○ Pending", style="dim")
+            # Idle view
+            stats.append("\n\n [ NEURAL_CORE_IDLE ]\n", style="bold dim cyan")
+            stats.append(" Select a module to initiate deployment\n", style="dim")
+            
+            # Show summary
+            complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
+            total = len(self.engine.steps)
+            stats.append(f"\n STABILITY_INDEX: {int((complete/total)*100)}%\n", style="bright_green")
+            
+        return Panel(
+            Align.center(stats, vertical="middle"),
+            title=f"[bold bright_magenta]══ DEPLOYMENT_MONITOR ══[/]",
+            border_style="bright_magenta",
+            box=box.HEAVY
+        )
+
+    def render_ai_copilot(self):
+        """AI Assistant thought log with dynamic states"""
+        thoughts = Text()
+        
+        # Simulated AI internal states
+        states = [" ANALYZING", " OPTIMIZING", " MONITORING", " SECURING"]
+        state = states[int(time.time() / 2) % len(states)]
+        
+        thoughts.append(f" 🧠 {state}: ", style="bold bright_magenta")
+        
+        if self.executing_step is not None:
+            step = self.engine.steps[self.executing_step]
+            # Context-aware phrases
+            if "host" in step.name.lower():
+                thoughts.append("Verifying ecosystem dependencies. Host environment identified as stable.")
+            elif "toolchain" in step.name.lower():
+                thoughts.append("Synthesizing binary primitives. Mitigating entropy in the cross-compiler.")
+            elif "kernel" in step.name.lower():
+                thoughts.append("Orchestrating the heart of GingerOS. Calibrating scheduler and memory safety.")
+            else:
+                thoughts.append(f"Executing directive: {step.name}. Monitoring for syscall anomalies.")
+        else:
+            if self.auto_all:
+                thoughts.append("Autonomous sequence engaged. Standing by for multi-phase synchronization.")
+            else:
+                thoughts.append("Awaiting operator 'EXECUTE' command. Ready to initiate sequence pulse.")
+            
+        return Panel(
+            thoughts,
+            title="[bold bright_magenta] AI_COPILOT_STREAM [/]",
+            border_style="dim magenta",
+            box=box.SQUARE,
+            padding=(1, 2)
+        )
+
+    def render_matrix(self):
+        """System metrics matrix with stability gauge"""
+        matrix = Text()
+        matrix.append("\n 🖥️  HOST_RESOURCES\n", style="bold bright_white")
+        
+        try:
+            load = os.getloadavg()
+            matrix.append(f"  CPU_LOAD: ", style="bright_cyan")
+            matrix.append(f"{load[0]:.2f}\n", style="bold bright_white")
+        except: pass
+        
+        # Disk stats
+        host_disk = self.engine.storage_stats.get("host", 0)
+        lfs_disk = self.engine.storage_stats.get("lfs", 0)
+        
+        def disk_bar(val):
+            filled = int(val / 10)
+            return "█" * filled + "░" * (10 - filled)
+            
+        matrix.append(f"\n 💿  STORAGE_NODES\n", style="bold bright_white")
+        matrix.append(f"  HOST: [{disk_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_cyan" if host_disk < 90 else "bright_red")
+        matrix.append(f"  LFS:  [{disk_bar(lfs_disk)}] {lfs_disk:.0f}%\n", style="bright_green")
+        
+        # Stability / Build Index
+        complete = sum(1 for s in self.engine.steps if self.engine._should_skip(s))
+        total = len(self.engine.steps)
+        stability = (complete/total) * 100
+        matrix.append(f"\n 🛡️  CORE_STABILITY\n", style="bold bright_white")
+        matrix.append(f"  INDEX: [{disk_bar(stability)}] {stability:.0f}%\n", style="bold bright_green")
+        
+        matrix.append(f"\n 🛰️  ENCRYPTION\n", style="dim")
+        matrix.append("  AES-256_ACTIVE\n", style="dim italic green")
         
         return Panel(
-            details,
-            title="[bold bright_blue]Details[/]",
-            border_style="bold bright_blue"
+            matrix,
+            title="[bold bright_white]══ SYSTEM_MATRIX ══[/]",
+            border_style="bright_white",
+            box=box.ROUNDED
         )
-    
-    def render_logs(self):
-        """Render live logs panel"""
+
+    def render_terminal(self):
+        """Live log terminal with scanline effect simulator"""
         log_content = Text()
         
         if self.executing_step is not None:
-            # Show live output during execution
-            # log_content.append("🔴 LIVE OUTPUT\n\n", style="bold bright_red")
-            
-            # Show recent logs (last 30 lines)
-            recent_logs = self.engine.logs[-30:] if len(self.engine.logs) > 30 else self.engine.logs
-            
+            recent_logs = self.engine.logs[-15:] if len(self.engine.logs) > 15 else self.engine.logs
             for log_entry, style in recent_logs:
-                # Truncate very long lines
-                if len(log_entry) > 120:
-                    log_entry = log_entry[:117] + "..."
+                # Truncate and prefix
+                if len(log_entry) > 100: log_entry = log_entry[:97] + "..."
+                log_content.append(" >_ ", style="bold bright_cyan")
                 log_content.append(log_entry + "\n", style=style or "bright_white")
         else:
-            # Show instructions when idle
-            log_content.append("Ready to execute commands\n\n", style="bold bright_cyan")
-            log_content.append("Press ", style="dim")
-            log_content.append("ENTER", style="bold bright_green")
-            log_content.append(" to run selected step\n", style="dim")
-            log_content.append("Press ", style="dim")
-            log_content.append("?", style="bold bright_magenta")
-            log_content.append(" for help", style="dim")
-        
+            log_content.append("\n [ TERMINAL_STANDBY ]\n", style="bold dim cyan")
+            log_content.append(" Pulse frequency: 440Hz\n", style="dim italic")
+            log_content.append(" Waiting for neural link acquisition...", style="dim")
+            
         return Panel(
             log_content,
-            title="[bold bright_blue]Live Output[/]",
-            border_style="bold bright_blue"
+            title="[bold bright_cyan]══ TERMINAL_STREAM ══[/]",
+            border_style="dim cyan",
+            box=box.SQUARE
         )
+
+    def render_footer(self):
+        """Stylish button-like footer"""
+        footer = Text()
+        
+        # (Key, Label, Color)
+        commands = [
+            ("↵", "EXECUTE", "bright_green"),
+            ("A", "AUTO", "bright_cyan"),
+            ("P", "STEP", "bright_magenta"),
+            ("F", "FORCE", "bright_yellow"),
+            ("D", "PURGE", "bright_red"),
+            ("?", "HELP", "white"),
+            ("Q", "QUIT", "bright_red")
+        ]
+        
+        for key, cmd, color in commands:
+            footer.append(f" {key} ", style=f"bold black on {color}")
+            footer.append(f" {cmd} ", style=f"dim")
+            footer.append("  ")
+            
+        return Panel(
+            Align.center(footer, vertical="middle"),
+            border_style="dim cyan",
+            box=box.PLAIN
+        )
+    
+    def update_display(self, layout):
+        """Update all specific Neural UI panels"""
+        layout["header"].update(self.render_header())
+        layout["steps"].update(self.render_steps())
+        layout["dashboard"].split_column(
+            Layout(self.render_dashboard(), ratio=1),
+            Layout(self.render_ai_copilot(), size=6)
+        )
+        layout["matrix"].update(self.render_matrix())
+        layout["terminal"].update(self.render_terminal())
+        layout["footer"].update(self.render_footer())
     
     def render_help(self):
         """Render help panel"""
