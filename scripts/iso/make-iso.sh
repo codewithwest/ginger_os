@@ -102,6 +102,24 @@ cp "$GINGER_ROOT/scripts/lib/disk.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/scripts/lib/bash_config.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/ginger.conf" "$ISO_DIR/installer/" 2>/dev/null || true
 
+# Copy GRUB modules (Essential for grub-install)
+if [ -d /usr/lib/grub ]; then
+    echo "[INFO] Copying GRUB modules..."
+    mkdir -p "$INITRD_WORK/usr/lib"
+    cp -r /usr/lib/grub "$INITRD_WORK/usr/lib/"
+fi
+
+# Copy Terminfo (Fixes "terminals database is inaccessible")
+if [ -d /usr/share/terminfo ]; then
+    echo "[INFO] Copying terminfo..."
+    mkdir -p "$INITRD_WORK/usr/share"
+    cp -r /usr/share/terminfo "$INITRD_WORK/usr/share/"
+elif [ -d /lib/terminfo ]; then
+     echo "[INFO] Copying terminfo from /lib..."
+     mkdir -p "$INITRD_WORK/lib"
+     cp -r /lib/terminfo "$INITRD_WORK/lib/"
+fi
+
 # Rootfs payload
 ROOTFS_PATH="$GINGER_ROOT/gingeros-base-rootfs.tar.gz"
 echo "[DEBUG] Looking for RootFS at: $ROOTFS_PATH"
@@ -121,7 +139,7 @@ cat << 'EOF' > "$INITRD_WORK/init"
 #!/bin/sh
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
-echo "=== GingerOS Installer Boot (Terminal Debug) ==="
+echo "=== GingerOS Installer Boot ==="
 
 mount -t proc proc /proc || true
 mount -t sysfs sysfs /sys || true
@@ -217,12 +235,17 @@ chmod +x "$INITRD_WORK/init"
 (cd "$INITRD_WORK" && find . | cpio -o -H newc | gzip -c > "$ISO_DIR/boot/initrd.img")
 
 cat << EOF > "$ISO_DIR/boot/grub/grub.cfg"
-set default=0
-set timeout=5
+set default=1
+set timeout=10
 terminal_input console
 terminal_output console
 
-menuentry "GingerOS Installer (Terminal Debug)" {
+menuentry "Install GingerOS" {
+    linux /boot/vmlinuz root=/dev/ram0 rw console=tty0 loglevel=3 quiet
+    initrd /boot/initrd.img
+}
+
+menuentry "Install GingerOS (Terminal Debug)" {
     linux /boot/vmlinuz root=/dev/ram0 rw console=tty0 console=ttyS0,115200 loglevel=7 debug earlyprintk=serial
     initrd /boot/initrd.img
 }
