@@ -17,7 +17,7 @@ write_bash_config() {
     local PROMPT_COLOR="$LASER_GREEN"
     [[ "$IS_ROOT" == "true" ]] && PROMPT_COLOR="$LASER_RED"
 
-    cat << EOF > "$TARGET_FILE"
+cat << 'EOF' > "$TARGET_FILE"
 # GingerOS west Bash Configuration
 # System-wide settings for $USERNAME
 
