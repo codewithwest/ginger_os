@@ -128,6 +128,12 @@ echo "root:$ROOT_PASS" | sudo chroot "$MNT" chpasswd
 sudo chroot "$MNT" useradd -m -s /bin/bash "$NEW_USER" || true
 echo "$NEW_USER:$NEW_PASS" | sudo chroot "$MNT" chpasswd
 
+# Add this to your installer.sh during the "Step 4: User Setup" phase
+cat << EOF | sudo tee "$MNT/etc/inittab" >/dev/null
+id:3:initdefault:
+tty1::respawn:/sbin/getty 38400 tty1
+EOF
+
 # Apply professional bash config
 write_bash_config "$MNT/root/.bashrc" "root" "true"
 write_bash_config "$MNT/home/$NEW_USER/.bashrc" "$NEW_USER" "false"
@@ -156,10 +162,10 @@ insmod part_msdos
 insmod ext2
 search --no-floppy --fs-uuid --set=root $NEW_UUID
 menuentry 'GingerOS' {
-    linux /boot/$KERNEL_IMG root=/dev/sda1 root=UUID=$NEW_UUID rw console=tty0
+    # Remove the hardcoded /dev/sda1
+    linux /boot/$KERNEL_IMG root=UUID=$NEW_UUID rw console=tty0
     $( [ -n "$INITRD_IMG" ] && echo "initrd /boot/$INITRD_IMG" )
 }
-EOF
 
 # Find and run grub-install with logging and force
 GRUB_BIN=$(find "$MNT/usr/sbin" "$MNT/usr/bin" -name "grub-install" | head -n 1)
