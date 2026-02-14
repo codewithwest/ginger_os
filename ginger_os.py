@@ -85,7 +85,7 @@ class GingerTUI:
         pulsar = self.get_neural_pulsar()
         
         # Left Side: Original Branding
-        branding = Text("\n" + LOGO.strip() + "\n", style=f"bold {self.theme_color}")
+        branding = Text("\n" + LOGO.strip() + "\n", style=f"bold {self.theme_secondary_color}")
         # Right Side: Deployment Metrics + AI Thoughts
         metrics = Text()
         if self.executing_step is not None:
@@ -361,8 +361,8 @@ class GingerTUI:
         lfs_disk = self.engine.storage_stats.get("lfs", 0)
         
         def mini_bar(val):
-            filled = int(val / 20)
-            return "█" * filled + "░" * (5 - filled)
+            filled = int(val / 10)
+            return "█" * filled + "░" * (10 - filled)
             
         matrix.append(f"\n 💿  STORAGE\n", style="bold bright_white")
         matrix.append(f"  Host Disk: [{mini_bar(host_disk)}] {host_disk:.0f}%\n", style="bright_blue" if host_disk < 90 else "bright_red")
