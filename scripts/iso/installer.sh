@@ -106,7 +106,7 @@ ui_log "Deploying GingerOS files (Total: $TOTAL_FILES)..."
 # Run tar with verbose output piped to progress bar
 sudo tar --xattrs --acls -C "$MNT" -xvzpf "$TARBALL" | ui_progress_bar "$TOTAL_FILES" "Deploying RootFS"
 
-# Step 3: Sync
+# Step 3: Sync Hardware
 ui_step 3
 ui_log "Synchronizing hardware IDs..."
 NEW_UUID=$(disk_get_uuid "$PART")
@@ -118,49 +118,41 @@ devpts /dev/pts devpts gid=5,mode=620 0 0
 tmpfs /run tmpfs defaults 0 0
 EOF
 
-# Step 4: User Setup
+# Step 4: User & Init Setup
 ui_step 4
-ui_log "Creating user accounts..."
-# Setup root password
+ui_log "Creating user accounts and Init config..."
 echo "root:$ROOT_PASS" | sudo chroot "$MNT" chpasswd
 
-# Setup new user
+# FIX: Create /etc/inittab as a FILE, not a directory
+sudo rm -rf "$LFS/etc/inittab.d"
+sudo rm -f "$LFS/etc/inittab"
+
+# 2. Pre-stage a basic inittab so the first boot works even if installer fails
+cat << EOF | sudo tee "$MNT/etc/inittab" >/dev/null
+id:3:initdefault:
+si::sysinit:/etc/rc.d/init.d/rc S
+l3:3:wait:/etc/rc.d/init.d/rc 3
+1:2345:respawn:/sbin/getty 38400 tty1
+EOF
+
+# User Setup
 sudo chroot "$MNT" useradd -m -s /bin/bash "$NEW_USER" || true
 echo "$NEW_USER:$NEW_PASS" | sudo chroot "$MNT" chpasswd
 
-# Add this to your installer.sh during the "Step 4: User Setup" phase
-cat << EOF | sudo tee "$MNT/etc/inittab" >/dev/null
-id:3:initdefault:
-tty1::respawn:/sbin/getty 38400 tty1
-EOF
-
-# Apply professional bash config
+# Apply bash config (Note: Ensure write_bash_config uses 'EOF' to avoid syntax errors)
 write_bash_config "$MNT/root/.bashrc" "root" "true"
 write_bash_config "$MNT/home/$NEW_USER/.bashrc" "$NEW_USER" "false"
-sudo chroot "$MNT" chown -R "$NEW_USER:$NEW_USER" "/home/$NEW_USER"
 
 # Step 5: Bootloader
 ui_step 5
-ui_log "Installing GRUB to $TARGET_DEV..."
-
-# Mount virtual filesystems for GRUB
+ui_log "Installing GRUB..."
 sudo mount --bind /dev "$MNT/dev"
 sudo mount --bind /proc "$MNT/proc"
 sudo mount --bind /sys "$MNT/sys"
 
-# Detect kernel and optional initrd
 KERNEL_IMG=$(ls "$MNT/boot/vmlinuz-"* 2>/dev/null | head -n 1 | xargs basename || echo "")
-INITRD_IMG=$(ls "$MNT/boot/initrd.img"* 2>/dev/null | head -n 1 | xargs basename || echo "")
 
-if [ -z "$KERNEL_IMG" ]; then
-    ui_log "WARNING: No kernel found in /boot! Boot will likely fail."
-fi
-
-# 1. Create the device map so GRUB knows where $TARGET_DEV is
-sudo mkdir -p "$MNT/boot/grub"
-echo "(hd0) $TARGET_DEV" | sudo tee "$MNT/boot/grub/device.map" >/dev/null
-
-# 2. Generate professional grub.cfg
+# FIX: Generate grub.cfg with rootdelay to prevent unknown-block(0,0)
 cat << EOF | sudo tee "$MNT/boot/grub/grub.cfg" >/dev/null
 set default=0
 set timeout=5
@@ -168,25 +160,17 @@ insmod part_msdos
 insmod ext2
 search --no-floppy --fs-uuid --set=root $NEW_UUID
 menuentry 'GingerOS' {
-    linux /boot/$KERNEL_IMG root=UUID=$NEW_UUID rw console=tty0
-    $( [ -n "$INITRD_IMG" ] && echo "initrd /boot/$INITRD_IMG" )
+    linux /boot/$KERNEL_IMG root=UUID=$NEW_UUID rw rootdelay=5 console=tty0
 }
 EOF
 
-# 3. Run grub-install
-# We use a robust path search but execute inside chroot
-GRUB_BIN=$(sudo chroot "$MNT" which grub-install 2>/dev/null || echo "/usr/sbin/grub-install")
-ui_log "Running grub-install on $TARGET_DEV..."
-sudo chroot "$MNT" /bin/bash -c "export PATH=/usr/sbin:/usr/bin:/sbin:/bin && $GRUB_BIN --target=i386-pc --no-floppy --force $TARGET_DEV" || ui_error "GRUB installation failed!"
-
-# 4. CRITICAL: Flush buffers
-ui_log "Flushing buffers (sync)..."
-sync
-
+# Install GRUB to MBR
+sudo chroot "$MNT" grub-install --target=i386-pc --no-floppy --force "$TARGET_DEV"
 
 # --- FINISH ---
-sudo umount "$MNT/dev" "$MNT/proc" "$MNT/sys" 2>/dev/null || true
-sudo umount "$MNT"
+sync # Ensure MBR and files are flushed to disk
+sudo umount -l "$MNT/dev" "$MNT/proc" "$MNT/sys" "$MNT" 2>/dev/null || true
+
 ui_draw_header
 echo -e "${GREEN}${BOLD}--------------------------------------------------"
 echo "    INSTALLATION COMPLETE! ENJOY THE SPEED    "

@@ -17,29 +17,30 @@ write_bash_config() {
     local PROMPT_COLOR="$LASER_GREEN"
     [[ "$IS_ROOT" == "true" ]] && PROMPT_COLOR="$LASER_RED"
 
-cat << 'EOF' > "$TARGET_FILE"
+    # Create the config file with all literal contents
+    cat << 'EOF' > "$TARGET_FILE"
 # GingerOS west Bash Configuration
-# System-wide settings for $USERNAME
+# System-wide settings for GingerOS
 
-export TERM=xterm-256color
+export TERM=xterm-256color  
 export EDITOR=nano
 export VISUAL=nano
 
 # Colors
-BLUE='$ELECTRIC_BLUE'
-GREEN='$LASER_GREEN'
-RED='$LASER_RED'
-YELLOW='$LASER_YELLOW'
-BOLD='$BOLD'
-NC='$NC'
+BLUE='\[\033[38;5;39m\]'
+GREEN='\[\033[38;5;118m\]'
+RED='\[\033[0;31m\]'
+YELLOW='\[\033[0;31m\]'
+BOLD='\[\033[1m\]'
+NC='\[\033[0m\]'
 
 # Git helper functions for prompt/aliases
 git_main_branch() {
   command git rev-parse --git-dir &>/dev/null || return
   local ref
   for ref in refs/heads/main refs/heads/master refs/remotes/origin/main refs/remotes/origin/master; do
-    if command git show-ref -q --verify "\$ref"; then
-      echo "\${ref##*/}"
+    if command git show-ref -q --verify "$ref"; then
+      echo "${ref##*/}"
       return
     fi
   done
@@ -51,10 +52,10 @@ git_current_branch() {
 }
 
 # Prompt setup
-if [ "\$EUID" -eq 0 ]; then
-    PS1="\${RED}\${BOLD}root@gingeros\${NC}:\${BLUE}\w\${NC}# "
+if [ "$EUID" -eq 0 ]; then
+    PS1="${RED}${BOLD}root@gingeros${NC}:${BLUE}\w${NC}# "
 else
-    PS1="\${GREEN}\${BOLD}\u@gingeros\${NC}:\${BLUE}\w\${NC}\$ "
+    PS1="${GREEN}${BOLD}\u@gingeros${NC}:${BLUE}\w${NC}$ "
 fi
 
 # General Aliases
@@ -126,7 +127,7 @@ alias gpd='git push --dry-run'
 alias gpf='git push --force-with-lease --force-if-includes'
 alias 'gpf!'='git push --force'
 alias gpr='git pull --rebase'
-alias gpsup='git push --set-upstream origin \$(git_current_branch)'
+alias gpsup='git push --set-upstream origin $(git_current_branch)'
 alias gr='git remote'
 alias gra='git remote add'
 alias grb='git rebase'
@@ -151,9 +152,9 @@ alias gsw='git switch'
 alias gswc='git switch --create'
 
 # Advanced Git Aliases
-alias grt='cd "\$(git rev-parse --show-toplevel || echo .)"'
-alias gwip='git add -A; git rm \$(git ls-files --deleted) 2> /dev/null; git commit --no-verify --no-gpg-sign --message "--wip-- [skip ci]"'
-alias gunwip='git rev-list --max-count=1 --format="%s" HEAD | grep -q "\--wip--" && git reset HEAD~1'
+alias grt='cd "$(git rev-parse --show-toplevel || echo .)"'
+alias gwip='git add -A; git rm $(git ls-files --deleted) 2> /dev/null; git commit --no-verify --no-gpg-sign --message "--wip-- [skip ci]"'
+alias gunwip='git rev-list --max-count=1 --format="%s" HEAD | grep -q "--wip--" && git reset HEAD~1'
 
 # Docker Aliases
 alias dps='docker ps'
@@ -182,7 +183,9 @@ tarzip() { tar -czvf "$1.tar.gz" "$2"; }
 if [ -f /etc/ginger_issue ]; then
     cat /etc/ginger_issue
 fi
-
-echo -e "\${BLUE}Welcome to GingerOS ${USERNAME} Edition\${NC}"
 EOF
+
+    # Append the dynamic welcome message
+    echo "echo -e \"\${BLUE}Welcome to GingerOS ${USERNAME} Edition\${NC}\"" >> "$TARGET_FILE"
+
 }
