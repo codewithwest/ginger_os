@@ -30,9 +30,16 @@ fi
 [ -z "${KERNEL_IMG:-}" ] && { echo "Kernel not found!"; exit 1; }
 cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
 
+# Step 2: Initrd
 echo "__GINGER_PKG_MARKER__: Initrd"
+echo "Assembling Minimal Live Environment..."
 sudo rm -rf "$INITRD_WORK"
 
+# Create essential system directory structure FIRST
+mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sys,tmp,var,root}
+(cd "$INITRD_WORK" && ln -sf bin sbin && mkdir -p usr && cd usr && ln -sf ../bin bin && ln -sf ../bin sbin)
+
+# Essential tools needed for a functional Live environment and Installer
 ESSENTIAL_TOOLS=(
     bash sh mount umount mkdir ls cat grep sed awk rm
     parted partprobe mkfs.ext4 tar lsblk blkid wipefs gzip udevadm
