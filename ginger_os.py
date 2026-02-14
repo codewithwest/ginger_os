@@ -56,9 +56,9 @@ class GingerTUI:
         )
         
         layout["main_grid"].split_row(
-            Layout(name="steps", ratio=1.2),
-            Layout(name="dashboard", ratio=2),
-            Layout(name="matrix", ratio=0.8)
+            Layout(name="steps", ratio=12),
+            Layout(name="dashboard", ratio=20),
+            Layout(name="matrix", ratio=8)
         )
         
         layout["dashboard"].split_column(

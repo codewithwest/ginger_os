@@ -83,9 +83,10 @@ class GingerEngine:
         # Log rotation
         self._rotate_logs()
         
-        # Keep sudo alive
-        self.sudo_thread = threading.Thread(target=self._sudo_keepalive, daemon=True)
-        self.sudo_thread.start()
+        # Keep sudo alive (skip if dry_run)
+        if not self.dry_run:
+            self.sudo_thread = threading.Thread(target=self._sudo_keepalive, daemon=True)
+            self.sudo_thread.start()
 
         # Telemetry
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
