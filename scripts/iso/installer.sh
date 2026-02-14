@@ -142,6 +142,8 @@ sudo chroot "$MNT" chown -R "$NEW_USER:$NEW_USER" "/home/$NEW_USER"
 # Step 5: Bootloader
 ui_step 5
 ui_log "Installing GRUB to $TARGET_DEV..."
+
+# Mount virtual filesystems for GRUB
 sudo mount --bind /dev "$MNT/dev"
 sudo mount --bind /proc "$MNT/proc"
 sudo mount --bind /sys "$MNT/sys"
@@ -154,7 +156,11 @@ if [ -z "$KERNEL_IMG" ]; then
     ui_log "WARNING: No kernel found in /boot! Boot will likely fail."
 fi
 
-# Generate professional grub.cfg
+# 1. Create the device map so GRUB knows where $TARGET_DEV is
+sudo mkdir -p "$MNT/boot/grub"
+echo "(hd0) $TARGET_DEV" | sudo tee "$MNT/boot/grub/device.map" >/dev/null
+
+# 2. Generate professional grub.cfg
 cat << EOF | sudo tee "$MNT/boot/grub/grub.cfg" >/dev/null
 set default=0
 set timeout=5
@@ -162,20 +168,21 @@ insmod part_msdos
 insmod ext2
 search --no-floppy --fs-uuid --set=root $NEW_UUID
 menuentry 'GingerOS' {
-    # Remove the hardcoded /dev/sda1
     linux /boot/$KERNEL_IMG root=UUID=$NEW_UUID rw console=tty0
     $( [ -n "$INITRD_IMG" ] && echo "initrd /boot/$INITRD_IMG" )
 }
+EOF
 
-# Find and run grub-install with logging and force
-GRUB_BIN=$(find "$MNT/usr/sbin" "$MNT/usr/bin" -name "grub-install" | head -n 1)
-if [ -n "$GRUB_BIN" ]; then
-    ui_log "Running grub-install (force)..."
-    # Set PATH so grub-install can find its helpers inside chroot
-    sudo chroot "$MNT" /bin/bash -c "export PATH=/usr/sbin:/usr/bin:/sbin:/bin && ${GRUB_BIN#$MNT} --target=i386-pc --no-floppy --force $TARGET_DEV" || ui_error "GRUB installation failed!"
-else
-    ui_error "grub-install not found in the target system!"
-fi
+# 3. Run grub-install
+# We use a robust path search but execute inside chroot
+GRUB_BIN=$(sudo chroot "$MNT" which grub-install 2>/dev/null || echo "/usr/sbin/grub-install")
+ui_log "Running grub-install on $TARGET_DEV..."
+sudo chroot "$MNT" /bin/bash -c "export PATH=/usr/sbin:/usr/bin:/sbin:/bin && $GRUB_BIN --target=i386-pc --no-floppy --force $TARGET_DEV" || ui_error "GRUB installation failed!"
+
+# 4. CRITICAL: Flush buffers
+ui_log "Flushing buffers (sync)..."
+sync
+
 
 # --- FINISH ---
 sudo umount "$MNT/dev" "$MNT/proc" "$MNT/sys" 2>/dev/null || true
