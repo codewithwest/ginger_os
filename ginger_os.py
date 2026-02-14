@@ -354,7 +354,7 @@ class GingerTUI:
         
         try:
             load = os.getloadavg()
-            matrix.append(f"  LOAD: {load[0]:.2f}\n", style="bright_cyan")
+            matrix.append(f"  LOAD: {load[0]:.2f}\n", style="blue")
         except: pass
         
         # Disk stats
