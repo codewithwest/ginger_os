@@ -121,10 +121,10 @@ ui_log "Deploying GingerOS files (Total: $TOTAL_FILES)..."
 # Run tar with verbose output piped to progress bar
 sudo tar --xattrs --acls -C "$MNT" -xvzpf "$TARBALL" | ui_progress_bar "$TOTAL_FILES" "Deploying RootFS"
 
-# Step 3: Sync Hardware
 ui_step 3
-ui_log "Synchronizing hardware IDs..."
+ui_log "Synchronizing hardware IDs (Universal UUID Mode)..."
 NEW_UUID=$(disk_get_uuid "$PART")
+
 cat << EOF | sudo tee "$MNT/etc/fstab" >/dev/null
 # <file system> <mount point>   <type>  <options>       <dump>  <pass>
 UUID=$NEW_UUID /               ext4    defaults        1       1
@@ -137,19 +137,19 @@ EOF
 
 # Step 4: User & Init Setup
 ui_step 4
-ui_log "Creating user accounts and Init config..."
-echo "root:$ROOT_PASS" | sudo chroot "$MNT" chpasswd
+ui_log "Correcting Getty paths and Init config..."
 
-# FIX: Create /etc/inittab as a FILE, not a directory
-sudo rm -rf "$MNT/etc/inittab.d"
+# Find the real path of getty in the target system
+AGETTY_PATH="/usr/sbin/agetty"
+
+sudo rm -rf "$MNT/etc/inittab.d" 
 sudo rm -f "$MNT/etc/inittab"
 
-# 2. Pre-stage a basic inittab so the first boot works even if installer fails
 cat << EOF | sudo tee "$MNT/etc/inittab" >/dev/null
 id:3:initdefault:
 si::sysinit:/etc/rc.d/init.d/rc S
 l3:3:wait:/etc/rc.d/init.d/rc 3
-1:2345:respawn:/sbin/getty 38400 tty1
+1:2345:respawn:$AGETTY_PATH 38400 tty1
 EOF
 
 # User Setup
@@ -174,10 +174,14 @@ cat << EOF | sudo tee "$MNT/boot/grub/grub.cfg" >/dev/null
 set default=0
 set timeout=5
 insmod part_msdos
+insmod part_gpt
 insmod ext2
+
 search --no-floppy --fs-uuid --set=root $NEW_UUID
-menuentry 'GingerOS' {
-    linux /boot/$KERNEL_IMG root=/dev/sda1 rw rootdelay=1 console=tty0}
+
+menuentry 'GingerOS Professional' {
+    linux /boot/$KERNEL_IMG root=UUID=$NEW_UUID rw rootdelay=5 console=tty0
+}
 EOF
 
 # Install GRUB to MBR
