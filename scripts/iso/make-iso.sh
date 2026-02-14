@@ -64,13 +64,28 @@ for tool in "${ESSENTIAL_TOOLS[@]}"; do
     cp -vL "$TOOL_PATH" "$INITRD_WORK/bin/"
 done
 
-echo "Resolving library dependencies..."
+echo "[INFO] Resolving library dependencies..."
 for file in "$INITRD_WORK/bin/"*; do
-    ldd "$file" 2>/dev/null | awk '{print $3}' | grep '^/' | while read -r lib; do
-        dest="$INITRD_WORK$(dirname "$lib")"
-        mkdir -p "$dest"
-        cp -L "$lib" "$dest/" 2>/dev/null || true
-    done
+    # Check if file exists (in case glob matches nothing)
+    [ -e "$file" ] || continue
+    
+    # Skip if not an executable or is a directory
+    [ -f "$file" ] || continue
+
+    # Get libraries, ignoring errors (e.g. if file is a script or static binary)
+    # properly handle pipefail: ensure command doesn't fail if grep finds nothing
+    LIBS=$(ldd "$file" 2>/dev/null | awk '{print $3}' | grep '^/' || true)
+
+    if [ -n "$LIBS" ]; then
+        echo "  - Dependencies for $(basename "$file")"
+        echo "$LIBS" | while read -r lib; do
+            dest="$INITRD_WORK$(dirname "$lib")"
+            if [ ! -d "$dest" ]; then
+                mkdir -p "$dest"
+            fi
+            cp -nL "$lib" "$dest/" 2>/dev/null || true
+        done
+    fi
 done
 
 # Dynamic linker
