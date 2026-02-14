@@ -42,12 +42,79 @@ ESSENTIAL_TOOLS=(
     python3 chmod env find losetup
 )
 
-# ... (omitted unchanged parts for brevity if tool allows, but here we replace the chunk) ...
-
 # Create essential system directory structure
 mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sys,tmp,var,root,usr}
 
-# ... (omitted unchanged symlinks) ...
+# Create merged usr compatibility symlinks and standard layout
+ln -sf bin "$INITRD_WORK/sbin"
+ln -sf ../bin "$INITRD_WORK/usr/bin"
+ln -sf ../bin "$INITRD_WORK/usr/sbin"
+ln -sf ../lib "$INITRD_WORK/usr/lib"
+ln -sf ../lib64 "$INITRD_WORK/usr/lib64"
+
+for tool in "${ESSENTIAL_TOOLS[@]}"; do
+    # Use 'type -P' to find the executable path, ignoring shell builtins and aliases
+    TOOL_PATH=$(type -P "$tool" || true)
+    
+    if [ -z "$TOOL_PATH" ]; then
+        echo "[WARN] Missing tool '$tool' (or only available as builtin), skipping"
+        continue
+    fi
+    
+    cp -vL "$TOOL_PATH" "$INITRD_WORK/bin/"
+done
+
+echo "[INFO] Resolving library dependencies..."
+for file in "$INITRD_WORK/bin/"*; do
+    # Check if file exists (in case glob matches nothing)
+    [ -e "$file" ] || continue
+    
+    # Skip if not an executable or is a directory
+    [ -f "$file" ] || continue
+
+    # Get libraries, ignoring errors (e.g. if file is a script or static binary)
+    # properly handle pipefail: ensure command doesn't fail if grep finds nothing
+    LIBS=$(ldd "$file" 2>/dev/null | awk '{print $3}' | grep '^/' || true)
+
+    if [ -n "$LIBS" ]; then
+        echo "  - Dependencies for $(basename "$file")"
+        echo "$LIBS" | while read -r lib; do
+            dest="$INITRD_WORK$(dirname "$lib")"
+            if [ ! -d "$dest" ]; then
+                mkdir -p "$dest"
+            fi
+            cp -nL "$lib" "$dest/" 2>/dev/null || true
+        done
+    fi
+done
+
+# Dynamic linker
+if [ -f /lib64/ld-linux-x86-64.so.2 ]; then
+    mkdir -p "$INITRD_WORK/lib64"
+    cp -L /lib64/ld-linux-x86-64.so.2 "$INITRD_WORK/lib64/"
+fi
+
+# Copy installer payload
+cp "$GINGER_ROOT/scripts/iso/ginger-installer-bin" "$ISO_DIR/installer/installer-bin"
+cp "$GINGER_ROOT/scripts/iso/installer.sh" "$ISO_DIR/installer/"
+cp "$GINGER_ROOT/scripts/lib/ui.sh" "$ISO_DIR/installer/"
+cp "$GINGER_ROOT/scripts/lib/disk.sh" "$ISO_DIR/installer/"
+cp "$GINGER_ROOT/scripts/lib/bash_config.sh" "$ISO_DIR/installer/"
+cp "$GINGER_ROOT/ginger.conf" "$ISO_DIR/installer/" 2>/dev/null || true
+
+# Rootfs payload
+ROOTFS_PATH="$GINGER_ROOT/gingeros-base-rootfs.tar.gz"
+echo "[DEBUG] Looking for RootFS at: $ROOTFS_PATH"
+if [ -f "$ROOTFS_PATH" ]; then
+    echo "[INFO] Found RootFS, copying..."
+    ls -lh "$ROOTFS_PATH"
+    cp "$ROOTFS_PATH" "$ISO_DIR/installer/" || { echo "[ERROR] Failed to copy RootFS"; exit 1; }
+else
+    echo "[ERROR] RootFS not found at $ROOTFS_PATH"
+    echo "Directory contents of $GINGER_ROOT:"
+    ls -lh "$GINGER_ROOT" | head -n 5
+    echo "[WARN] Continuing without RootFS (ISO will be small/incomplete)"
+fi
 
 # Init script
 cat << 'EOF' > "$INITRD_WORK/init"
