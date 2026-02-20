@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.67. IPRoute2-6.13.0
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="iproute2"
 check_built "$PKG_NAME" && exit 0
 extract "iproute2"
@@ -13,5 +13,5 @@ make SBINDIR=/usr/sbin install
 
 install -vDm644 COPYING README* -t /usr/share/doc/iproute2-6.16.0
 
-cd .. && rm -rf "iproute2-"*
+cleanup
 mark_built "$PKG_NAME"

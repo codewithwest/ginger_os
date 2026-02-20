@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.41. Inetutils-2.6
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="inetutils"
 check_built "$PKG_NAME" && exit 0
 extract "inetutils"
@@ -27,5 +27,5 @@ mv -v /usr/{,s}bin/ifconfig
 # In Merged-usr, ifconfig/ping etc are already in /usr/bin. 
 # We just need to ensure permissions are correct if needed.
 
-cd .. && rm -rf "inetutils-"*
+cleanup
 mark_built "$PKG_NAME"

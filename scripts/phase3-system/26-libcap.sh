@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.26. Libcap-2.76
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="libcap"
 check_built "$PKG_NAME" && exit 0
 extract "libcap"
@@ -12,5 +12,5 @@ make prefix=/usr lib=lib $MAKEFLAGS
 
 make prefix=/usr lib=lib install
 
-cd .. && rm -rf "libcap-"*
+cleanup
 mark_built "$PKG_NAME"

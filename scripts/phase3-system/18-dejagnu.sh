@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.18. DejaGNU-1.6.3
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="dejagnu"
 check_built "$PKG_NAME" && exit 0
 extract "dejagnu"
@@ -18,5 +18,5 @@ make install
 install -v -dm755  /usr/share/doc/dejagnu-1.6.3
 install -v -m644   doc/dejagnu.{html,txt} /usr/share/doc/dejagnu-1.6.3
 
-cd .. && rm -rf "dejagnu-"*
+cleanup
 mark_built "$PKG_NAME"

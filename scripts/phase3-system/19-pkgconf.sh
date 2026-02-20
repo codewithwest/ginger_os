@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.19. Pkgconf-2.3.0
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="pkgconf"
 check_built "$PKG_NAME" && exit 0
 extract "pkgconf"
@@ -15,5 +15,5 @@ make install
 ln -sv pkgconf   /usr/bin/pkg-config
 ln -sv pkgconf.1 /usr/share/man/man1/pkg-config.1
 
-cd .. && rm -rf "pkgconf-"*
+cleanup
 mark_built "$PKG_NAME"

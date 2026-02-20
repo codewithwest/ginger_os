@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.39. Gperf-3.3
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="gperf"
 check_built "$PKG_NAME" && exit 0
 extract "gperf"
@@ -9,5 +9,5 @@ extract "gperf"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "gperf-"*
+cleanup
 mark_built "$PKG_NAME"

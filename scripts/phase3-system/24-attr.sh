@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.24. Attr-2.5.2
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="attr"
 check_built "$PKG_NAME" && exit 0
 extract "attr"
@@ -13,5 +13,5 @@ extract "attr"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "attr-"*
+cleanup
 mark_built "$PKG_NAME"

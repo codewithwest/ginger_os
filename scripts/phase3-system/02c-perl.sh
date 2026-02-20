@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 7.9. Perl-5.41.3 (Temporary)
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="perl-bridge"
 check_built "$PKG_NAME" && exit 0
 extract "perl"
@@ -19,5 +19,5 @@ sh Configure -des                                         \
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "perl-"*
+cleanup
 mark_built "$PKG_NAME"

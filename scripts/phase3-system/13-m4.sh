@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.13. M4-1.4.20
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="m4"
 check_built "$PKG_NAME" && exit 0
 extract "m4"
@@ -9,5 +9,5 @@ extract "m4"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "m4-"*
+cleanup
 mark_built "$PKG_NAME"

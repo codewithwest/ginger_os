@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.34. Bison-3.8.2
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="bison"
 check_built "$PKG_NAME" && exit 0
 extract "bison"
@@ -11,5 +11,5 @@ extract "bison"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "bison-"*
+cleanup
 mark_built "$PKG_NAME"

@@ -2,4 +2,8 @@
 *.qcow2*
 *.img*
 vmlinuz-*
+*.tar.gz
+
+**/*.pyc
+**/venv
 

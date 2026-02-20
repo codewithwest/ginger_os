@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.79. Procps-ng-4.0.5
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="procps-ng"
 check_built "$PKG_NAME" && exit 0
 extract "procps-ng"
@@ -14,5 +14,5 @@ extract "procps-ng"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "procps-ng-"*
+cleanup
 mark_built "$PKG_NAME"

@@ -7,8 +7,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-source "${SCRIPT_DIR}/../config/env.sh"
-source "${SCRIPT_DIR}/common.sh"
+
+source "${SCRIPT_DIR}/../lib/common.sh"
 
 # ---------------------------------------------------------------------
 # Safety checks
@@ -36,18 +36,6 @@ if [ "$(stat -c %d /)" = "$(stat -c %d "$LFS")" ]; then
     log "ERROR" "$LFS is on the host root filesystem"
     log "ERROR" "This will corrupt the host system and break LFS"
     exit 1
-fi
-
-# ---------------------------------------------------------------------
-# Create lfs user and group (if missing)
-# ---------------------------------------------------------------------
-if ! id lfs >/dev/null 2>&1; then
-    log "INFO" "Creating 'lfs' user and group..."
-    /usr/sbin/groupadd lfs
-    /usr/sbin/useradd -s /bin/bash -g lfs -m -k /dev/null lfs
-    echo "lfs:lfs" | /usr/sbin/chpasswd
-else
-    log "INFO" "'lfs' user already exists"
 fi
 
 # ---------------------------------------------------------------------

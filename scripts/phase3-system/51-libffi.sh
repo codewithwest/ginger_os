@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.51. Libffi-3.5.2
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="libffi"
 check_built "$PKG_NAME" && exit 0
 extract "libffi"
@@ -12,5 +12,5 @@ extract "libffi"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "libffi-"*
+cleanup
 mark_built "$PKG_NAME"

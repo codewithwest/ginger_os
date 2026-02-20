@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.43. Perl-5.41.3
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="perl"
 check_built "$PKG_NAME" && exit 0
 extract "perl"
@@ -27,5 +27,5 @@ make install
 
 unset BUILD_ZLIB BUILD_BZIP2
 
-cd .. && rm -rf "perl-"*
+cleanup
 mark_built "$PKG_NAME"

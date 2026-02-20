@@ -1,11 +1,11 @@
 #!/bin/bash
 # LFS 12.4 - 8.16. Tcl-8.6.16
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="tcl"
 check_built "$PKG_NAME" && exit 0
 
 # Tcl is a bit unique with its archive name and sub-directory
-extract "tcl.*-src"
+extract "tcl*-src"
 # The extract function should handle the -src suffix and cd into unix/
 SRCDIR=$(pwd)
 

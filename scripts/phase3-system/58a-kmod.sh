@@ -1,7 +1,7 @@
 #!/bin/bash
 # LFS 12.4 - 8.58a. Kmod-34.2
 
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="kmod"
 check_built "$PKG_NAME" && exit 0
 extract "kmod"
@@ -17,5 +17,5 @@ ninja
 
 ninja install
 
-cd .. && rm -rf "kmod-"*
+cleanup
 mark_built "$PKG_NAME"

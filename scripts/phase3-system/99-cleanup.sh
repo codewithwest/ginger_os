@@ -1,6 +1,6 @@
 #!/bin/bash
 # GingerOS - Final System cleanup
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 log "INFO" "Cleaning up system..."
 
 rm -rf /tmp/{*,.*}

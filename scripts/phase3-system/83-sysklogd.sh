@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.83. Sysklogd-2.7.2
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="sysklogd"
 check_built "$PKG_NAME" && exit 0
 extract "sysklogd"
@@ -34,6 +34,6 @@ secure_mode 2
 EOF
 
 
-cd .. && rm -rf "sysklogd-"*
+cleanup
 mark_built "$PKG_NAME"
 # Note: Root required for syslog install.

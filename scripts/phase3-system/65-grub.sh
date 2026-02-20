@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.65. GRUB-2.12
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="grub"
 check_built "$PKG_NAME" && exit 0
 extract "grub"
@@ -19,5 +19,5 @@ make install
 
 mv -v /etc/bash_completion.d/grub /usr/share/bash-completion/completions
 
-cd .. && rm -rf "grub-"*
+cleanup
 mark_built "$PKG_NAME"

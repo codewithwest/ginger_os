@@ -1,6 +1,6 @@
 #!/bin/bash
 # GingerOS - Network Configuration
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="network-config"
 check_built "$PKG_NAME" && exit 0
 log "INFO" "Configuring networking..."

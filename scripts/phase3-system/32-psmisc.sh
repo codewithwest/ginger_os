@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.32. Psmisc-23.8
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="psmisc"
 check_built "$PKG_NAME" && exit 0
 extract "psmisc"
@@ -9,5 +9,5 @@ extract "psmisc"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "psmisc-"*
+cleanup
 mark_built "$PKG_NAME"

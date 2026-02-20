@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.28. Shadow-4.17.3
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="shadow"
 check_built "$PKG_NAME" && exit 0
 extract "shadow"
@@ -38,6 +38,6 @@ grep -q '^users:' /etc/group || groupadd -g 999 users
 mkdir -p /etc/default
 useradd -D --gid 999
 
-cd .. && rm -rf "shadow-"*
+cleanup
 mark_built "$PKG_NAME"
 # Note: Root password must be set manually or via another script

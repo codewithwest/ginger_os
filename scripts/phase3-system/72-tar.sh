@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.72. Tar-1.35
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="tar"
 check_built "$PKG_NAME" && exit 0
 extract "tar"
@@ -14,5 +14,5 @@ make install
 make -C doc install-html docdir=/usr/share/doc/tar-1.35
 
 
-cd .. && rm -rf "tar-"*
+cleanup
 mark_built "$PKG_NAME"

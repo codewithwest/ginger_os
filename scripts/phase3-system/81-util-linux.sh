@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.81. Util-linux-2.41.1
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="util-linux"
 check_built "$PKG_NAME" && exit 0
 extract "util-linux"
@@ -26,5 +26,5 @@ extract "util-linux"
             
 make $MAKEFLAGS
 make install
-cd .. && rm -rf "util-linux-"*
+cleanup
 mark_built "$PKG_NAME"

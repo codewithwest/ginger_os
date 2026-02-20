@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.50. Elfutils-0.193
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="elfutils"
 check_built "$PKG_NAME" && exit 0
 extract "elfutils"
@@ -16,5 +16,5 @@ make -C libelf install
 install -vm644 config/libelf.pc /usr/lib/pkgconfig
 rm /usr/lib/libelf.a
 
-cd .. && rm -rf "elfutils-"*
+cleanup
 mark_built "$PKG_NAME"

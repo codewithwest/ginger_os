@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 7.7. Gettext-0.23.1 (Temporary)
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="gettext-bridge"
 check_built "$PKG_NAME" && exit 0
 extract "gettext"
@@ -10,5 +10,5 @@ extract "gettext"
 make $MAKEFLAGS
 cp -v gettext-tools/src/{msgfmt,msgmerge,xgettext} /usr/bin
 
-cd .. && rm -rf "gettext-"*
+cleanup
 mark_built "$PKG_NAME"

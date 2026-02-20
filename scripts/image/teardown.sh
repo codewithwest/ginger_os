@@ -2,7 +2,7 @@
 # GingerOS - Safety Teardown (Unmount Chroot)
 # MUST BE RUN AS ROOT
 
-source "$(dirname "$(readlink -f "$0")")/config/env.sh"
+source "$(dirname "$(readlink -f "$0")")/../../config/env.sh"
 
 log() {
     echo -e "\033[0;33m[UNMOUNT] $1\033[0m"

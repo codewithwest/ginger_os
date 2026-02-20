@@ -2,7 +2,7 @@
 # LFS 12.4 - 7.5. Creating Directories
 # To be run INSIDE chroot.
 
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 
 log "INFO" "Creating standard directory tree..."
 

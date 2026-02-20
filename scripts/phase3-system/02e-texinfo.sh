@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 7.11. Texinfo-7.2 (Temporary)
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="texinfo-bridge"
 check_built "$PKG_NAME" && exit 0
 extract "texinfo"
@@ -10,5 +10,5 @@ extract "texinfo"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "texinfo-"*
+cleanup
 mark_built "$PKG_NAME"

@@ -1,13 +1,35 @@
 #!/bin/bash
-LFS_VERSION="12.4"
-# Core Toolchain
-export BINUTILS_VERSION="2.45"
-export GCC_VERSION="15.2.0"
-export GLIBC_VERSION="2.42"
-export LINUX_VERSION="6.16.1"
-export MPFR_VERSION="4.2.2"
-export GMP_VERSION="6.3.0"
-export MPC_VERSION="1.3.1"
+# GingerOS Environment Configuration
+
+# Source the central configuration file
+# This allows overriding variables like LFS_VERSION, LFS_MOUNT, etc. in one place.
+GINGER_ROOT_RAW="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export GINGER_ROOT=$(echo "$GINGER_ROOT_RAW" | sed 's|^//|/|; s|/$||')
+[ -z "$GINGER_ROOT" ] && GINGER_ROOT="/"
+
+CONF_FILE="${GINGER_ROOT}/ginger.conf"
+if [ -f "$CONF_FILE" ]; then
+    # Basic key=value parser for ginger.conf
+    while IFS='=' read -r key value || [ -n "$key" ]; do
+        # Ignore comments and empty lines
+        [[ "$key" =~ ^#.*$ ]] && continue
+        [[ -z "$key" ]] && continue
+        export "$key"="$value"
+    done < "$CONF_FILE"
+fi
+
+# Fallback defaults if ginger.conf is missing or incomplete
+export LFS_VERSION="${LFS_VERSION:-12.4}"
+export LFS="${LFS_MOUNT:-/mnt/lfs}"
+
+# Core Toolchain (from ginger.conf if available)
+export BINUTILS_VERSION="${BINUTILS_VERSION:-2.45}"
+export GCC_VERSION="${GCC_VERSION:-15.2.0}"
+export GLIBC_VERSION="${GLIBC_VERSION:-2.42}"
+export LINUX_VERSION="${LINUX_VERSION:-6.16.1}"
+export MPFR_VERSION="${MPFR_VERSION:-4.2.2}"
+export GMP_VERSION="${GMP_VERSION:-6.3.0}"
+export MPC_VERSION="${MPC_VERSION:-1.3.1}"
 
 # Basic System Software
 export M4_VERSION="1.4.20"
@@ -89,7 +111,7 @@ export LIBISOFS_VERSION="1.5.6"
 export LIBISOBURN_VERSION="1.5.6"
 
 # Target directory for the LFS system
-export LFS="/mnt/lfs"
+export LFS="${LFS_MOUNT:-/mnt/lfs}"
 
 # Chroot Detection: If we are inside the new system, LFS should be /
 # Chroot detection
@@ -99,7 +121,7 @@ if [ "$(id -u)" -eq 0 ] && [ -d /tools ] && [ -d /sources ]; then
 fi
 
 # Target architecture triplet
-export LFS_TGT="x86_64-lfs-linux-gnu"
+export LFS_TGT="${LFS_TGT:-x86_64-lfs-linux-gnu}"
 
 # Path configuration
 export PATH="$LFS/tools/bin:/usr/bin:/usr/sbin:/usr/local/bin"
@@ -108,10 +130,25 @@ export PATH="$LFS/tools/bin:/usr/bin:/usr/sbin:/usr/local/bin"
 export MAKEFLAGS="-j$(nproc)"
 
 # Workspace directories
-export GINGER_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export GINGER_SCRIPTS="$GINGER_ROOT/scripts"
-export GINGER_SOURCES="$GINGER_ROOT/sources"
-export GINGER_LOGS="$GINGER_ROOT/logs"
+# Use sed to ensure GINGER_ROOT is normalized (no double slashes or trailing slashes)
+# especially when it becomes the root "/" inside chroot.
+GINGER_ROOT_RAW="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export GINGER_ROOT=$(echo "$GINGER_ROOT_RAW" | sed 's|^//|/|; s|/$||')
+
+# If GINGER_ROOT is empty (can happen at true root), make it /
+[ -z "$GINGER_ROOT" ] && GINGER_ROOT="/"
+
+# --- CRITICAL SAFETY CHECK (Issue #14) ---
+# Ensure GINGER_ROOT is a valid directory and contains expected structure
+if [ ! -d "$GINGER_ROOT/scripts" ] || [ ! -d "$GINGER_ROOT/config" ]; then
+    echo -e "${RED}ERROR: Invalid GINGER_ROOT detected: $GINGER_ROOT${NC}"
+    echo "This script must be run from within the GingerOS source tree."
+    exit 1
+fi
+
+export GINGER_SCRIPTS="${GINGER_ROOT%/}/scripts"
+export GINGER_SOURCES="${GINGER_ROOT%/}/sources"
+export GINGER_LOGS="${GINGER_ROOT%/}/logs"
 
 # Ensure directories exist
 mkdir -p "$GINGER_SOURCES" "$GINGER_LOGS"

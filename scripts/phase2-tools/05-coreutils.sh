@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 6.5. Coreutils-9.7
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="coreutils-temp"
 check_built "$PKG_NAME" && exit 0
@@ -21,5 +21,5 @@ mkdir -pv $LFS/usr/share/man/man8
 mv -v $LFS/usr/share/man/man1/chroot.1 $LFS/usr/share/man/man8/chroot.8
 sed -i 's/"1"/"8"/'                    $LFS/usr/share/man/man8/chroot.8
 
-cd .. && rm -rf "coreutils-"*
+cleanup
 mark_built "$PKG_NAME"

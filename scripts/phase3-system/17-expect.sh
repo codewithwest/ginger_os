@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.17. Expect-5.45.4
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="expect"
 check_built "$PKG_NAME" && exit 0
 extract "expect"
@@ -21,5 +21,5 @@ make $MAKEFLAGS
 make install
 ln -svf expect5.45.4/libexpect5.45.4.so /usr/lib
 
-cd .. && rm -rf "expect"*
+cleanup
 mark_built "$PKG_NAME"

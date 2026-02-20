@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - Libisoburn-1.5.6 (xorriso)
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="libisoburn"
 
 check_built "$PKG_NAME" && exit 0
@@ -13,5 +13,5 @@ make
 
 make install
 
-cd .. && rm -rf "libisoburn-"*
+cleanup
 mark_built "$PKG_NAME"

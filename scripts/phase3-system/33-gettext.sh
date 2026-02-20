@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.33. Gettext-0.23.1
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="gettext"
 check_built "$PKG_NAME" && exit 0
 extract "gettext"
@@ -14,5 +14,5 @@ make install
 
 chmod -v 0755 /usr/lib/preloadable_libintl.so
 
-cd .. && rm -rf "gettext-"*
+cleanup
 mark_built "$PKG_NAME"

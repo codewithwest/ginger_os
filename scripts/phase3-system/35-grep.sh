@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.35. Grep-3.11
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="grep"
 check_built "$PKG_NAME" && exit 0
 extract "grep"
@@ -12,5 +12,5 @@ sed -i "s/echo/#echo/" src/egrep.sh
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "grep-"*
+cleanup
 mark_built "$PKG_NAME"

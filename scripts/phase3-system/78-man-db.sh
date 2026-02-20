@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.78. Man-DB-2.14.0
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="man-db"
 check_built "$PKG_NAME" && exit 0
 extract "man-db"
@@ -18,5 +18,5 @@ extract "man-db"
             
 make $MAKEFLAGS
 make install
-cd .. && rm -rf "man-db-"*
+cleanup
 mark_built "$PKG_NAME"

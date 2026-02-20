@@ -1,7 +1,7 @@
 #!/bin/bash
 # GingerOS - QEMU Execution Script
 
-source "$(dirname "$(readlink -f "$0")")/config/env.sh"
+source "$(dirname "$(readlink -f "$0")")/scripts/lib/common.sh"
 
 IMAGE_PATH="${GINGER_ROOT}/ginger_os.img"
 

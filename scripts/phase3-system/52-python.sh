@@ -1,7 +1,7 @@
 #!/bin/bash
 # LFS 12.4 - 8.52. Python-3.13.7
-source "/scripts/common.sh"
-PKG_NAME="Python"
+source "/scripts/lib/common.sh"
+PKG_NAME="newPythonPip"
 check_built "$PKG_NAME" && exit 0
 extract "Python"
 
@@ -21,7 +21,5 @@ root-user-action = ignore
 disable-pip-version-check = true
 EOF
 
-
-
-cd .. && rm -rf "Python-"*
+cleanup
 mark_built "$PKG_NAME"

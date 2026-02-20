@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 8.25. Acl-2.3.3
-source "/scripts/common.sh"
+source "/scripts/lib/common.sh"
 PKG_NAME="acl"
 check_built "$PKG_NAME" && exit 0
 extract "acl"
@@ -12,5 +12,5 @@ extract "acl"
 make $MAKEFLAGS
 make install
 
-cd .. && rm -rf "acl-"*
+cleanup
 mark_built "$PKG_NAME"

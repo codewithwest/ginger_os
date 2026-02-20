@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 12.4 - 6.17. Binutils-2.45 - Pass 2
-source "$(dirname "$(readlink -f "$0")")/../common.sh"
+source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="binutils-pass2"
 check_built "$PKG_NAME" && exit 0
