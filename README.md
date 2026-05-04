@@ -17,6 +17,14 @@ The TUI shows:
 
 **YOU** control everything with keyboard commands. Nothing runs automatically.
 
+### Containerized Architecture (Docker-Exec Style)
+GingerOS builds itself completely isolated from your host system using a "Zero-Host-Pollution" workflow:
+1. **Virtual Disk**: It creates a raw QEMU `.img` file and mounts it natively.
+2. **Ubuntu Base**: It uses `debootstrap` to install a minimal Ubuntu 24.04 base directly into the image.
+3. **Bind Execution**: The orchestrator bind-mounts the `ginger_os` repository into the image and runs all compilation scripts using `chroot` (acting exactly like `docker exec`).
+
+This means your host machine stays completely clean, and the final output is a portable QEMU disk image.
+
 ## Keyboard Commands
 
 ### Navigation
@@ -92,6 +100,8 @@ The TUI shows:
 ## Requirements
 - Python 3.8+
 - `rich` library (`pip install rich`)
+- `qemu-utils` (for creating the raw image)
+- `debootstrap` (for installing the Ubuntu Base container environment)
 
 ## Directory Structure
 - `logs/`: Build logs for each step

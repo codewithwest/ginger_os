@@ -6,4 +6,4 @@ vmlinuz-*
 
 **/*.pyc
 **/venv
-
+logs/*
