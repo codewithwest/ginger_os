@@ -30,32 +30,31 @@ class GingerEngine:
         """
         self.steps = [
             # Preparation Phase
-            BuildStep("01_fix_repo", "Fix Repo Ownership", "sudo chown -R $(logname):$(logname) .git || true", "Preparation"),
-            BuildStep("02_host_reqs", "Host Requirements", "bash ./scripts/host/host-requirements-install.sh", "Preparation"),
-            BuildStep("03_version_check", "Version Check", "bash ./scripts/host/version-check.sh", "Preparation"),
-            BuildStep("04_prepare_image", "Prepare Image", "bash ./scripts/image/prepare-image.sh", "Preparation"),
-            BuildStep("05_download_sources", "Download Sources", "bash ./scripts/host/download.sh", "Preparation"),
-            # BuildStep("06_fix_source_perms", "Fix Source Perms", "sudo chown -R lfs:lfs /mnt/lfs/sources && sudo chmod -R 775 /mnt/lfs/sources", "Preparation"),
-            BuildStep("07_host_setup", "Host Setup", "bash ./scripts/host/setup-host.sh", "Preparation"),
-            BuildStep("08_update_dir", "Update Directories", "bash ./scripts/host/update-dir.sh", "Preparation"),
+            BuildStep("01_create_qemu_img", "Create QEMU Image", "bash ./scripts/image/prepare-image.sh", "Preparation"),
+            BuildStep("02_install_ubuntu", "Install Ubuntu Base", "sudo bash ./scripts/image/install-ubuntu.sh", "Preparation"),
+            BuildStep("03_install_os_base", "Install OS Base", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/setup-host.sh'", "Preparation"),
+            BuildStep("04_setup_downloads", "Setup & Downloads", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/download.sh'", "Preparation"),
+            BuildStep("05_host_reqs", "Host Requirements", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/host-requirements-install.sh'", "Preparation"),
+            BuildStep("06_version_check", "Version Check", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/version-check.sh'", "Preparation"),
+            BuildStep("07_update_dir", "Update Directories", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/update-dir.sh'", "Preparation"),
             
             # Host Tools Phase
-            BuildStep("09_setup_lfs_env", "Setup LFS Environment", "bash scripts/host/run-as-lfs.sh ./scripts/phases/setup-lfs-user-env.sh", "Host Tools"),
+            BuildStep("08_setup_lfs_env", "Setup LFS Environment", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/run-as-lfs.sh ./scripts/phases/setup-lfs-user-env.sh'", "Host Tools"),
             
             # Phase 1 Toolchain
-            BuildStep("10_phase1_toolchain", "Toolchain Build", "bash scripts/host/run-as-lfs.sh ./scripts/phases/build-phase1.sh", "Phase 1 Toolchain"),
+            BuildStep("09_phase1_toolchain", "Toolchain Build", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/run-as-lfs.sh ./scripts/phases/build-phase1.sh'", "Phase 1 Toolchain"),
             
             # Phase 2 Cross Tools
-            BuildStep("11_phase2_toolchain", "Cross Tools Build", "bash scripts/host/run-as-lfs.sh ./scripts/phases/build-phase2.sh", "Phase 2 Cross Tools"),
+            BuildStep("10_phase2_toolchain", "Cross Tools Build", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/run-as-lfs.sh ./scripts/phases/build-phase2.sh'", "Phase 2 Cross Tools"),
             
             # Phase 3 System
-            BuildStep("12_chroot_mounts", "Mount Chroot", "sudo bash scripts/chroot.sh --mount-only", "Phase 3 System"),
-            BuildStep("13_phase3_system", "System Build", "sudo chroot /mnt/lfs /bin/bash -c 'bash scripts/phases/build-phase3.sh'", "Phase 3 System"),
+            BuildStep("11_chroot_mounts", "Mount Chroot", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && sudo bash scripts/chroot.sh --mount-only'", "Phase 3 System"),
+            BuildStep("12_phase3_system", "System Build", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && sudo chroot /mnt/lfs /bin/bash -c \"bash scripts/phases/build-phase3.sh\"'", "Phase 3 System"),
             
             # Kernel & Boot
-            BuildStep("14_kernel", "Kernel Build", "sudo chroot /mnt/lfs /bin/bash -c 'bash scripts/phases/build-phase4.sh'", "Kernel & Boot"),
-            BuildStep("15_finalize", "Finalize System", "bash scripts/host/finalize-system.sh", "Kernel & Boot"),
-            BuildStep("16_teardown", "Teardown", "bash scripts/image/teardown.sh", "Kernel & Boot")
+            BuildStep("13_kernel", "Kernel Build", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && sudo chroot /mnt/lfs /bin/bash -c \"bash scripts/phases/build-phase4.sh\"'", "Kernel & Boot"),
+            BuildStep("14_finalize", "Finalize System", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/finalize-system.sh'", "Kernel & Boot"),
+            BuildStep("15_teardown", "Teardown", "bash scripts/image/teardown.sh", "Kernel & Boot")
         ]
         self.dry_run = dry_run
         self.current_step_idx = 0
@@ -278,7 +277,7 @@ class GingerEngine:
         # 1. CRITICAL: Source Integrity Check (HOST SIDE)
         # If we are missing sources, we MUST NOT skip the download step, 
         # because the chroot doesn't have wget to fix it later.
-        if step.id == "05_download_sources":
+        if step.id == "04_setup_downloads":
             sources_dir = os.path.join(GINGER_ROOT, "sources")
             if not os.path.exists(sources_dir) or len(os.listdir(sources_dir)) < 5:
                 # Force re-download by removing the marker if it exists
@@ -288,49 +287,35 @@ class GingerEngine:
                     except: pass
                 return False
 
+        # 1.5. Failsafe Mount Checks
+        if step.id == "01_create_qemu_img":
+            try:
+                if subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True, timeout=5).returncode != 0:
+                    return False
+            except: return False
+
+        if step.id == "11_chroot_mounts":
+            try:
+                if subprocess.run(["grep", "-q", f"{LFS_MOUNT}/proc", "/proc/mounts"], capture_output=True, timeout=5).returncode != 0:
+                    return False
+            except: return False
+
         # 2. Direct marker check in the central state dir
         central_marker = os.path.join(STATE_DIR, f"{step.id}.built")
         if os.path.exists(central_marker):
             return True
             
         # 3. Smart checks for major phases (checks all constituent packages)
-        if step.id == "10_phase1_toolchain":
+        if step.id == "09_phase1_toolchain":
             return self._check_phase_complete("phase1-tools")
-        if step.id == "11_phase2_toolchain":
+        if step.id == "10_phase2_toolchain":
             return self._check_phase_complete("phase2-tools")
-        if step.id == "13_phase3_system":
+        if step.id == "12_phase3_system":
              return self._check_phase_complete("phase3-system")
-        if step.id == "14_kernel":
+        if step.id == "13_kernel":
              return self._check_phase_complete("phase4-boot")
              
-        # 4. Dynamic state checks
-        if step.id == "04_prepare_image":
-            # Check if image is already mounted to LFS
-            # CRITICAL FAILSAFE: Even if marker exists, if it's NOT mounted, we should NOT skip
-            try:
-                result = subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True, timeout=5)
-                is_mounted = result.returncode == 0
-                if not is_mounted:
-                    return False
-                return True # Marker exists AND is mounted
-            except subprocess.TimeoutExpired:
-                self.log(f"WARN: mountpoint check timed out for {LFS_MOUNT}", "yellow")
-                return False
-            except: return False
-            
-        if step.id == "12_chroot_mounts":
-            # Check if chroot special filesystems are mounted
-            # FAILSAFE: If marker exists but mounts are gone, do NOT skip
-            try:
-                result = subprocess.run(["grep", "-q", f"{LFS_MOUNT}/proc", "/proc/mounts"], capture_output=True, timeout=5)
-                is_mounted = result.returncode == 0
-                if not is_mounted:
-                    return False
-                return True # Marker exists AND chroot is mounted
-            except subprocess.TimeoutExpired:
-                return False
-            except: return False
-
+        # 4. Return false if not completed
         return False
 
     def _sudo_keepalive(self):
@@ -373,6 +358,11 @@ class GingerEngine:
         try:
             result = subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True, timeout=5)
             if result.returncode == 0:
+                bind_dir = os.path.join(LFS_MOUNT, "ginger_os")
+                if not os.path.exists(bind_dir):
+                    os.makedirs(bind_dir, exist_ok=True)
+                if subprocess.run(["mountpoint", "-q", bind_dir], capture_output=True).returncode != 0:
+                    subprocess.run(["sudo", "mount", "--bind", GINGER_ROOT, bind_dir])
                 return True
             
             if self.dry_run: return True
@@ -388,9 +378,9 @@ class GingerEngine:
             self.log("Attempting automated mount recovery...", "bold cyan")
             
             # ... recovery steps ...
-            prepare_step = next((s for s in self.steps if s.id == "04_prepare_image"), None)
+            prepare_step = next((s for s in self.steps if s.id == "01_create_qemu_img"), None)
             if not prepare_step:
-                self.log("ERROR: Could not find Recovery Step (04_prepare_image)!", "bold red")
+                self.log("ERROR: Could not find Recovery Step (01_create_qemu_img)!", "bold red")
                 return False
                 
             # Run the idempotent script with a timeout to avoid hangs
@@ -480,7 +470,7 @@ class GingerEngine:
         # Steps 07 (Host Setup) through 16 (Teardown) require the LFS disk to be mounted
         try:
             step_num = int(step.id.split('_')[0])
-            if step_num >= 7 and step_num <= 16:
+            if step_num >= 2 and step_num <= 15:
                 if not self._ensure_lfs_mounted():
                     self.log(f"ERROR: Step {step.name} cannot proceed without LFS mount.", "bold red")
                     step.status = "failed"
@@ -489,13 +479,13 @@ class GingerEngine:
             pass # Non-standard step ID, skip auto-mount check
 
         # Verify chroot for system phases
-        if step.id in ["13_phase3_system", "14_kernel"]:
+        if step.id in ["12_phase3_system", "13_kernel"]:
             if not self._verify_chroot_ready():
                 self.log("WARN: Chroot environments are NOT mounted!", "yellow")
                 self.log("Attempting automated chroot recovery...", "bold cyan")
                 
                 # Find the "chroot-mounts" step
-                mount_step = next((s for s in self.steps if s.id == "12_chroot_mounts"), None)
+                mount_step = next((s for s in self.steps if s.id == "11_chroot_mounts"), None)
                 if mount_step:
                     # Run it once
                     proc = subprocess.run(mount_step.command, shell=True, cwd=GINGER_ROOT, capture_output=True, text=True)

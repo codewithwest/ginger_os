@@ -33,7 +33,7 @@ if grep -v '^#' md5sums | xargs -P "$(nproc)" -I {} sh -c "echo '{}' | md5sum -c
     # Also check BLFS extras
     if [ -f "libburn-1.5.6.tar.gz" ] && [ -f "libisofs-1.5.6.tar.gz" ] && [ -f "libisoburn-1.5.6.tar.gz" ]; then
         log "INFO" "All packages already exist and are valid. Marking complete."
-        mark_built "05_download_sources"
+        mark_built "04_setup_downloads"
         exit 0
     fi
 fi
@@ -92,7 +92,7 @@ failed_log=$(mktemp)
 if grep -v '^#' md5sums | md5sum -c --quiet > "$failed_log" 2>&1; then
     rm -f "$failed_log"
     log "INFO" "Source acquisition complete and verified."
-    mark_built "05_download_sources"
+    mark_built "04_setup_downloads"
 else
     log "ERROR" "Checksum verification FAILED:"
     cat "$failed_log"

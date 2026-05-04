@@ -36,3 +36,4 @@ chown -v lfs "$LFS/var/lib"
 chown -R lfs "$LFS/var/lib/ginger"
 
 chmod -R 777 "$GINGER_LOGS"
+mark_built "07_update_dir"

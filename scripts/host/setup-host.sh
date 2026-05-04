@@ -112,3 +112,4 @@ chown -R lfs:lfs $LFS
 log "INFO" "Host setup complete."
 log "INFO" "Switch to the 'lfs' user to begin Phase 1:"
 log "INFO" "  su - lfs"
+mark_built "03_install_os_base"

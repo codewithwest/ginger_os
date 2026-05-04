@@ -85,3 +85,7 @@ if [ "$(nproc)" = "" ]; then
 else
    echo "OK: nproc reports $(nproc) logical cores are available"
 fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../lib/common.sh"
+mark_built "06_version_check"

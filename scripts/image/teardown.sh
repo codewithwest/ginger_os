@@ -25,5 +25,6 @@ mountpoint -q $LFS/run     && umount -v $LFS/run
 mountpoint -q $LFS/sys     && umount -v $LFS/sys
 mountpoint -q $LFS/proc    && umount -v $LFS/proc
 mountpoint -q $LFS/dev     && umount -v $LFS/dev
+mountpoint -q $LFS/ginger_os && umount -v $LFS/ginger_os
 
 log "Teardown complete."
