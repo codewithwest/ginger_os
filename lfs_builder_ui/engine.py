@@ -260,7 +260,14 @@ class GingerEngine:
             if pkg_name:
                 possible_marker_names.extend([f"{pkg_name}.built", f"{pkg_name}-temp.built"])
             
-            if not any(os.path.exists(os.path.join(STATE_DIR, m)) for m in possible_marker_names):
+            lfs_status_dir = os.path.join(LFS_MOUNT, "var", "lib", "ginger")
+            found = False
+            for m in possible_marker_names:
+                if os.path.exists(os.path.join(STATE_DIR, m)) or os.path.exists(os.path.join(lfs_status_dir, m)):
+                    found = True
+                    break
+            
+            if not found:
                 return False
         return True
 
@@ -363,6 +370,12 @@ class GingerEngine:
                     os.makedirs(bind_dir, exist_ok=True)
                 if subprocess.run(["mountpoint", "-q", bind_dir], capture_output=True).returncode != 0:
                     subprocess.run(["sudo", "mount", "--bind", GINGER_ROOT, bind_dir])
+                
+                # Ensure virtual filesystems are mounted for chroot
+                proc_mount = os.path.join(LFS_MOUNT, "proc")
+                if subprocess.run(["mountpoint", "-q", proc_mount], capture_output=True).returncode != 0:
+                    subprocess.run(["sudo", "bash", "scripts/chroot.sh", "--mount-only"], cwd=GINGER_ROOT)
+                
                 return True
             
             if self.dry_run: return True
