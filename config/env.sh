@@ -128,8 +128,10 @@ export LFS_TGT="${LFS_TGT:-x86_64-lfs-linux-gnu}"
 # Path configuration
 export PATH="$LFS/tools/bin:/usr/bin:/usr/sbin:/usr/local/bin"
 
-# Parallel build settings - use all available cores
-export MAKEFLAGS="-j$(nproc)"
+# Parallel build settings - cap at 12 to keep system responsive
+CORES=$(nproc 2>/dev/null || echo 4)
+if [ "$CORES" -gt 12 ]; then CORES=12; fi
+export MAKEFLAGS="-j${CORES}"
 
 # Workspace directories
 # Use sed to ensure GINGER_ROOT is normalized (no double slashes or trailing slashes)

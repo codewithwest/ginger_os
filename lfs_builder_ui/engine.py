@@ -372,6 +372,14 @@ class GingerEngine:
                     if r.returncode != 0:
                         self.log(f"ERROR: Failed to bind-mount repo into chroot: {r.stderr}", "bold red")
                         return False
+
+                # Mount /proc so nproc works during phase 1/2 builds
+                proc_mount = os.path.join(LFS_MOUNT, "proc")
+                if not os.path.exists(proc_mount):
+                    subprocess.run(["sudo", "mkdir", "-p", proc_mount], capture_output=True)
+                if subprocess.run(["mountpoint", "-q", proc_mount], capture_output=True).returncode != 0:
+                    subprocess.run(["sudo", "mount", "-vt", "proc", "proc", proc_mount], capture_output=True)
+
                 return True
             
             if self.dry_run: return True

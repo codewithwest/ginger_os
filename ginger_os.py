@@ -355,6 +355,13 @@ class GingerTUI:
             load = os.getloadavg()
             matrix.append(f"  LOAD: {load[0]:.2f}\n", style="blue")
         except: pass
+
+        try:
+            import multiprocessing
+            cores = multiprocessing.cpu_count()
+            active = min(cores, 12)
+            matrix.append(f"  CORES: {active}/{cores} (capped)\n", style="bright_cyan")
+        except: pass
         
         # Disk stats
         host_disk = self.engine.storage_stats.get("host", 0)
@@ -383,20 +390,30 @@ class GingerTUI:
         )
 
     def render_terminal(self):
-        """Live log terminal with scanline effect simulator"""
+        """Live log terminal with scroll support"""
         log_content = Text()
         
         if self.engine.logs:
-            # We can show more logs now in the side panel
-            recent_logs = self.engine.logs[-28:] if len(self.engine.logs) > 28 else self.engine.logs
-            for log_entry, style in recent_logs:
-                # Truncate and prefix
+            # Calculate visible window based on scroll position
+            total = len(self.engine.logs)
+            visible = 28
+            # Auto-scroll to bottom unless user has scrolled up
+            if self.log_scroll == 0:
+                start = max(0, total - visible)
+            else:
+                start = max(0, min(total - visible, total - visible - self.log_scroll))
+            end = min(total, start + visible)
+            
+            for log_entry, style in self.engine.logs[start:end]:
                 if len(log_entry) > 100: log_entry = log_entry[:97] + "..."
                 log_content.append(" >_ ", style="bold bright_cyan")
                 log_content.append(log_entry + "\n", style=style or "bright_white")
+            
+            # Scroll indicator
+            if self.log_scroll > 0:
+                log_content.append(f" ↓ {self.log_scroll} lines from bottom (PgDn to resume)", style="dim yellow")
         else:
             log_content.append("\n [ TERMINAL_STANDBY ]\n", style="bold dim cyan")
-            log_content.append(" Pulse frequency: 440Hz\n", style="dim italic")
             log_content.append(" Waiting for neural link acquisition...", style="dim")
             
         return Panel(
@@ -417,6 +434,7 @@ class GingerTUI:
             ("P", "STEP", "bright_magenta"),
             ("F", "FORCE", "bright_yellow"),
             ("D", "PURGE", "bright_red"),
+            ("PgUp/Dn", "SCROLL", "white"),
             ("?", "HELP", "white"),
             ("Q", "QUIT", "bright_red")
         ]
@@ -460,6 +478,7 @@ class GingerTUI:
         self.executing_step = step_idx
         self.current_start_time = time.time()
         self.engine.current_step_idx = step_idx
+        self.log_scroll = 0  # reset to live tail on new step
         
         def _target():
             self.engine._execute_step(step)
@@ -511,6 +530,12 @@ class GingerTUI:
         elif key in ['k', '\x1b[A']:  # k or UP
             if self.selected_step > 0:
                 self.selected_step -= 1
+        
+        elif key == '\x1b[5~':  # PgUp - scroll log up
+            self.log_scroll = min(self.log_scroll + 10, max(0, len(self.engine.logs) - 28))
+        
+        elif key == '\x1b[6~':  # PgDn - scroll log down / resume auto-scroll
+            self.log_scroll = max(0, self.log_scroll - 10)
         
         elif key == 'g':  # Go to first
             self.selected_step = 0
@@ -598,10 +623,13 @@ class GingerTUI:
                     if select.select([sys.stdin], [], [], 0.05)[0]:
                         key = sys.stdin.read(1)
                         
-                        # Handle arrow keys (multi-byte)
+                        # Handle arrow keys and PgUp/PgDn (multi-byte)
                         if key == '\x1b':
                             next_chars = sys.stdin.read(2)
                             key = key + next_chars
+                            # PgUp/PgDn are 3-char sequences ending in ~
+                            if key in ('\x1b[5', '\x1b[6'):
+                                key += sys.stdin.read(1)  # read the ~
                         
                         action = self.handle_key(key)
                         

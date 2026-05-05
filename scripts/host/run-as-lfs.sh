@@ -28,7 +28,7 @@ exec runuser -u lfs -- env -i \
   LC_ALL=POSIX \
   LFS_TGT=$(uname -m)-lfs-linux-gnu \
   PATH=/mnt/lfs/tools/bin:/usr/bin \
-  MAKEFLAGS=-j$(nproc) \
+  MAKEFLAGS=-j$(( $(nproc) > 12 ? 12 : $(nproc) )) \
   MOVE_TO_BUILD_DIR="${MOVE_TO_BUILD_DIR:-false}" \
   GINGER_UI_MASTER_PID="${GINGER_UI_MASTER_PID:-}" \
   GINGER_ROOT="$GINGER_ROOT" \
