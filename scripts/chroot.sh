@@ -35,9 +35,9 @@ log "INFO" "Entering chroot..."
 
 # Fix liblzma symlink if newer version was built in phase 3
 # This ensures xz can decompress .tar.xz sources inside the chroot
-if [ -f "$LFS/usr/lib/liblzma.so.5" ] && [ -f "$LFS/lib/x86_64-linux-gnu/liblzma.so.5" ]; then
-    NEW=$(readlink -f "$LFS/usr/lib/liblzma.so.5")
-    ln -sfv "$NEW" "$LFS/lib/x86_64-linux-gnu/liblzma.so.5" 2>/dev/null || true
+if [ -f "$LFS/usr/lib/liblzma.so.5" ] && [ -d "$LFS/lib/x86_64-linux-gnu" ]; then
+    log "INFO" "Ensuring xz uses the correct liblzma from /usr/lib..."
+    ln -sfv /usr/lib/liblzma.so.5 "$LFS/lib/x86_64-linux-gnu/liblzma.so.5"
 fi
 
 # If we are running in the UI (where it just needs mounts), it can exit here.

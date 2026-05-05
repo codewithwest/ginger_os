@@ -26,13 +26,9 @@ for script in "${SCRIPTS[@]}"; do
         continue
     fi
 
-    if [[ ! "$FILE_PKG_NAME" =~ ^(gettext|bison|perl|python|texinfo|util-linux)$ ]]; then
-        if [ -f "$STATE_DIR/${FILE_PKG_NAME}.built" ] || \
-           [ -n "$SCRIPT_PKG_NAME" -a -f "$STATE_DIR/${SCRIPT_PKG_NAME}.built" ]; then
-            echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME (Skipped)"
-            continue
-        fi
-    fi
+    # Phase 3 scripts must only be skipped if their specific full script name marker exists.
+    # We remove the generic FILE_PKG_NAME/SCRIPT_PKG_NAME fallback because it 
+    # incorrectly skips final system builds if toolchain markers exist.
 
     echo "__GINGER_PKG_MARKER__: $FILE_PKG_NAME"
     echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME"

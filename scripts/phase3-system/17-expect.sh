@@ -9,7 +9,7 @@ extract "expect"
 python3 -c 'from pty import spawn; spawn(["echo", "ok"])' 2>/dev/null || log "WARN" "PTY support test failed, continuing anyway..."
 
 # Patch for GCC 15
-patch -Np1 -i /sources/expect-5.45.4-gcc15-1.patch
+apply_patch "expect" "gcc15"
 
 ./configure --prefix=/usr           \
             --with-tcl=/usr/lib     \

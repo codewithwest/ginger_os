@@ -152,6 +152,45 @@ fetch_missing_source() {
     return 1
 }
 
+apply_patch() {
+    local PKG_PATTERN=$1
+    local PATCH_SEARCH=${2:-} # Optional search term within the patch name
+    
+    # Try to find the patch file with smart filtering
+    local PATCH_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*${PATCH_SEARCH}*.patch" | head -n 1)
+    
+    if [ -z "$PATCH_NAME" ]; then
+        # Fallback to case-insensitive search
+        PATCH_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -iname "${PKG_PATTERN}*${PATCH_SEARCH}*.patch" | head -n 1)
+    fi
+    
+    if [ -z "$PATCH_NAME" ]; then
+        log "WARN" "No patch matching '${PKG_PATTERN}*${PATCH_SEARCH}*.patch' found in $GINGER_SOURCES"
+        return 1
+    fi
+    
+    # In Phase 3 chroot, use the internal /sources path
+    local INTERNAL_PATCH_PATH="/sources/$(basename "$PATCH_NAME")"
+    [ -f "$INTERNAL_PATCH_PATH" ] || INTERNAL_PATCH_PATH="$PATCH_NAME"
+    
+    log "INFO" "Applying patch: $(basename "$PATCH_NAME")..."
+    
+    # Try applying with -f (force) to avoid interactive prompts
+    if patch -Np1 -f -i "$INTERNAL_PATCH_PATH" &>/dev/null; then
+        log "INFO" "Successfully applied $(basename "$PATCH_NAME")"
+        return 0
+    else
+        # Check if already applied by attempting a dry-run reversal
+        if patch -Np1 --dry-run -R -i "$INTERNAL_PATCH_PATH" &>/dev/null; then
+            log "WARN" "Patch $(basename "$PATCH_NAME") appears already applied. Skipping."
+            return 0
+        else
+            log "ERROR" "Failed to apply patch $(basename "$PATCH_NAME")"
+            return 1
+        fi
+    fi
+}
+
 extract() {
     local PKG_PATTERN=$1
     
@@ -198,12 +237,11 @@ extract() {
     
     # Safe cleanup of previous build directory
     if [[ -n "$DIR_NAME" && "$DIR_NAME" != "/" && "$DIR_NAME" != "." ]]; then
-        # Only remove if pattern is sufficiently specific (length > 2)
-        if [[ ${#DIR_NAME} -gt 2 ]]; then
-             # IMPORTANT: Only remove DIRECTORIES to avoid deleting the source tarball
-             # which often shares the same name prefix.
-             find . -maxdepth 1 -type d -name "${DIR_NAME%-*}*" -exec rm -rf {} + || true
-        fi
+        log "PROCESS" "Cleaning up any existing directory for $DIR_NAME..."
+        # 1. Remove the exact directory if it exists
+        rm -rf "$DIR_NAME" 2>/dev/null || true
+        # 2. Also remove anything that looks like it (to handle version suffixes/changes)
+        find . -maxdepth 1 -type d -name "${DIR_NAME%-*}*" -exec rm -rf {} + || true
     fi
     
     # Extract with re-download fallback

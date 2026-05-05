@@ -6,7 +6,7 @@ check_built "$PKG_NAME" && exit 0
 extract "kbd"
 
 # Apply backspace patch
-patch -Np1 -i /sources/kbd-2.8.0-backspace-1.patch
+apply_patch "kbd" "backspace"
 
 sed -i '/RESIZECONS_PROGS=/s/yes/no/' configure
 sed -i 's/resizecons.8 //' docs/man/man8/Makefile.in
