@@ -50,7 +50,7 @@ cd build
 make $MAKEFLAGS
 make DESTDIR=$LFS install
 
-ln -sv gcc $LFS/usr/bin/cc
+ln -sfv gcc $LFS/usr/bin/cc
 
 cd ../..
 rm -rf "gcc-"*

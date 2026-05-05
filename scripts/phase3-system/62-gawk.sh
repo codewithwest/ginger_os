@@ -13,7 +13,7 @@ make $MAKEFLAGS
 rm -f /usr/bin/gawk-5.3.2
 make install
 
-ln -sv gawk.1 /usr/share/man/man1/awk.1
+ln -sfv gawk.1 /usr/share/man/man1/awk.1
 
 install -vDm644 doc/{awkforai.txt,*.{eps,pdf,jpg}} -t /usr/share/doc/gawk-5.3.2
 

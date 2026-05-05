@@ -12,8 +12,8 @@ extract "pkgconf"
 make $MAKEFLAGS
 make install
 
-ln -sv pkgconf   /usr/bin/pkg-config
-ln -sv pkgconf.1 /usr/share/man/man1/pkg-config.1
+ln -sfv pkgconf   /usr/bin/pkg-config
+ln -sfv pkgconf.1 /usr/share/man/man1/pkg-config.1
 
 cleanup
 mark_built "$PKG_NAME"

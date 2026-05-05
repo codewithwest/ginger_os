@@ -9,8 +9,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../../config/env.sh"
 
 # State directory on host for orchestrator markers
-GINGER_STATE_DIR="${GINGER_ROOT}/.build_state"
-mkdir -p "$GINGER_STATE_DIR"
+# Inside phase 3 chroot, ginger_os is bind-mounted at /ginger_os
+if [ -d "/ginger_os/.build_state" ]; then
+    GINGER_STATE_DIR="/ginger_os/.build_state"
+else
+    GINGER_STATE_DIR="${GINGER_ROOT}/.build_state"
+fi
+mkdir -p "$GINGER_STATE_DIR" 2>/dev/null || true
 
 # Status directory - relative into the LFS partition
 STATUS_DIR="$LFS/var/lib/ginger"

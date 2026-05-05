@@ -12,12 +12,12 @@ echo '#define SYS_VIMRC_FILE "/etc/vimrc"' >> src/feature.h
 make $MAKEFLAGS
 make install
 
-ln -sv vim /usr/bin/vi
+ln -sfv vim /usr/bin/vi
 for L in  /usr/share/man/{,*/}man1/vim.1; do
-    ln -sv vim.1 $(dirname $L)/vi.1
+    ln -sfv vim.1 $(dirname $L)/vi.1
 done
 
-ln -sv ../vim/vim91/doc /usr/share/doc/vim-9.1.1629
+ln -sfv ../vim/vim91/doc /usr/share/doc/vim-9.1.1629
 
 
 

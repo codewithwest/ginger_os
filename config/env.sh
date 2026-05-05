@@ -122,6 +122,11 @@ if [ ! -d "/mnt/lfs" ] && [ -d "/tools" ] && [ "$(id -u)" -eq 0 ]; then
     export LFS=""
 fi
 
+# In phase 3 chroot, sources and state dir are at known bind-mount paths
+if [ ! -d "/mnt/lfs" ] && [ -d "/sources" ]; then
+    export GINGER_SOURCES="/sources"
+fi
+
 # Target architecture triplet
 export LFS_TGT="${LFS_TGT:-x86_64-lfs-linux-gnu}"
 

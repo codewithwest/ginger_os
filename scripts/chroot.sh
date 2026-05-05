@@ -7,15 +7,11 @@ source "$(dirname "$(readlink -f "$0")")/lib/common.sh"
 
 
 log "INFO" "Mounting virtual kernel file systems..."
-chown --from lfs -R root:root $LFS/{usr,var,etc,tools}
-case $(uname -m) in
-  x86_64) chown --from lfs -R root:root $LFS/lib64 ;;
-esac
 mkdir -p $LFS/{dev,proc,sys,run}
 
 # Mount with safety checks
 mkdir -p $LFS/etc
-[ -f /etc/resolv.conf ] && cp -v /etc/resolv.conf $LFS/etc/
+[ -f /etc/resolv.conf ] && rm -f $LFS/etc/resolv.conf && cp -v /etc/resolv.conf $LFS/etc/
 mountpoint -q $LFS/dev || mount -v --bind /dev $LFS/dev
 mountpoint -q $LFS/dev/pts || mount -v --bind /dev/pts $LFS/dev/pts
 mountpoint -q $LFS/proc || mount -vt proc proc $LFS/proc
@@ -36,6 +32,13 @@ mountpoint -q "$LFS/config"  || mount --bind "$GINGER_ROOT/config"  "$LFS/config
 mountpoint -q "$LFS/sources" || mount --bind "$GINGER_SOURCES" "$LFS/sources"
 
 log "INFO" "Entering chroot..."
+
+# Fix liblzma symlink if newer version was built in phase 3
+# This ensures xz can decompress .tar.xz sources inside the chroot
+if [ -f "$LFS/usr/lib/liblzma.so.5" ] && [ -f "$LFS/lib/x86_64-linux-gnu/liblzma.so.5" ]; then
+    NEW=$(readlink -f "$LFS/usr/lib/liblzma.so.5")
+    ln -sfv "$NEW" "$LFS/lib/x86_64-linux-gnu/liblzma.so.5" 2>/dev/null || true
+fi
 
 # If we are running in the UI (where it just needs mounts), it can exit here.
 # But if a user runs this manually, we want to drop them into the shell.
