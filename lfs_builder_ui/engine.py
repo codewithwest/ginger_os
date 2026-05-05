@@ -368,13 +368,10 @@ class GingerEngine:
                 if not os.path.exists(bind_dir):
                     subprocess.run(["sudo", "mkdir", "-p", bind_dir], capture_output=True)
                 if subprocess.run(["mountpoint", "-q", bind_dir], capture_output=True).returncode != 0:
-                    subprocess.run(["sudo", "mount", "--bind", GINGER_ROOT, bind_dir])
-                
-                # Ensure virtual filesystems are mounted for chroot
-                proc_mount = os.path.join(LFS_MOUNT, "proc")
-                if subprocess.run(["mountpoint", "-q", proc_mount], capture_output=True).returncode != 0:
-                    subprocess.run(["sudo", "bash", "scripts/chroot.sh", "--mount-only"], cwd=GINGER_ROOT)
-                
+                    r = subprocess.run(["sudo", "mount", "--bind", GINGER_ROOT, bind_dir], capture_output=True)
+                    if r.returncode != 0:
+                        self.log(f"ERROR: Failed to bind-mount repo into chroot: {r.stderr}", "bold red")
+                        return False
                 return True
             
             if self.dry_run: return True

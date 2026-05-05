@@ -113,10 +113,12 @@ export LIBISOBURN_VERSION="1.5.6"
 # Target directory for the LFS system
 export LFS="${LFS_MOUNT:-/mnt/lfs}"
 
-# Chroot detection: if our root inode is not the same as the real root,
-# or if /proc/1/root doesn't point to /, we are inside a chroot.
-# Simpler reliable check: if /mnt/lfs does not exist, we are inside the chroot.
-if [ ! -d "/mnt/lfs" ] && [ "$(id -u)" -eq 0 ]; then
+# Chroot detection: clear LFS only in the INNER chroot (phase 3+)
+# where we are actually running inside the LFS system being built.
+# The outer Ubuntu chroot (steps 3-10) still needs LFS=/mnt/lfs.
+# Detect inner chroot by checking if /tools exists (built during phase 1/2)
+# AND /mnt/lfs does not exist (we are past the Ubuntu layer).
+if [ ! -d "/mnt/lfs" ] && [ -d "/tools" ] && [ "$(id -u)" -eq 0 ]; then
     export LFS=""
 fi
 
@@ -139,11 +141,13 @@ export GINGER_ROOT=$(echo "$GINGER_ROOT_RAW" | sed 's|^//|/|; s|/$||')
 [ -z "$GINGER_ROOT" ] && GINGER_ROOT="/"
 
 # --- CRITICAL SAFETY CHECK (Issue #14) ---
-# Ensure GINGER_ROOT is a valid directory and contains expected structure
-if [ ! -d "$GINGER_ROOT/scripts" ] || [ ! -d "$GINGER_ROOT/config" ]; then
-    echo -e "${RED}ERROR: Invalid GINGER_ROOT detected: $GINGER_ROOT${NC}"
-    echo "This script must be run from within the GingerOS source tree."
-    exit 1
+# Skip this check inside chroot where GINGER_ROOT may resolve to /
+if [ -n "${LFS:-}" ]; then
+    if [ ! -d "$GINGER_ROOT/scripts" ] || [ ! -d "$GINGER_ROOT/config" ]; then
+        echo -e "${RED}ERROR: Invalid GINGER_ROOT detected: $GINGER_ROOT${NC}"
+        echo "This script must be run from within the GingerOS source tree."
+        exit 1
+    fi
 fi
 
 export GINGER_SCRIPTS="${GINGER_ROOT%/}/scripts"

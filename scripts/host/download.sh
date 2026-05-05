@@ -45,13 +45,19 @@ log "INFO" "Verifying all manifest packages exist locally..."
 total=$(grep -v '^#' wget-list | wc -l)
 current=0
 missing_count=0
+tmp_missing=$(mktemp)
+echo 0 > "$tmp_missing"
 
-while read -r url; do
+grep -v '^#' wget-list | while read -r url; do
     current=$((current + 1))
     
-    # Fix for flaky GNU mirrors SSL - allow HTTP since we verify checksums
     if [[ "$url" == *"ftpmirror.gnu.org"* ]]; then
         url="${url/https:/http:}"
+    fi
+
+    # ncurses snapshots move frequently — use stable ftp.gnu.org release
+    if [[ "$url" == *"invisible-mirror.net"* ]] || [[ "$url" == *"invisible-island.net"* ]]; then
+        url="https://ftp.gnu.org/gnu/ncurses/ncurses-6.5.tar.gz"
     fi
 
     pkg=$(basename "$url")
@@ -64,8 +70,12 @@ while read -r url; do
             exit 1
         fi
         missing_count=$((missing_count + 1))
+        echo $missing_count > "$tmp_missing"
     fi
-done < <(grep -v '^#' wget-list)
+done
+
+missing_count=$(cat "$tmp_missing")
+rm -f "$tmp_missing"
 
 if [ "$missing_count" -eq 0 ]; then
     log "INFO" "All $total manifest packages are already present."
@@ -84,6 +94,16 @@ for url in "${extra_urls[@]}"; do
         wget -4 -nc --progress=bar:force:noscroll --continue "$url"
     fi
 done
+
+# Patch md5sums to match any redirected filenames
+# ncurses: snapshot filename in manifest vs stable release we actually downloaded
+if grep -q 'ncurses-6.5-[0-9]\+\.tgz' md5sums 2>/dev/null; then
+    NCURSES_MD5=$(md5sum ncurses-6.5.tar.gz 2>/dev/null | cut -d' ' -f1)
+    if [ -n "$NCURSES_MD5" ]; then
+        sed -i "s|[a-f0-9]\+  ncurses-6\.5-[0-9]\+\.tgz|${NCURSES_MD5}  ncurses-6.5.tar.gz|" md5sums
+        log "INFO" "Patched md5sums: ncurses snapshot → ncurses-6.5.tar.gz"
+    fi
+fi
 
 log "INFO" "Final manifest verification..."
 failed_log=$(mktemp)

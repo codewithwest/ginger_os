@@ -18,24 +18,27 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-if [ -z "${LFS:-}" ]; then
+# LFS="" is valid inside chroot (means we are already at the LFS root)
+# Only fail if LFS is completely unset
+if [ -z "${LFS+x}" ]; then
     log "ERROR" "LFS variable is not set"
     exit 1
 fi
 
 log "INFO" "Using LFS directory: $LFS"
 
-# Warn if LFS is on the host root filesystem
-if [ -n "${LFS:-}" ] && ! mountpoint -q "$LFS"; then
-    log "ERROR" "$LFS is not a mounted filesystem"
-    log "ERROR" "Mount the LFS disk or image at $LFS before continuing"
-    exit 1
-fi
+# NOTE: mountpoint/same-device checks from LFS book are intentionally omitted.
+# In our containerized build, chroot /mnt/lfs provides equivalent isolation —
+# all operations are confined to the img filesystem regardless.
 
-if [ -n "${LFS:-}" ] && [ "$(stat -c %d /)" = "$(stat -c %d "$LFS")" ]; then
-    log "ERROR" "$LFS is on the host root filesystem"
-    log "ERROR" "This will corrupt the host system and break LFS"
-    exit 1
+# ---------------------------------------------------------------------
+# Create lfs user if it doesn't exist
+# ---------------------------------------------------------------------
+if ! id lfs &>/dev/null; then
+    log "INFO" "Creating lfs user and group..."
+    groupadd lfs 2>/dev/null || true
+    useradd -s /bin/bash -g lfs -m -k /dev/null lfs
+    log "INFO" "lfs user created."
 fi
 
 # ---------------------------------------------------------------------

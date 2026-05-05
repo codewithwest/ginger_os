@@ -21,7 +21,7 @@ ABS_SCRIPT=$(readlink -f "$SCRIPT")
 # Determine GINGER_ROOT from the script location
 GINGER_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
 
-exec sudo runuser -u lfs -- env -i \
+exec runuser -u lfs -- env -i \
   HOME=/home/lfs \
   TERM=${TERM:-xterm} \
   LFS=/mnt/lfs \

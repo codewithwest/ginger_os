@@ -8,3 +8,7 @@ vmlinuz-*
 **/venv
 logs/*
 .build_state
+wget-log*
+md5sums
+**/*wget-list
+sources
