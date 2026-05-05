@@ -152,7 +152,7 @@ ui_draw_full_dashboard() {
         buf+="| |__| | | | | | (_| |  __/ |   | |__| |____) |\e[K\n"
         buf+=" \_____|_|_| |_|\__, |\___|_|    \____/|_____/ \e[K\n"
         buf+="                 __/ |                         \e[K\n"
-        buf+="                |___/         v1.0             \e[K\n"
+        buf+="                |___/         v1.0.0             \e[K\n"
         buf+="${NC}"
     fi
     buf+="${LASER_GREEN}  🌶️  GingerOS Build System v1.0 - LFS 12.4 🌶️${NC}\e[K\n"

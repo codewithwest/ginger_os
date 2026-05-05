@@ -1,0 +1,11 @@
+[project]
+name = "ginger-os"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.136.1",
+    "uvicorn>=0.46.0",
+    "rich>=13.0.0",
+]

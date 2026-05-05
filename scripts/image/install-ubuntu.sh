@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 source "${SCRIPT_DIR}/../lib/common.sh"
 
 UBUNTU_RELEASE="${UBUNTU_RELEASE:-noble}"
-UBUNTU_MIRROR="${UBUNTU_MIRROR:-http://archive.ubuntu.com/ubuntu}"
+UBUNTU_MIRROR="${UBUNTU_MIRROR:-http://de.archive.ubuntu.com/ubuntu}"
 
 # ─────────────────────────────────────────────
 # Safety checks
@@ -65,7 +65,22 @@ else
         --include=apt,wget,curl,sudo,bash,coreutils,util-linux,procps,net-tools \
         "${UBUNTU_RELEASE}" \
         "${LFS}" \
-        "${UBUNTU_MIRROR}"
+        "${UBUNTU_MIRROR}" \
+        > "${GINGER_LOGS}/debootstrap.log" 2>&1 &
+    DEBOOTSTRAP_PID=$!
+    
+    # Stream the log so TUI sees output
+    tail -f "${GINGER_LOGS}/debootstrap.log" &
+    TAIL_PID=$!
+    
+    wait $DEBOOTSTRAP_PID
+    DEBOOTSTRAP_EXIT=$?
+    kill $TAIL_PID 2>/dev/null
+    
+    if [ $DEBOOTSTRAP_EXIT -ne 0 ]; then
+        log "ERROR" "debootstrap failed. See ${GINGER_LOGS}/debootstrap.log"
+        exit 1
+    fi
 
     log "INFO" "Ubuntu base installed successfully."
 fi

@@ -628,7 +628,7 @@ def main():
     parser.add_argument("-n", "--dry-run", action="store_true", help="Preview build without executing commands")
     parser.add_argument("--no-web", action="store_true", help="Disable the remote monitoring Web UI")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Web UI host (default: 127.0.0.1)")
-    parser.add_argument("-p", "--port", type=int, default=8000, help="Web UI port (default: 8000)")
+    parser.add_argument("-p", "--port", type=int, default=8087, help="Web UI port (default: 8087)")
     args = parser.parse_args()
     
     tui = GingerTUI(dry_run=args.dry_run)
@@ -641,14 +641,12 @@ def main():
             from lfs_builder_ui.server import start_server
             
             web_thread = threading.Thread(
-                target=start_server, 
-                args=(tui.engine, args.host, args.port), 
+                target=start_server,
+                args=(tui.engine, tui, args.host, args.port),
                 daemon=True
             )
             web_thread.start()
-            # Small delay to let the server start
             time.sleep(0.5)
-            tui.engine.log(f"NEURAL_LINK: Dashboard active at http://{args.host}:{args.port}", "bold green")
         except ImportError:
             tui.engine.log("SYSTEM_WARNING: Web UI dependencies (fastapi, uvicorn) missing. Dashboard disabled.", "yellow")
 

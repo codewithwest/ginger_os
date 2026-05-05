@@ -30,13 +30,13 @@ class GingerEngine:
         """
         self.steps = [
             # Preparation Phase
-            BuildStep("01_create_qemu_img", "Create QEMU Image", "bash ./scripts/image/prepare-image.sh", "Preparation"),
-            BuildStep("02_install_ubuntu", "Install Ubuntu Base", "sudo bash ./scripts/image/install-ubuntu.sh", "Preparation"),
-            BuildStep("03_install_os_base", "Install OS Base", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/setup-host.sh'", "Preparation"),
-            BuildStep("04_setup_downloads", "Setup & Downloads", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/download.sh'", "Preparation"),
-            BuildStep("05_host_reqs", "Host Requirements", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/host-requirements-install.sh'", "Preparation"),
-            BuildStep("06_version_check", "Version Check", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/version-check.sh'", "Preparation"),
-            BuildStep("07_update_dir", "Update Directories", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/update-dir.sh'", "Preparation"),
+            BuildStep("01_create_qemu_img", "Create QEMU Image",  "bash ./scripts/image/prepare-image.sh", "Preparation"),
+            BuildStep("02_install_ubuntu", "Install Ubuntu Base",  "sudo bash ./scripts/image/install-ubuntu.sh", "Preparation"),
+            BuildStep("03_install_os_base", "Install OS Base",     "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/setup-host.sh'", "Preparation"),
+            BuildStep("04_setup_downloads", "Setup & Downloads",   "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/download.sh'", "Preparation"),
+            BuildStep("05_host_reqs", "Host Requirements",         "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/host-requirements-install.sh'", "Preparation"),
+            BuildStep("06_version_check", "Version Check",         "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/version-check.sh'", "Preparation"),
+            BuildStep("07_update_dir", "Update Directories",       "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/update-dir.sh'", "Preparation"),
             
             # Host Tools Phase
             BuildStep("08_setup_lfs_env", "Setup LFS Environment", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/run-as-lfs.sh ./scripts/phases/setup-lfs-user-env.sh'", "Host Tools"),
@@ -260,10 +260,9 @@ class GingerEngine:
             if pkg_name:
                 possible_marker_names.extend([f"{pkg_name}.built", f"{pkg_name}-temp.built"])
             
-            lfs_status_dir = os.path.join(LFS_MOUNT, "var", "lib", "ginger")
             found = False
             for m in possible_marker_names:
-                if os.path.exists(os.path.join(STATE_DIR, m)) or os.path.exists(os.path.join(lfs_status_dir, m)):
+                if os.path.exists(os.path.join(STATE_DIR, m)):
                     found = True
                     break
             

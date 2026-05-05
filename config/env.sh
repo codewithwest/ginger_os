@@ -113,10 +113,10 @@ export LIBISOBURN_VERSION="1.5.6"
 # Target directory for the LFS system
 export LFS="${LFS_MOUNT:-/mnt/lfs}"
 
-# Chroot Detection: If we are inside the new system, LFS should be /
-# Chroot detection
-# Only clear LFS if we are ACTUALLY inside the chroot
-if [ "$(id -u)" -eq 0 ] && [ -d /tools ] && [ -d /sources ]; then
+# Chroot detection: if our root inode is not the same as the real root,
+# or if /proc/1/root doesn't point to /, we are inside a chroot.
+# Simpler reliable check: if /mnt/lfs does not exist, we are inside the chroot.
+if [ ! -d "/mnt/lfs" ] && [ "$(id -u)" -eq 0 ]; then
     export LFS=""
 fi
 

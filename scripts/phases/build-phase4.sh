@@ -5,9 +5,11 @@
 set -e
 set -o pipefail
 
+STATE_DIR="/ginger_os/.build_state"
+mkdir -p "$STATE_DIR"
+
 echo "Inside Chroot: Starting Phase 4 (Kernel & Boot)..."
 
-# Collect scripts - and ensure they follow the GINGER_PKG pattern for the engine
 SCRIPTS=(/scripts/phase4-boot/*.sh)
 TOTAL_PKGS=${#SCRIPTS[@]}
 CURRENT_PKG_IDX=0
@@ -16,19 +18,16 @@ for script in "${SCRIPTS[@]}"; do
     CURRENT_PKG_IDX=$((CURRENT_PKG_IDX + 1))
     SCRIPT_PKG_NAME=$(grep -E "^PKG_NAME=" "$script" | cut -d'"' -f2 || echo "")
     FILE_PKG_NAME=$(basename "$script" .sh | cut -d'-' -f2-)
-    
     FULL_SCRIPT_NAME=$(basename "$script" .sh)
-    
-    # Priority 1: Check for unique script-based marker
-    if [ -f "/var/lib/ginger/${FULL_SCRIPT_NAME}.built" ]; then
+
+    if [ -f "$STATE_DIR/${FULL_SCRIPT_NAME}.built" ]; then
         echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME (Skipped)"
         continue
     fi
 
-    # Priority 2: Fallback to generic markers ONLY if no known collision risk
     if [[ ! "$FILE_PKG_NAME" =~ ^(gettext|bison|perl|python|texinfo|util-linux)$ ]]; then
-        if [ -f "/var/lib/ginger/${FILE_PKG_NAME}.built" ] || \
-           [ -n "$SCRIPT_PKG_NAME" -a -f "/var/lib/ginger/${SCRIPT_PKG_NAME}.built" ]; then
+        if [ -f "$STATE_DIR/${FILE_PKG_NAME}.built" ] || \
+           [ -n "$SCRIPT_PKG_NAME" -a -f "$STATE_DIR/${SCRIPT_PKG_NAME}.built" ]; then
             echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME (Skipped)"
             continue
         fi
@@ -38,12 +37,9 @@ for script in "${SCRIPTS[@]}"; do
     echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME"
     echo "Building: $FILE_PKG_NAME (Boot Components)"
 
-    # Execute
     if bash "$script"; then
-        mkdir -p "/var/lib/ginger"
-        touch "/var/lib/ginger/${FULL_SCRIPT_NAME}.built"
+        touch "$STATE_DIR/${FULL_SCRIPT_NAME}.built"
         echo "Successfully built: ${FILE_PKG_NAME}"
-        # Safe cleanup: only folders, preserve archives
         find /sources -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
     else
         echo "Error: Failed to build ${FILE_PKG_NAME}"
