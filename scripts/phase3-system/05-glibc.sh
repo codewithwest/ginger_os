@@ -35,13 +35,11 @@ make $MAKEFLAGS
 # Fix ldd path
 touch /etc/ld.so.conf
 
-# The original script attempted to replace the PERL invocation in the test-installation
-# target of the glibc Makefile with a harmless echo. However, this substitution can
-# interfere with the build environment and lead to a segmentation fault during
-# `make install`. To avoid this issue we simply disable the test-installation step
-# by commenting out the sed command. The build will proceed without attempting to
-# run the problematic test.
-# sed '/test-installation/s@$(PERL)@echo not running@' -i ../Makefile
+# LFS book step: disable the test-installation target which runs perl to link a
+# test binary against the new glibc. Inside the chroot this causes a segfault due
+# to dynamic linker version mismatch between the host perl and the freshly built glibc.
+# Replacing $(PERL) with 'echo not running' skips the test without breaking make install.
+sed '/test-installation/s@$(PERL)@echo not running@' -i ../Makefile
 
 make install
 
