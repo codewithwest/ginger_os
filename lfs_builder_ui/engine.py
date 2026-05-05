@@ -10,7 +10,7 @@ import termios
 import tty
 import json
 from datetime import datetime
-from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, SOURCES_DIR, LFS_MOUNT, BUILD_TYPE
+from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, SOURCES_DIR, LFS_MOUNT, BUILD_TYPE, SNAPSHOTS_DIR, SNAPSHOT_BEFORE
 from .models import BuildStep
 
 class GingerEngine:
@@ -713,6 +713,115 @@ class GingerEngine:
             return True
         return False
 
+
+    def list_snapshots(self):
+        """Return list of available snapshots sorted newest first."""
+        snaps = []
+        for f in os.listdir(SNAPSHOTS_DIR):
+            if f.endswith(".img"):
+                path = os.path.join(SNAPSHOTS_DIR, f)
+                size_gb = os.path.getsize(path) / (1024**3)
+                mtime = os.path.getmtime(path)
+                snaps.append({"name": f, "path": path, "size_gb": size_gb, "mtime": mtime})
+        return sorted(snaps, key=lambda x: x["mtime"], reverse=True)
+
+    def take_snapshot(self, label):
+        """
+        Snapshot the current img state by copying it.
+        Runs teardown first to ensure the img is cleanly unmounted.
+        """
+        from datetime import datetime
+        img_path = os.path.join(GINGER_ROOT, CONFIG.get("IMAGE_NAME", "ginger_os.img") if True else "ginger_os.img")
+        # get IMAGE_NAME from constants
+        from .constants import IMAGE_NAME
+        img_path = os.path.join(GINGER_ROOT, IMAGE_NAME)
+
+        if not os.path.exists(img_path):
+            self.log("SNAPSHOT: No image found to snapshot.", "yellow")
+            return False
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        snap_name = f"{timestamp}_{label}.img"
+        snap_path = os.path.join(SNAPSHOTS_DIR, snap_name)
+
+        self.log(f"SNAPSHOT: Creating checkpoint '{label}'...", "bold cyan")
+        self.log(f"SNAPSHOT: Destination: {snap_path}", "dim")
+
+        try:
+            # Try reflink first (instant on btrfs/xfs), fall back to regular copy
+            result = subprocess.run(
+                ["cp", "--reflink=auto", img_path, snap_path],
+                capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                size_gb = os.path.getsize(snap_path) / (1024**3)
+                self.log(f"SNAPSHOT: ✅ '{label}' saved ({size_gb:.1f}GB)", "bold green")
+                # Also snapshot the .build_state markers
+                import shutil
+                state_snap = snap_path.replace(".img", ".state")
+                shutil.copytree(STATE_DIR, state_snap, dirs_exist_ok=True)
+                return True
+            else:
+                self.log(f"SNAPSHOT: ❌ Failed: {result.stderr}", "bold red")
+                return False
+        except Exception as e:
+            self.log(f"SNAPSHOT: ❌ Exception: {str(e)}", "bold red")
+            return False
+
+    def restore_snapshot(self, snap_name):
+        """
+        Restore a snapshot — unmounts the img, replaces it, remounts.
+        """
+        from .constants import IMAGE_NAME
+        snap_path = os.path.join(SNAPSHOTS_DIR, snap_name)
+        img_path = os.path.join(GINGER_ROOT, IMAGE_NAME)
+
+        if not os.path.exists(snap_path):
+            self.log(f"RESTORE: Snapshot '{snap_name}' not found.", "bold red")
+            return False
+
+        self.log(f"RESTORE: Restoring from '{snap_name}'...", "bold yellow")
+
+        # Step 1: Teardown current mounts
+        self.log("RESTORE: Unmounting current image...", "cyan")
+        subprocess.run(["bash", "scripts/image/teardown.sh"], cwd=GINGER_ROOT, capture_output=True)
+
+        # Step 2: Replace the image
+        self.log("RESTORE: Replacing image file...", "cyan")
+        result = subprocess.run(
+            ["cp", "--reflink=auto", snap_path, img_path],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            self.log(f"RESTORE: ❌ Failed to copy snapshot: {result.stderr}", "bold red")
+            return False
+
+        # Step 3: Restore build state markers
+        import shutil
+        state_snap = snap_path.replace(".img", ".state")
+        if os.path.exists(state_snap):
+            if os.path.exists(STATE_DIR):
+                shutil.rmtree(STATE_DIR)
+            shutil.copytree(state_snap, STATE_DIR)
+            self.log("RESTORE: Build state markers restored.", "cyan")
+
+        # Step 4: Remount
+        self.log("RESTORE: Remounting image...", "cyan")
+        result = subprocess.run(
+            ["bash", "scripts/image/prepare-image.sh"],
+            cwd=GINGER_ROOT, capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            self.log(f"RESTORE: ✅ Restored to '{snap_name}' successfully.", "bold green")
+            # Reset step statuses
+            for step in self.steps:
+                step.status = "pending"
+                step.start_time = None
+                step.end_time = None
+            return True
+        else:
+            self.log(f"RESTORE: ❌ Remount failed: {result.stderr}", "bold red")
+            return False
 
     def abort(self):
         """Abort the current build process."""

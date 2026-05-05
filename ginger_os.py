@@ -434,6 +434,8 @@ class GingerTUI:
             ("P", "STEP", "bright_magenta"),
             ("F", "FORCE", "bright_yellow"),
             ("D", "PURGE", "bright_red"),
+            ("B", "SNAPSHOT", "bright_blue"),
+            ("R", "RESTORE", "bright_magenta"),
             ("PgUp/Dn", "SCROLL", "white"),
             ("?", "HELP", "white"),
             ("Q", "QUIT", "bright_red")
@@ -479,6 +481,14 @@ class GingerTUI:
         self.current_start_time = time.time()
         self.engine.current_step_idx = step_idx
         self.log_scroll = 0  # reset to live tail on new step
+
+        # Auto-snapshot before critical steps
+        from lfs_builder_ui.constants import SNAPSHOT_BEFORE
+        if step.id in SNAPSHOT_BEFORE and not force:
+            threading.Thread(
+                target=lambda: self.engine.take_snapshot(step.id),
+                daemon=True
+            ).start()
         
         def _target():
             self.engine._execute_step(step)
@@ -568,6 +578,12 @@ class GingerTUI:
                     self.selected_step = idx
                     break
         
+        elif key == 'b':  # take snapshot
+            return 'snapshot'
+
+        elif key == 'r':  # restore snapshot menu
+            return 'restore'
+
         # Other
         elif key == '?':
             self.show_help = not self.show_help
@@ -645,6 +661,23 @@ class GingerTUI:
                             self.engine.package_stepping = not self.engine.package_stepping
                         elif action == 'resume':
                             self.engine.resume_package()
+                        elif action == 'snapshot':
+                            step = self.engine.steps[self.selected_step]
+                            threading.Thread(
+                                target=lambda: self.engine.take_snapshot(f"manual_{step.id}"),
+                                daemon=True
+                            ).start()
+                        elif action == 'restore':
+                            snaps = self.engine.list_snapshots()
+                            if snaps:
+                                # Restore most recent snapshot
+                                latest = snaps[0]["name"]
+                                threading.Thread(
+                                    target=lambda: self.engine.restore_snapshot(latest),
+                                    daemon=True
+                                ).start()
+                            else:
+                                self.engine.log("RESTORE: No snapshots found.", "yellow")
         
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)

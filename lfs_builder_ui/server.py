@@ -1,6 +1,8 @@
 import os
 import json
 import asyncio
+import queue
+import threading
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from typing import List
@@ -8,7 +10,10 @@ from typing import List
 app = FastAPI()
 
 engine = None
-tui = None  # Reference to GingerTUI for step control
+tui = None
+
+# Thread-safe queue for log messages from engine thread → async broadcast
+_log_queue: queue.Queue = queue.Queue()
 
 class ConnectionManager:
     def __init__(self):
@@ -23,13 +28,31 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
 
     async def broadcast(self, message: str):
+        dead = []
         for connection in self.active_connections:
             try:
                 await connection.send_text(message)
             except:
-                pass
+                dead.append(connection)
+        for d in dead:
+            self.active_connections.remove(d)
 
 manager = ConnectionManager()
+
+# Background task that drains the queue and broadcasts to all WS clients
+async def _broadcast_worker():
+    while True:
+        try:
+            msg = _log_queue.get_nowait()
+            await manager.broadcast(msg)
+        except queue.Empty:
+            await asyncio.sleep(0.05)
+        except Exception:
+            await asyncio.sleep(0.05)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(_broadcast_worker())
 
 @app.get("/api/status")
 async def get_status():
@@ -102,12 +125,15 @@ async def control_build(action: str):
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
+        # Send existing logs on connect
         if engine:
-            for log_entry, style in engine.logs:
+            for log_entry, style in list(engine.logs):
                 await websocket.send_text(json.dumps({"msg": log_entry, "style": style or ""}))
+        # Keep connection alive, ping every 5s
         while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
+            await asyncio.sleep(5)
+            await websocket.send_text(json.dumps({"ping": True}))
+    except (WebSocketDisconnect, Exception):
         manager.disconnect(websocket)
 
 INDEX_HTML = """<!DOCTYPE html>
@@ -229,6 +255,7 @@ INDEX_HTML = """<!DOCTYPE html>
     };
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        if (data.ping) return;  // keep-alive, ignore
         appendLog(data.msg, data.style);
     };
 
@@ -382,6 +409,28 @@ INDEX_HTML = """<!DOCTYPE html>
 </body>
 </html>"""
 
+@app.get("/api/snapshots")
+async def list_snapshots():
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
+    return {"snapshots": engine.list_snapshots()}
+
+@app.post("/api/snapshots/take")
+async def take_snapshot(label: str = "manual"):
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
+    import threading
+    threading.Thread(target=lambda: engine.take_snapshot(label), daemon=True).start()
+    return {"status": "ok", "message": f"Snapshot '{label}' started"}
+
+@app.post("/api/snapshots/restore/{snap_name}")
+async def restore_snapshot(snap_name: str):
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
+    import threading
+    threading.Thread(target=lambda: engine.restore_snapshot(snap_name), daemon=True).start()
+    return {"status": "ok", "message": f"Restore from '{snap_name}' started"}
+
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
     return INDEX_HTML
@@ -389,14 +438,11 @@ async def get_index():
 loop = None
 
 def broadcast_log(msg, style):
-    if loop and manager.active_connections:
-        asyncio.run_coroutine_threadsafe(
-            manager.broadcast(json.dumps({"msg": msg, "style": style or ""})),
-            loop
-        )
+    """Called from engine thread — puts message into thread-safe queue."""
+    _log_queue.put(json.dumps({"msg": msg, "style": style or ""}))
 
 def start_server(engine_instance, tui_instance, host="127.0.0.1", port=8000):
-    global engine, tui, loop
+    global engine, tui
     engine = engine_instance
     tui = tui_instance
     engine.on_log_callbacks.append(broadcast_log)
@@ -412,9 +458,7 @@ def start_server(engine_instance, tui_instance, host="127.0.0.1", port=8000):
     try:
         config = uvicorn.Config(app, host=host, port=port, log_level="error")
         server = uvicorn.Server(config)
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         engine.log(f"NEURAL_LINK: Dashboard active at http://{host}:{port}", "bold green")
-        loop.run_until_complete(server.serve())
+        asyncio.run(server.serve())
     except Exception as e:
         engine.log(f"SYSTEM_WARNING: Web UI failed to start: {str(e)}", "yellow")

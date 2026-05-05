@@ -36,9 +36,15 @@ BUILD_TYPE = CONFIG.get("BUILD_TYPE", "image")
 IMAGE_NAME = CONFIG.get("IMAGE_NAME", "ginger_os.img")
 IMAGE_SIZE = CONFIG.get("IMAGE_SIZE", "12G")
 
-# Create directories
-os.makedirs(LOG_DIR, exist_ok=True)
-os.makedirs(STATE_DIR, exist_ok=True)
+SNAPSHOTS_DIR = os.path.join(GINGER_ROOT, ".snapshots")
+os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
+
+# Steps that auto-snapshot before running (critical recovery points)
+SNAPSHOT_BEFORE = {
+    "12_phase3_system",
+    "13_kernel",
+    "14_finalize",
+}
 
 # Bright colors for transparent terminals
 LASER_GREEN = "bright_green"
