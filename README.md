@@ -100,6 +100,7 @@ This means your host machine stays completely clean, and the final output is a p
 ## Requirements
 - Python 3.8+
 - `rich` library (`pip install rich`)
+- `fastapi` + `uvicorn` for the web dashboard (`pip install fastapi uvicorn`) — optional, TUI works without them
 - `qemu-utils` (for creating the raw image)
 - `debootstrap` (for installing the Ubuntu Base container environment)
 

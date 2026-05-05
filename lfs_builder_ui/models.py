@@ -20,3 +20,11 @@ class BuildStep:
         if self.start_time:
             return time.time() - self.start_time
         return 0
+
+    @property
+    def progress(self):
+        if self.status == "completed":
+            return 100
+        if self.status == "running" and self.start_time:
+            return 50  # indeterminate — midpoint until package-level tracking is wired
+        return 0

@@ -367,7 +367,7 @@ class GingerEngine:
             if result.returncode == 0:
                 bind_dir = os.path.join(LFS_MOUNT, "ginger_os")
                 if not os.path.exists(bind_dir):
-                    os.makedirs(bind_dir, exist_ok=True)
+                    subprocess.run(["sudo", "mkdir", "-p", bind_dir], capture_output=True)
                 if subprocess.run(["mountpoint", "-q", bind_dir], capture_output=True).returncode != 0:
                     subprocess.run(["sudo", "mount", "--bind", GINGER_ROOT, bind_dir])
                 

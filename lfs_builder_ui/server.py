@@ -36,7 +36,7 @@ async def get_status():
     if not engine:
         return {"status": "error", "message": "Engine not initialized"}
     return {
-        "running": engine.executing_step is not None,
+        "running": engine.is_running,
         "aborted": engine.aborted,
         "current_pkg": getattr(engine, "current_pkg", "None"),
         "steps": [
@@ -168,7 +168,7 @@ INDEX_HTML = """
                     </div>
 
                     <div id="storage-stats" class="grid grid-cols-2 gap-4 py-4 border-y border-slate-800/50">
-                        <!-- Storage info here -->
+                        <!-- Storage info here (values are %) -->
                     </div>
 
                     <button onclick="control('abort')" class="w-full py-3 rounded-xl border border-red-900/30 text-red-500 hover:bg-red-500/10 transition-colors text-[10px] font-bold uppercase tracking-widest">
@@ -293,7 +293,7 @@ INDEX_HTML = """
                 storageStats.innerHTML = Object.entries(data.storage).map(([k, v]) => `
                     <div class="flex flex-col gap-0.5">
                         <span class="text-[9px] uppercase font-bold text-slate-600 tracking-wider">${k}</span>
-                        <span class="font-mono text-xs text-slate-400">${(v/1024).toFixed(1)} GB</span>
+                        <span class="font-mono text-xs text-slate-400">${parseFloat(v).toFixed(1)}%</span>
                     </div>
                 `).join('');
 
@@ -320,7 +320,7 @@ def broadcast_log(msg, style):
             loop
         )
 
-def start_server(engine_instance, host="0.0.0.0", port=8000):
+def start_server(engine_instance, host="127.0.0.1", port=8000):
     global engine, loop
     engine = engine_instance
     engine.on_log_callbacks.append(broadcast_log)

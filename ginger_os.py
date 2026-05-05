@@ -435,33 +435,16 @@ class GingerTUI:
     def update_display(self, layout):
         """Update all specific Neural UI panels"""
         layout["header"].update(self.render_header())
-        layout["steps"].update(self.render_steps())
-        
-        # Grid handles help toggle
-        if self.show_help:
-            # We can overlay help or change body. For now, overlay dashboard area logic
-            # but since dashboard is gone, we'll just update body if help is on?
-            # Actually, standardizing on a dedicated help render inside the dashboard spot
-            # was better. Let's make the 'steps' or 'matrix' area show help if needed,
-            # or better: use the full body for help.
-            layout["body"].update(self.render_help())
-        else:
-            # Ensure the body is split back to columns if help was closed
-            if not isinstance(layout["body"].renderable, Layout):
-                layout["body"].split_row(
-                    Layout(name="left_col", ratio=12),
-                    Layout(name="terminal", ratio=28)
-                )
-                layout["left_col"].split_column(
-                    Layout(name="steps", ratio=2),
-                    Layout(name="matrix", ratio=1)
-                )
+        layout["footer"].update(self.render_footer())
 
+        if self.show_help:
+            layout["steps"].update(self.render_help())
+            layout["matrix"].update(Panel("", border_style=self.theme_color, box=box.ROUNDED))
+            layout["terminal"].update(Panel("", border_style=self.theme_color, box=box.SQUARE))
+        else:
             layout["steps"].update(self.render_steps())
             layout["matrix"].update(self.render_matrix())
             layout["terminal"].update(self.render_terminal())
-            
-        layout["footer"].update(self.render_footer())
     
     def run_step(self, step_idx, force=False):
         """Execute a single step in a background thread"""
