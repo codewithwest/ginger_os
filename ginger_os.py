@@ -780,7 +780,15 @@ def main():
         try:
             import fastapi
             import uvicorn
-            from lfs_builder_ui.server import start_server
+
+            try:
+                from lfs_builder_ui.server import start_server
+            except Exception as e:
+                tui.engine.log(
+                    f"SYSTEM_WARNING: Web UI server module failed to load: {str(e)}",
+                    "yellow",
+                )
+                raise ImportError(f"Server module error: {e}")
 
             web_thread = threading.Thread(
                 target=start_server,
@@ -789,11 +797,17 @@ def main():
             )
             web_thread.start()
             time.sleep(0.5)
-        except ImportError:
-            tui.engine.log(
-                "SYSTEM_WARNING: Web UI dependencies (fastapi, uvicorn) missing. Dashboard disabled.",
-                "yellow",
-            )
+        except ImportError as e:
+            if "fastapi" in str(e).lower() or "uvicorn" in str(e).lower():
+                tui.engine.log(
+                    "SYSTEM_WARNING: Web UI dependencies (fastapi, uvicorn) missing. Dashboard disabled.",
+                    "yellow",
+                )
+            else:
+                tui.engine.log(
+                    f"SYSTEM_WARNING: Web UI failed to start: {str(e)}",
+                    "yellow",
+                )
 
     tui.run()
 

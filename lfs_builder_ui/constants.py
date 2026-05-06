@@ -43,6 +43,7 @@ os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
 
 # Steps that auto-snapshot after successful completion (critical recovery points)
 SNAPSHOT_AFTER = {
+    "10_phase2_system",
     "12_phase3_system",
     "13_kernel",
     "14_finalize",
