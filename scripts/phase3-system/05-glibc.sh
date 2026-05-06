@@ -41,7 +41,19 @@ touch /etc/ld.so.conf
 # Replacing $(PERL) with 'echo not running' skips the test without breaking make install.
 sed '/test-installation/s@$(PERL)@echo not running@' -i ../Makefile
 
+# Disable trap for the volatile installation phase to prevent shell segfaults
+trap - ERR
+
 make install
+INSTALL_RES=$?
+
+# Re-enable trap
+trap 'error_handler $LINENO "$BASH_COMMAND"' ERR
+
+if [ $INSTALL_RES -ne 0 ]; then
+    log "ERROR" "glibc make install failed with code $INSTALL_RES"
+    exit $INSTALL_RES
+fi
 
 sed '/RTLDLIST=/s@/usr@@g' -i /usr/bin/ldd
 

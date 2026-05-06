@@ -238,10 +238,8 @@ extract() {
     # Safe cleanup of previous build directory
     if [[ -n "$DIR_NAME" && "$DIR_NAME" != "/" && "$DIR_NAME" != "." ]]; then
         log "PROCESS" "Cleaning up any existing directory for $DIR_NAME..."
-        # 1. Remove the exact directory if it exists
+        # Remove the exact directory if it exists
         rm -rf "$DIR_NAME" 2>/dev/null || true
-        # 2. Also remove anything that looks like it (to handle version suffixes/changes)
-        find . -maxdepth 1 -type d -name "${DIR_NAME%-*}*" -exec rm -rf {} + || true
     fi
     
     # Extract with re-download fallback
@@ -305,7 +303,7 @@ error_handler() {
     local LINE=$1
     local CMD=$2
     log "ERROR" "Command '$CMD' failed at line $LINE"
-    cleanup
+    # cleanup
     exit 1
 }
 

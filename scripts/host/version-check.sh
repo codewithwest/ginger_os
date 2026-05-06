@@ -60,9 +60,52 @@ ver_check Texinfo        texi2any 5.0
 ver_check Xz             xz       5.0.0
 ver_kernel 5.4
 
-if mount | grep -q 'devpts on /dev/pts' && [ -e /dev/ptmx ]
-then echo "OK:    Linux Kernel supports UNIX 98 PTY";
-else echo "ERROR: Linux Kernel does NOT support UNIX 98 PTY"; fi
+ensure_unix98_pty() {
+  local fixed=0
+
+  if ! mountpoint -q /dev/pts; then
+    if [ "$(id -u)" -eq 0 ]; then
+      mkdir -p /dev/pts
+      if mount -t devpts devpts /dev/pts 2>/dev/null; then
+        echo "INFO:   Mounted devpts on /dev/pts"
+        fixed=1
+      fi
+    fi
+  fi
+
+  if [ ! -c /dev/ptmx ]; then
+    if [ "$(id -u)" -eq 0 ]; then
+      if mknod -m 666 /dev/ptmx c 5 2 2>/dev/null; then
+        echo "INFO:   Created /dev/ptmx"
+        fixed=1
+      fi
+    fi
+  fi
+
+  if [ -c /dev/ptmx ] && mountpoint -q /dev/pts; then
+    return 0
+  fi
+
+  return $fixed
+}
+
+if ensure_unix98_pty && [ -c /dev/ptmx ] && mountpoint -q /dev/pts
+then
+  echo "OK:    Linux Kernel supports UNIX 98 PTY";
+else
+  if [ -c /dev/ptmx ] && mountpoint -q /dev/pts; then
+    echo "OK:    Linux Kernel supports UNIX 98 PTY";
+  elif [ -c /dev/ptmx ]; then
+    echo "WARN:   Linux Kernel supports UNIX 98 PTY, but /dev/pts is not mounted";
+    echo "WARN:   Run 'sudo mount -t devpts devpts /dev/pts' to fix this.";
+  elif mountpoint -q /dev/pts; then
+    echo "WARN:   /dev/pts is mounted, but /dev/ptmx is missing";
+    echo "WARN:   Run 'sudo mknod -m 666 /dev/ptmx c 5 2' to fix this.";
+  else
+    echo "WARN:   devpts is not mounted on /dev/pts or /dev/ptmx is missing";
+    echo "WARN:   UNIX 98 PTY support may not be available";
+  fi
+fi
 
 alias_check() {
    if $1 --version 2>&1 | grep -qi $2
