@@ -2,6 +2,7 @@ import os
 import time
 from .constants import LOG_DIR
 
+
 class BuildStep:
     def __init__(self, id, name, command, phase="General"):
         self.id = id

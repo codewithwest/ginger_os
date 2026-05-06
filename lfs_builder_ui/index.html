@@ -43,14 +43,18 @@
         </div>
 
         <!-- Controls -->
-        <div class="p-3 border-b border-slate-800 flex gap-2">
+        <div class="p-3 border-b border-slate-800 grid grid-cols-3 gap-2">
             <button onclick="controlBuild('auto')" id="btn-auto"
-                class="flex-1 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[11px] font-bold uppercase tracking-wider hover:bg-cyan-500/20 transition-all">
+                class="py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[11px] font-bold uppercase tracking-wider hover:bg-cyan-500/20 transition-all">
                 ▶ Auto Run
             </button>
             <button onclick="controlBuild('abort')"
-                class="flex-1 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] font-bold uppercase tracking-wider hover:bg-red-500/20 transition-all">
+                class="py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] font-bold uppercase tracking-wider hover:bg-red-500/20 transition-all">
                 ■ Abort
+            </button>
+            <button onclick="fullTeardown()"
+                class="py-2 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 text-[11px] font-bold uppercase tracking-wider hover:bg-orange-500/20 transition-all">
+                🗑️ Teardown
             </button>
         </div>
 
@@ -178,6 +182,16 @@
 
     async function controlBuild(action) {
         await fetch(`/api/control/${action}`, { method: 'POST' });
+    }
+
+    async function fullTeardown() {
+        if (confirm('Are you sure you want to perform a full teardown? This will unmount all LFS mounts and remove the image file.')) {
+            const res = await fetch('/api/teardown', { method: 'POST' });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                appendLog('→ Full teardown started...', 'orange');
+            }
+        }
     }
 
     async function runStep(idx, force=false) {

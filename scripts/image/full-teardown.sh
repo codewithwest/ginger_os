@@ -60,4 +60,6 @@ else
     log "No GingerOS loop device found to detach (snap loops left untouched)."
 fi
 
+rm -v ginger_os.img
+
 ok "Full teardown complete."

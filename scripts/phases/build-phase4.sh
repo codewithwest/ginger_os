@@ -5,6 +5,18 @@
 set -e
 set -o pipefail
 
+if [ -f /config/env.sh ]; then
+    # Use the project’s inner-chroot environment configuration.
+    source /config/env.sh
+else
+    export LFS=/mnt/lfs
+    export LC_ALL=POSIX
+    export LFS_TGT=$(uname -m)-lfs-linux-gnu
+    export PATH=/tools/bin:/bin:/usr/bin
+    export MAKEFLAGS=-j$(nproc)
+    export CONFIG_SITE=$LFS/usr/share/config.site
+fi
+
 STATE_DIR="/ginger_os/.build_state"
 mkdir -p "$STATE_DIR"
 

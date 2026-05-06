@@ -3,13 +3,14 @@ import os
 # Paths
 GINGER_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
+
 # Configuration Parser
 def load_ginger_conf():
     conf = {
         "LFS_MOUNT": "/mnt/lfs",
         "BUILD_TYPE": "image",
         "IMAGE_NAME": "ginger_os.img",
-        "IMAGE_SIZE": "12G"
+        "IMAGE_SIZE": "12G",
     }
     conf_path = os.path.join(GINGER_ROOT, "ginger.conf")
     if os.path.exists(conf_path):
@@ -22,6 +23,7 @@ def load_ginger_conf():
                     key, value = line.split("=", 1)
                     conf[key.strip()] = value.strip()
     return conf
+
 
 CONFIG = load_ginger_conf()
 
@@ -39,8 +41,8 @@ IMAGE_SIZE = CONFIG.get("IMAGE_SIZE", "12G")
 SNAPSHOTS_DIR = os.path.join(GINGER_ROOT, ".snapshots")
 os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
 
-# Steps that auto-snapshot before running (critical recovery points)
-SNAPSHOT_BEFORE = {
+# Steps that auto-snapshot after successful completion (critical recovery points)
+SNAPSHOT_AFTER = {
     "12_phase3_system",
     "13_kernel",
     "14_finalize",

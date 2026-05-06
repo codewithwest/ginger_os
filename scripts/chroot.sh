@@ -49,4 +49,9 @@ if [[ "${1:-}" != "--mount-only" ]]; then
         PS1='(ginger-chroot) \u:\w\$ '  \
         PATH=/usr/bin:/usr/sbin     \
         /bin/bash --login
+else
+    log "INFO" "Mounts set up. Exiting without entering chroot (mount-only mode)."
 fi
+
+log "INFO" "Chroot phase complete."
+

@@ -4,8 +4,7 @@ import asyncio
 import queue
 import threading
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from typing import List
 import logging
 
@@ -19,6 +18,7 @@ tui = None
 # Thread-safe queue for log messages from engine thread → async broadcast
 _log_queue: queue.Queue = queue.Queue()
 _broadcast_task = None
+
 
 class ConnectionManager:
     def __init__(self):
@@ -37,12 +37,14 @@ class ConnectionManager:
         for connection in self.active_connections:
             try:
                 await connection.send_text(message)
-            except Exception as e:
+            except Exception:
                 dead.append(connection)
         for d in dead:
             self.disconnect(d)
 
+
 manager = ConnectionManager()
+
 
 # Background task that drains the queue and broadcasts to all WS clients
 async def _broadcast_worker():
@@ -53,13 +55,15 @@ async def _broadcast_worker():
             await manager.broadcast(msg)
         except queue.Empty:
             await asyncio.sleep(0.02)
-        except Exception as e:
+        except Exception:
             await asyncio.sleep(0.05)
+
 
 @app.on_event("startup")
 async def startup_event():
     global _broadcast_task
     _broadcast_task = asyncio.create_task(_broadcast_worker())
+
 
 @app.get("/api/status")
 async def get_status():
@@ -76,14 +80,17 @@ async def get_status():
                 "id": s.id,
                 "name": s.name,
                 "phase": s.phase,
-                "status": s.status if not engine._should_skip(s) or s.status == "running"
-                          else "completed",
+                "status": s.status
+                if not engine._should_skip(s) or s.status == "running"
+                else "completed",
                 "progress": s.progress,
-                "duration": round(s.duration(), 1)
-            } for s in engine.steps
+                "duration": round(s.duration(), 1),
+            }
+            for s in engine.steps
         ],
-        "storage": engine.storage_stats
+        "storage": engine.storage_stats,
     }
+
 
 @app.post("/api/step/{step_idx}/run")
 async def run_step(step_idx: int):
@@ -95,6 +102,7 @@ async def run_step(step_idx: int):
     tui.run_step(step_idx, force=False)
     return {"status": "ok", "step": engine.steps[step_idx].name}
 
+
 @app.post("/api/step/{step_idx}/force")
 async def force_step(step_idx: int):
     if not tui:
@@ -103,6 +111,7 @@ async def force_step(step_idx: int):
         return {"status": "error", "message": "Invalid step index"}
     tui.run_step(step_idx, force=True)
     return {"status": "ok", "step": engine.steps[step_idx].name}
+
 
 @app.post("/api/step/{step_idx}/reset")
 async def reset_step(step_idx: int):
@@ -113,6 +122,7 @@ async def reset_step(step_idx: int):
     tui.delete_marker(step_idx)
     engine.steps[step_idx].status = "pending"
     return {"status": "ok", "step": engine.steps[step_idx].name}
+
 
 @app.post("/api/control/{action}")
 async def control_build(action: str):
@@ -128,6 +138,28 @@ async def control_build(action: str):
         engine.resume_package()
     return {"status": "ok", "action": action}
 
+@app.post("/api/teardown")
+async def full_teardown():
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
+    import subprocess
+    import threading
+    
+    def run_teardown():
+        try:
+            # Run the full teardown script
+            script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts", "image", "full-teardown.sh")
+            result = subprocess.run(["sudo", script_path], capture_output=True, text=True, cwd=os.path.dirname(os.path.dirname(__file__)))
+            if result.returncode == 0:
+                engine.log("Full teardown completed successfully", "green")
+            else:
+                engine.log(f"Full teardown failed: {result.stderr}", "red")
+        except Exception as e:
+            engine.log(f"Full teardown error: {str(e)}", "red")
+    
+    threading.Thread(target=run_teardown, daemon=True).start()
+    return {"status": "ok", "message": "Full teardown started"}
+
 @app.websocket("/ws/logs")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
@@ -135,13 +167,16 @@ async def websocket_endpoint(websocket: WebSocket):
         # Send existing logs on connect
         if engine:
             for log_entry, style in list(engine.logs):
-                await websocket.send_text(json.dumps({"msg": log_entry, "style": style or ""}))
+                await websocket.send_text(
+                    json.dumps({"msg": log_entry, "style": style or ""})
+                )
         # Keep connection alive, ping every 5s
         while True:
             await asyncio.sleep(5)
             await websocket.send_text(json.dumps({"ping": True}))
-    except (WebSocketDisconnect, Exception):
+    except WebSocketDisconnect, Exception:
         manager.disconnect(websocket)
+
 
 @app.get("/api/snapshots")
 async def list_snapshots():
@@ -149,25 +184,31 @@ async def list_snapshots():
         return {"status": "error", "message": "Engine not initialized"}
     return {"snapshots": engine.list_snapshots()}
 
+
 @app.post("/api/snapshots/take")
 async def take_snapshot(label: str = "manual"):
     if not engine:
         return {"status": "error", "message": "Engine not initialized"}
-    import threading
+
     threading.Thread(target=lambda: engine.take_snapshot(label), daemon=True).start()
     return {"status": "ok", "message": f"Snapshot '{label}' started"}
+
 
 @app.post("/api/snapshots/restore/{snap_name}")
 async def restore_snapshot(snap_name: str):
     if not engine:
         return {"status": "error", "message": "Engine not initialized"}
-    import threading
-    threading.Thread(target=lambda: engine.restore_snapshot(snap_name), daemon=True).start()
+
+    threading.Thread(
+        target=lambda: engine.restore_snapshot(snap_name), daemon=True
+    ).start()
     return {"status": "ok", "message": f"Restore from '{snap_name}' started"}
+
 
 # Get the directory where this server.py file is located
 _UI_DIR = os.path.dirname(os.path.abspath(__file__))
 _INDEX_PATH = os.path.join(_UI_DIR, "index.html")
+
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
@@ -176,11 +217,14 @@ async def get_index():
             return f.read()
     return "<h1>UI not found</h1>"
 
+
 loop = None
+
 
 def broadcast_log(msg, style):
     """Called from engine thread — puts message into thread-safe queue."""
     _log_queue.put(json.dumps({"msg": msg, "style": style or ""}))
+
 
 def start_server(engine_instance, tui_instance, host="127.0.0.1", port=8000):
     global engine, tui
@@ -193,13 +237,18 @@ def start_server(engine_instance, tui_instance, host="127.0.0.1", port=8000):
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         if s.connect_ex((host, port)) == 0:
-            engine.log(f"SYSTEM_WARNING: Port {port} already in use. Web UI disabled.", "yellow")
+            engine.log(
+                f"SYSTEM_WARNING: Port {port} already in use. Web UI disabled.",
+                "yellow",
+            )
             return
 
     try:
         config = uvicorn.Config(app, host=host, port=port, log_level="error")
         server = uvicorn.Server(config)
-        engine.log(f"NEURAL_LINK: Dashboard active at http://{host}:{port}", "bold green")
+        engine.log(
+            f"NEURAL_LINK: Dashboard active at http://{host}:{port}", "bold green"
+        )
         asyncio.run(server.serve())
     except Exception as e:
         engine.log(f"SYSTEM_WARNING: Web UI failed to start: {str(e)}", "yellow")

@@ -1,22 +1,29 @@
 import os
-import sys
 import time
 import subprocess
 import threading
 import signal
 import re
 import shutil
-import termios
-import tty
 import json
 from datetime import datetime
-from .constants import MASTER_LOG, LOG_DIR, GINGER_ROOT, STATE_DIR, SOURCES_DIR, LFS_MOUNT, BUILD_TYPE, SNAPSHOTS_DIR, SNAPSHOT_BEFORE
+from .constants import (
+    MASTER_LOG,
+    LOG_DIR,
+    GINGER_ROOT,
+    STATE_DIR,
+    SOURCES_DIR,
+    LFS_MOUNT,
+    BUILD_TYPE,
+    SNAPSHOTS_DIR,
+)
 from .models import BuildStep
+
 
 class GingerEngine:
     """
     Core build engine for GingerOS.
-    
+
     Manages the execution of build steps, process monitoring, logging,
     and user interaction via a keyboard listener.
     """
@@ -24,37 +31,107 @@ class GingerEngine:
     def __init__(self, dry_run=False):
         """
         Initialize the build engine with defined steps and state.
-        
+
         Sets up the build pipeline, initializing step objects, internal counters,
         and launching background threads for sudo keepalive and keyboard input.
         """
         self.steps = [
             # Preparation Phase
-            BuildStep("01_create_qemu_img", "Create QEMU Image",  "bash ./scripts/image/prepare-image.sh", "Preparation"),
-            BuildStep("02_install_ubuntu", "Install Ubuntu Base",  "sudo bash ./scripts/image/install-ubuntu.sh", "Preparation"),
-            BuildStep("03_install_os_base", "Install OS Base",     "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/setup-host.sh'", "Preparation"),
-            BuildStep("04_setup_downloads", "Setup & Downloads",   "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/download.sh'", "Preparation"),
-            BuildStep("05_host_reqs", "Host Requirements",         "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/host-requirements-install.sh'", "Preparation"),
-            BuildStep("06_version_check", "Version Check",         "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/version-check.sh'", "Preparation"),
-            BuildStep("07_update_dir", "Update Directories",       "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/update-dir.sh'", "Preparation"),
-            
+            BuildStep(
+                "01_create_qemu_img",
+                "Create QEMU Image",
+                "bash ./scripts/image/prepare-image.sh",
+                "Preparation",
+            ),
+            BuildStep(
+                "02_install_ubuntu",
+                "Install Ubuntu Base",
+                "sudo bash ./scripts/image/install-ubuntu.sh",
+                "Preparation",
+            ),
+            BuildStep(
+                "03_install_os_base",
+                "Install OS Base",
+                "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/setup-host.sh'",
+                "Preparation",
+            ),
+            BuildStep(
+                "04_setup_downloads",
+                "Setup & Downloads",
+                "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/download.sh'",
+                "Preparation",
+            ),
+            BuildStep(
+                "05_host_reqs",
+                "Host Requirements",
+                "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/host-requirements-install.sh'",
+                "Preparation",
+            ),
+            BuildStep(
+                "06_version_check",
+                "Version Check",
+                "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/version-check.sh'",
+                "Preparation",
+            ),
+            BuildStep(
+                "07_update_dir",
+                "Update Directories",
+                "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash ./scripts/host/update-dir.sh'",
+                "Preparation",
+            ),
             # Host Tools Phase
-            BuildStep("08_setup_lfs_env", "Setup LFS Environment", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/run-as-lfs.sh ./scripts/phases/setup-lfs-user-env.sh'", "Host Tools"),
-            
+            BuildStep(
+                "08_setup_lfs_env",
+                "Setup LFS Environment",
+                "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/run-as-lfs.sh ./scripts/phases/setup-lfs-user-env.sh'",
+                "Host Tools",
+            ),
             # Phase 1 Toolchain
-            BuildStep("09_phase1_toolchain", "Toolchain Build", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/run-as-lfs.sh ./scripts/phases/build-phase1.sh'", "Phase 1 Toolchain"),
-            
+            BuildStep(
+                "09_phase1_toolchain",
+                "Toolchain Build",
+                "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/run-as-lfs.sh ./scripts/phases/build-phase1.sh'",
+                "Phase 1 Toolchain",
+            ),
             # Phase 2 Cross Tools
-            BuildStep("10_phase2_toolchain", "Cross Tools Build", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/run-as-lfs.sh ./scripts/phases/build-phase2.sh'", "Phase 2 Cross Tools"),
-            
+            BuildStep(
+                "10_phase2_toolchain",
+                "Cross Tools Build",
+                "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/run-as-lfs.sh ./scripts/phases/build-phase2.sh'",
+                "Phase 2 Cross Tools",
+            ),
             # Phase 3 System
-            BuildStep("11_chroot_mounts", "Mount Chroot",  "sudo bash scripts/chroot.sh --mount-only", "Phase 3 System"),
-            BuildStep("12_phase3_system", "System Build",   "sudo chroot /mnt/lfs /bin/bash -c 'bash /scripts/phases/build-phase3.sh'", "Phase 3 System"),
-            
+            BuildStep(
+                "11_chroot_mounts",
+                "Mount Chroot",
+                "sudo bash scripts/chroot.sh --mount-only",
+                "Phase 3 System",
+            ),
+            BuildStep(
+                "12_phase3_system",
+                "System Build",
+                "sudo chroot /mnt/lfs /bin/bash -c 'bash /scripts/phases/build-phase3.sh'",
+                "Phase 3 System",
+            ),
             # Kernel & Boot
-            BuildStep("13_kernel",    "Kernel Build",   "sudo chroot /mnt/lfs /bin/bash -c 'bash /scripts/phases/build-phase4.sh'", "Kernel & Boot"),
-            BuildStep("14_finalize",  "Finalize System", "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/finalize-system.sh'", "Kernel & Boot"),
-            BuildStep("15_teardown", "Teardown", "bash scripts/image/teardown.sh", "Kernel & Boot")
+            BuildStep(
+                "13_kernel",
+                "Kernel Build",
+                "sudo chroot /mnt/lfs /bin/bash -c 'bash /scripts/phases/build-phase4.sh'",
+                "Kernel & Boot",
+            ),
+            BuildStep(
+                "14_finalize",
+                "Finalize System",
+                "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/finalize-system.sh'",
+                "Kernel & Boot",
+            ),
+            BuildStep(
+                "15_teardown",
+                "Teardown",
+                "bash scripts/image/teardown.sh",
+                "Kernel & Boot",
+            ),
         ]
         self.dry_run = dry_run
         self.current_step_idx = 0
@@ -70,21 +147,23 @@ class GingerEngine:
         self.aborted = False
         self.error_msg = ""
         self.paused_for_error = False
-        
+
         # Storage monitoring
         self.storage_stats = {"host": 0, "lfs": 0}
-        
+
         # Regex for ANSI filtering
-        self.ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
+        self.ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
         # Filter for non-printable characters except newline and tab
-        self.non_printable = re.compile(r'[^\x20-\x7E\n\t]')
-        
+        self.non_printable = re.compile(r"[^\x20-\x7E\n\t]")
+
         # Log rotation
         self._rotate_logs()
-        
+
         # Keep sudo alive (skip if dry_run)
         if not self.dry_run:
-            self.sudo_thread = threading.Thread(target=self._sudo_keepalive, daemon=True)
+            self.sudo_thread = threading.Thread(
+                target=self._sudo_keepalive, daemon=True
+            )
             self.sudo_thread.start()
 
         # Telemetry
@@ -104,13 +183,20 @@ class GingerEngine:
                 shutil.move(MASTER_LOG, f"{MASTER_LOG}.{timestamp}.bak")
                 with open(MASTER_LOG, "w") as f:
                     f.write(f"--- GingerOS Master Log Rotated at {timestamp} ---\n")
-        
-        all_logs = sorted([os.path.join(LOG_DIR, f) for f in os.listdir(LOG_DIR) if f.endswith(".log")])
+
+        all_logs = sorted(
+            [
+                os.path.join(LOG_DIR, f)
+                for f in os.listdir(LOG_DIR)
+                if f.endswith(".log")
+            ]
+        )
         if len(all_logs) > 50:
             for old_log in all_logs[:-50]:
                 try:
                     os.remove(old_log)
-                except: pass
+                except:
+                    pass
 
     def restart_phase(self):
         self.log("RESTARTING PHASE...", "bold yellow")
@@ -123,15 +209,17 @@ class GingerEngine:
             self.log("⏸ BUILD PAUSED (press SPACE to resume)", "bold yellow")
         else:
             self.log("▶ BUILD RESUMED", "bold green")
-    
+
     def skip_to_next(self):
         """Skip to next step"""
         if self.current_step_idx < len(self.steps) - 1:
             self.current_step_idx += 1
-            self.log(f"⏭ SKIPPED TO: {self.steps[self.current_step_idx].name}", "bold cyan")
+            self.log(
+                f"⏭ SKIPPED TO: {self.steps[self.current_step_idx].name}", "bold cyan"
+            )
         else:
             self.log("Already at last step", "yellow")
-    
+
     def skip_current_step(self):
         """Mark current step as skipped and move to next"""
         if self.current_step_idx < len(self.steps):
@@ -139,14 +227,14 @@ class GingerEngine:
             current.status = "completed"  # Mark as complete to skip
             self.log(f"⏭ SKIPPED: {current.name}", "bold yellow")
             self.skip_to_next()
-    
+
     def jump_to_step(self):
         """Jump to a specific step (shows prompt)"""
         self.paused_for_error = True  # Pause to show prompt
         self.log("JUMP TO STEP: Enter step number (1-15):", "bold cyan")
         # Note: Actual input handling would need terminal restoration
         # For now, just log the option
-    
+
     def show_steps_list(self):
         """Show list of all steps"""
         self.log("=" * 60, "dim")
@@ -155,7 +243,7 @@ class GingerEngine:
             status = "✓" if self._should_skip(step) else "○"
             self.log(f"  {status} [{idx:2d}] {step.name} ({step.phase})", "white")
         self.log("=" * 60, "dim")
-    
+
     def show_help(self):
         """Show help information"""
         self.log("=" * 60, "dim")
@@ -171,22 +259,22 @@ class GingerEngine:
         self.log("  P     - Restart package (when paused on error)", "white")
         self.log("=" * 60, "dim")
 
-
     def restart_package(self):
         if not self.current_pkg:
             self.log("Cannot restart package: Unknown current package", "bold red")
             return
-            
+
         self.log(f"RESTARTING PACKAGE: {self.current_pkg}...", "bold yellow")
         marker_paths = [
             f"/mnt/lfs/var/lib/ginger/{self.current_pkg}.built",
-            f"/var/lib/ginger/{self.current_pkg}.built"
+            f"/var/lib/ginger/{self.current_pkg}.built",
         ]
         for path in marker_paths:
             if os.path.exists(path):
                 try:
                     os.remove(path)
-                except: pass
+                except:
+                    pass
         self.paused_for_error = False
 
     def _update_storage(self):
@@ -196,29 +284,40 @@ class GingerEngine:
             try:
                 if os.path.exists(path):
                     st = os.statvfs(path)
-                    used = (st.f_blocks - st.f_bfree)
+                    used = st.f_blocks - st.f_bfree
                     total = st.f_blocks
                     if total > 0:
                         percent = (used / total) * 100
                         self.storage_stats[key] = percent
-                        
+
                         # Emergency Autonomous Cleanup
                         if key == "host" and percent > 95:
                             # Only cleanup host sources if we are already in Phase 3 or 4
                             # because at that point, sources are already copied to LFS
-                            if self.current_step_idx >= 12: # Phase 3 System or later
+                            if self.current_step_idx >= 12:  # Phase 3 System or later
                                 host_sources = os.path.join(GINGER_ROOT, "sources")
                                 if os.path.exists(host_sources):
-                                    self.log("CRITICAL: Host disk full! Purging host sources to survive...", "bold red")
+                                    self.log(
+                                        "CRITICAL: Host disk full! Purging host sources to survive...",
+                                        "bold red",
+                                    )
                                     try:
                                         # We don't delete the dir, just the contents
                                         for f in os.listdir(host_sources):
                                             fpath = os.path.join(host_sources, f)
-                                            if os.path.isfile(fpath): os.remove(fpath)
-                                            elif os.path.isdir(fpath): shutil.rmtree(fpath)
-                                        self.log("Emergency cleanup finished. Build will attempt to continue.", "green")
+                                            if os.path.isfile(fpath):
+                                                os.remove(fpath)
+                                            elif os.path.isdir(fpath):
+                                                shutil.rmtree(fpath)
+                                        self.log(
+                                            "Emergency cleanup finished. Build will attempt to continue.",
+                                            "green",
+                                        )
                                     except Exception as e:
-                                        self.log(f"Emergency cleanup failed: {str(e)}", "bold red")
+                                        self.log(
+                                            f"Emergency cleanup failed: {str(e)}",
+                                            "bold red",
+                                        )
                 else:
                     self.storage_stats[key] = 0
             except:
@@ -227,7 +326,7 @@ class GingerEngine:
     def _get_script_pkg_name(self, script_path):
         """Peeks into a script to find its PKG_NAME definition."""
         try:
-            with open(script_path, 'r') as f:
+            with open(script_path, "r") as f:
                 content = f.read()
                 match = re.search(r'^PKG_NAME=["\'](.*)["\']', content, re.M)
                 if match:
@@ -241,31 +340,37 @@ class GingerEngine:
         scripts_dir = os.path.join(GINGER_ROOT, "scripts", script_subdir)
         if not os.path.exists(scripts_dir):
             return False
-            
+
         scripts = sorted([f for f in os.listdir(scripts_dir) if f.endswith(".sh")])
         if not scripts:
             return False
-            
+
         for script in scripts:
             script_path = os.path.join(scripts_dir, script)
             pkg_name = self._get_script_pkg_name(script_path)
             file_name = script.replace(".sh", "")
-            
+
             # For Phase 3/4, file names often have prefixes like 01-
             if script_subdir in ["phase3-system", "phase4-boot"]:
-                file_name = "-".join(file_name.split("-")[1:]) if "-" in file_name else file_name
+                file_name = (
+                    "-".join(file_name.split("-")[1:])
+                    if "-" in file_name
+                    else file_name
+                )
 
             # Prioritize the central host marker as the single source of truth
             possible_marker_names = [f"{file_name}.built", f"{file_name}-temp.built"]
             if pkg_name:
-                possible_marker_names.extend([f"{pkg_name}.built", f"{pkg_name}-temp.built"])
-            
+                possible_marker_names.extend(
+                    [f"{pkg_name}.built", f"{pkg_name}-temp.built"]
+                )
+
             found = False
             for m in possible_marker_names:
                 if os.path.exists(os.path.join(STATE_DIR, m)):
                     found = True
                     break
-            
+
             if not found:
                 return False
         return True
@@ -273,15 +378,15 @@ class GingerEngine:
     def _should_skip(self, step):
         """
         Determines if a build step should be skipped based on markers or filesystem state.
-        
+
         Args:
             step (BuildStep): The build step to check.
-            
+
         Returns:
             bool: True if the step is already completed, False otherwise.
         """
         # 1. CRITICAL: Source Integrity Check (HOST SIDE)
-        # If we are missing sources, we MUST NOT skip the download step, 
+        # If we are missing sources, we MUST NOT skip the download step,
         # because the chroot doesn't have wget to fix it later.
         if step.id == "04_setup_downloads":
             sources_dir = os.path.join(GINGER_ROOT, "sources")
@@ -289,38 +394,54 @@ class GingerEngine:
                 # Force re-download by removing the marker if it exists
                 marker_path = os.path.join(STATE_DIR, f"{step.id}.built")
                 if os.path.exists(marker_path):
-                    try: os.remove(marker_path)
-                    except: pass
+                    try:
+                        os.remove(marker_path)
+                    except:
+                        pass
                 return False
 
         # 1.5. Failsafe Mount Checks
         if step.id == "01_create_qemu_img":
             try:
-                if subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True, timeout=5).returncode != 0:
+                if (
+                    subprocess.run(
+                        ["mountpoint", "-q", LFS_MOUNT], capture_output=True, timeout=5
+                    ).returncode
+                    != 0
+                ):
                     return False
-            except: return False
+            except:
+                return False
 
         if step.id == "11_chroot_mounts":
             try:
-                if subprocess.run(["grep", "-q", f"{LFS_MOUNT}/proc", "/proc/mounts"], capture_output=True, timeout=5).returncode != 0:
+                if (
+                    subprocess.run(
+                        ["grep", "-q", f"{LFS_MOUNT}/proc", "/proc/mounts"],
+                        capture_output=True,
+                        timeout=5,
+                    ).returncode
+                    != 0
+                ):
                     return False
-            except: return False
+            except:
+                return False
 
         # 2. Direct marker check in the central state dir
         central_marker = os.path.join(STATE_DIR, f"{step.id}.built")
         if os.path.exists(central_marker):
             return True
-            
+
         # 3. Smart checks for major phases (checks all constituent packages)
         if step.id == "09_phase1_toolchain":
             return self._check_phase_complete("phase1-tools")
         if step.id == "10_phase2_toolchain":
             return self._check_phase_complete("phase2-tools")
         if step.id == "12_phase3_system":
-             return self._check_phase_complete("phase3-system")
+            return self._check_phase_complete("phase3-system")
         if step.id == "13_kernel":
-             return self._check_phase_complete("phase4-boot")
-             
+            return self._check_phase_complete("phase4-boot")
+
         # 4. Return false if not completed
         return False
 
@@ -332,9 +453,9 @@ class GingerEngine:
 
     def log(self, message, style=None):
         # Filter ANSI and non-printables
-        message = self.ansi_escape.sub('', message)
-        message = self.non_printable.sub('', message)
-        
+        message = self.ansi_escape.sub("", message)
+        message = self.non_printable.sub("", message)
+
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}"
         self.logs.append((log_entry, style))
@@ -355,54 +476,96 @@ class GingerEngine:
         """
         Verify that LFS_MOUNT is mounted. If not, automatically run
         the idempotent prepare-image step to recover the environment.
-        
+
         Returns:
             bool: True if mounted (or successfully re-mounted), False otherwise.
         """
         if self.dry_run:
             return True
         try:
-            result = subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True, timeout=5)
+            result = subprocess.run(
+                ["mountpoint", "-q", LFS_MOUNT], capture_output=True, timeout=5
+            )
             if result.returncode == 0:
                 bind_dir = os.path.join(LFS_MOUNT, "ginger_os")
                 if not os.path.exists(bind_dir):
-                    subprocess.run(["sudo", "mkdir", "-p", bind_dir], capture_output=True)
-                if subprocess.run(["mountpoint", "-q", bind_dir], capture_output=True).returncode != 0:
-                    r = subprocess.run(["sudo", "mount", "--bind", GINGER_ROOT, bind_dir], capture_output=True)
+                    subprocess.run(
+                        ["sudo", "mkdir", "-p", bind_dir], capture_output=True
+                    )
+                if (
+                    subprocess.run(
+                        ["mountpoint", "-q", bind_dir], capture_output=True
+                    ).returncode
+                    != 0
+                ):
+                    r = subprocess.run(
+                        ["sudo", "mount", "--bind", GINGER_ROOT, bind_dir],
+                        capture_output=True,
+                    )
                     if r.returncode != 0:
-                        self.log(f"ERROR: Failed to bind-mount repo into chroot: {r.stderr}", "bold red")
+                        self.log(
+                            f"ERROR: Failed to bind-mount repo into chroot: {r.stderr}",
+                            "bold red",
+                        )
                         return False
 
                 # Mount /proc so nproc works during phase 1/2 builds
                 proc_mount = os.path.join(LFS_MOUNT, "proc")
                 if not os.path.exists(proc_mount):
-                    subprocess.run(["sudo", "mkdir", "-p", proc_mount], capture_output=True)
-                if subprocess.run(["mountpoint", "-q", proc_mount], capture_output=True).returncode != 0:
-                    subprocess.run(["sudo", "mount", "-vt", "proc", "proc", proc_mount], capture_output=True)
+                    subprocess.run(
+                        ["sudo", "mkdir", "-p", proc_mount], capture_output=True
+                    )
+                if (
+                    subprocess.run(
+                        ["mountpoint", "-q", proc_mount], capture_output=True
+                    ).returncode
+                    != 0
+                ):
+                    subprocess.run(
+                        ["sudo", "mount", "-vt", "proc", "proc", proc_mount],
+                        capture_output=True,
+                    )
 
                 return True
-            
-            if self.dry_run: return True
-            
+
+            if self.dry_run:
+                return True
+
             # Mount lost! Behavior depends on BUILD_TYPE
             if BUILD_TYPE == "native":
-                self.log(f"CRITICAL: LFS partition ({LFS_MOUNT}) is NOT mounted!", "bold red")
-                self.log("On native servers, please mount your partition manually.", "yellow")
+                self.log(
+                    f"CRITICAL: LFS partition ({LFS_MOUNT}) is NOT mounted!", "bold red"
+                )
+                self.log(
+                    "On native servers, please mount your partition manually.", "yellow"
+                )
                 return False
 
             # Image recovery
             self.log(f"WARN: LFS partition ({LFS_MOUNT}) is NOT mounted!", "yellow")
             self.log("Attempting automated mount recovery...", "bold cyan")
-            
+
             # ... recovery steps ...
-            prepare_step = next((s for s in self.steps if s.id == "01_create_qemu_img"), None)
+            prepare_step = next(
+                (s for s in self.steps if s.id == "01_create_qemu_img"), None
+            )
             if not prepare_step:
-                self.log("ERROR: Could not find Recovery Step (01_create_qemu_img)!", "bold red")
+                self.log(
+                    "ERROR: Could not find Recovery Step (01_create_qemu_img)!",
+                    "bold red",
+                )
                 return False
-                
+
             # Run the idempotent script with a timeout to avoid hangs
             try:
-                proc = subprocess.run(prepare_step.command, shell=True, cwd=GINGER_ROOT, capture_output=True, text=True, timeout=30)
+                proc = subprocess.run(
+                    prepare_step.command,
+                    shell=True,
+                    cwd=GINGER_ROOT,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
                 if proc.returncode == 0:
                     self.log("✅ Mount recovered successfully.", "bold green")
                     return True
@@ -410,7 +573,10 @@ class GingerEngine:
                     self.log(f"❌ Automated recovery failed: {proc.stderr}", "bold red")
                     return False
             except subprocess.TimeoutExpired:
-                self.log("❌ Automated recovery TIMED OUT (likely waiting for sudo).", "bold red")
+                self.log(
+                    "❌ Automated recovery TIMED OUT (likely waiting for sudo).",
+                    "bold red",
+                )
                 return False
         except Exception as e:
             self.log(f"!!! Error during mount check: {str(e)}", "bold red")
@@ -426,22 +592,22 @@ class GingerEngine:
             if os.path.exists(self.telemetry_file):
                 with open(self.telemetry_file, "r") as f:
                     data = json.load(f)
-            
+
             if self.session_id not in data:
                 data[self.session_id] = {
                     "start_time": datetime.now().isoformat(),
-                    "steps": {}
+                    "steps": {},
                 }
-            
+
             for step in self.steps:
                 if step.status != "pending":
                     data[self.session_id]["steps"][step.id] = {
                         "name": step.name,
                         "status": step.status,
                         "duration": step.duration(),
-                        "packages": {pkg: dur for pkg, dur in step.packages_completed}
+                        "packages": {pkg: dur for pkg, dur in step.packages_completed},
                     }
-            
+
             with open(self.telemetry_file, "w") as f:
                 json.dump(data, f, indent=4)
         except Exception as e:
@@ -466,13 +632,13 @@ class GingerEngine:
     def _execute_step(self, step):
         """
         Execute a single build step in a subprocess.
-        
+
         Handles:
         - Output capturing and logging
         - Real-time UI updates (via shared state)
         - Timeout enforcement
         - Error handling and status updates
-        
+
         Args:
             step (BuildStep): The step to execute.
         """
@@ -482,75 +648,94 @@ class GingerEngine:
         step.status = "running"
         self.logs = []  # Clear previous logs for this run
         self.aborted = False
-        
+
         # Verify mount and chroot for dependent phases
         # Steps 07 (Host Setup) through 16 (Teardown) require the LFS disk to be mounted
         try:
-            step_num = int(step.id.split('_')[0])
+            step_num = int(step.id.split("_")[0])
             if step_num >= 2 and step_num <= 15:
                 if not self._ensure_lfs_mounted():
-                    self.log(f"ERROR: Step {step.name} cannot proceed without LFS mount.", "bold red")
+                    self.log(
+                        f"ERROR: Step {step.name} cannot proceed without LFS mount.",
+                        "bold red",
+                    )
                     step.status = "failed"
                     return
         except (ValueError, IndexError):
-            pass # Non-standard step ID, skip auto-mount check
+            pass  # Non-standard step ID, skip auto-mount check
 
         # Verify chroot for system phases
         if step.id in ["12_phase3_system", "13_kernel"]:
             if not self._verify_chroot_ready():
                 self.log("WARN: Chroot environments are NOT mounted!", "yellow")
                 self.log("Attempting automated chroot recovery...", "bold cyan")
-                
+
                 # Find the "chroot-mounts" step
-                mount_step = next((s for s in self.steps if s.id == "11_chroot_mounts"), None)
+                mount_step = next(
+                    (s for s in self.steps if s.id == "11_chroot_mounts"), None
+                )
                 if mount_step:
                     # Run it once
-                    proc = subprocess.run(mount_step.command, shell=True, cwd=GINGER_ROOT, capture_output=True, text=True)
+                    proc = subprocess.run(
+                        mount_step.command,
+                        shell=True,
+                        cwd=GINGER_ROOT,
+                        capture_output=True,
+                        text=True,
+                    )
                     if proc.returncode == 0:
                         self.log("✅ Chroot recovered successfully.", "bold green")
                     else:
-                        self.log(f"❌ Chroot recovery failed: {proc.stderr}", "bold red")
+                        self.log(
+                            f"❌ Chroot recovery failed: {proc.stderr}", "bold red"
+                        )
                         step.status = "failed"
                         return
-                
+
                 # Re-verify after attempt
                 if not self._verify_chroot_ready():
-                    self.log("ERROR: Chroot still not ready. Please run 'Mount Chroot' step manually.", "bold red")
+                    self.log(
+                        "ERROR: Chroot still not ready. Please run 'Mount Chroot' step manually.",
+                        "bold red",
+                    )
                     step.status = "failed"
                     return
-        
+
         self.current_pkg = ""
         self.current_pkg_idx = 0
         self.total_pkg_count = 0
         self.pkg_start_time = None
         step.packages_completed = []
-        
+
         self.log(f"Phase {step.phase}: Starting {step.name}...", "cyan")
-        
+
         try:
             with open(step.log_file, "w") as f:
                 f.write(f"--- GingerOS Step Log: {step.name} ---\n")
-            
+
             # Execution logic
             if self.dry_run:
-                self.log(f"[DRY-RUN] Would execute: {step.command}", "bold bright_yellow")
+                self.log(
+                    f"[DRY-RUN] Would execute: {step.command}", "bold bright_yellow"
+                )
                 process_returncode = 0
                 last_output_time = time.time()
             else:
-                        process = subprocess.Popen(
-                            step.command,
-                            cwd=GINGER_ROOT,
-                            shell=True,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            text=True,
-                            bufsize=1,  # Line buffered
-                            env=os.environ.copy()
-                        )
-                        self.current_process = process
-            
+                process = subprocess.Popen(
+                    step.command,
+                    cwd=GINGER_ROOT,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,  # Line buffered
+                    env=os.environ.copy(),
+                )
+                self.current_process = process
+
             # Read output with timeout
             import select
+
             last_output_time = time.time()
             IDLE_TIMEOUT = 600  # 10 minutes (configurable via constant eventually)
 
@@ -562,7 +747,9 @@ class GingerEngine:
 
                     # Check for output (non-blocking)
                     # We select on process.stdout
-                    rlist, _, _ = select.select([process.stdout], [], [], 1.0) # 1 sec poll
+                    rlist, _, _ = select.select(
+                        [process.stdout], [], [], 1.0
+                    )  # 1 sec poll
 
                     if rlist:
                         # Output available - read line
@@ -575,41 +762,55 @@ class GingerEngine:
 
                             # Clean for UI
                             # CRITICAL: Strip carriage returns for rich.Live safety
-                            clean_line = line.replace('\r', '').strip()
-                            clean_line = self.ansi_escape.sub('', clean_line)
-                            clean_line = self.non_printable.sub('', clean_line)
-                            
+                            clean_line = line.replace("\r", "").strip()
+                            clean_line = self.ansi_escape.sub("", clean_line)
+                            clean_line = self.non_printable.sub("", clean_line)
+
                             if clean_line:
                                 # Periodically update storage info (non-blocking if possible)
-                                if not hasattr(self, 'last_storage_update'): self.last_storage_update = 0
+                                if not hasattr(self, "last_storage_update"):
+                                    self.last_storage_update = 0
                                 if time.time() - self.last_storage_update > 3.0:
                                     self._update_storage()
                                     self.last_storage_update = time.time()
-                                
+
                                 # Log to TUI panel (NO PRINT!)
                                 # Special handling for useful keywords
                                 style = "white"
                                 lower_line = clean_line.lower()
-                                
-                                if any(kw in lower_line for kw in ["error", "fail", "denied", "critical", "fatal"]):
+
+                                if any(
+                                    kw in lower_line
+                                    for kw in [
+                                        "error",
+                                        "fail",
+                                        "denied",
+                                        "critical",
+                                        "fatal",
+                                    ]
+                                ):
                                     style = "bold red"
                                 elif "warning" in lower_line:
                                     style = "yellow"
                                 elif "pass" in lower_line:
                                     style = "bold green"
-                                elif "building" in lower_line or "starting" in lower_line:
+                                elif (
+                                    "building" in lower_line or "starting" in lower_line
+                                ):
                                     style = "bold cyan"
                                     # Extract package name for UI
                                     if "__GINGER_PKG_MARKER__" in line:
                                         self.current_pkg = line.split(":")[-1].strip()
-                                elif "%" in clean_line: # Progress indicator
+                                elif "%" in clean_line:  # Progress indicator
                                     style = "cyan"
-                                
+
                                 self.log(clean_line, style)
 
                                 # Auto-Download Handler
                                 if "__GINGER_MISSING_SOURCE_URL__:" in clean_line:
-                                    url = clean_line.split("__GINGER_MISSING_SOURCE_URL__:")[-1].strip()
+                                    url = clean_line.split(
+                                        "__GINGER_MISSING_SOURCE_URL__:"
+                                    )[-1].strip()
                                     self._download_missing_source(url)
 
                                 # Package progress parsing (e.g. __GINGER_PKG_COUNT__: 3/17 : PackageName)
@@ -617,14 +818,18 @@ class GingerEngine:
                                     try:
                                         parts = clean_line.split(":")
                                         count_part = parts[1].strip()
-                                        pkg_name_part = parts[2].strip() if len(parts) > 2 else ""
-                                        
+                                        pkg_name_part = (
+                                            parts[2].strip() if len(parts) > 2 else ""
+                                        )
+
                                         curr, total = count_part.split("/")
                                         self.current_pkg_idx = int(curr)
                                         self.total_pkg_count = int(total)
-                                        
+
                                         if pkg_name_part:
-                                            self.current_pkg = pkg_name_part.replace("(Skipped)", "").strip()
+                                            self.current_pkg = pkg_name_part.replace(
+                                                "(Skipped)", ""
+                                            ).strip()
                                             # If it's not a skip message, mark start time if not already set for this package
                                             if "(Skipped)" not in pkg_name_part:
                                                 if not self.pkg_start_time:
@@ -636,19 +841,30 @@ class GingerEngine:
                                 if clean_line.startswith("__GINGER_PKG_MARKER__:"):
                                     if self.current_pkg and self.pkg_start_time:
                                         duration = time.time() - self.pkg_start_time
-                                        step.packages_completed.append((self.current_pkg, duration))
-                                    
-                                    pkg_name = clean_line.replace("__GINGER_PKG_MARKER__:", "").strip()
+                                        step.packages_completed.append(
+                                            (self.current_pkg, duration)
+                                        )
+
+                                    pkg_name = clean_line.replace(
+                                        "__GINGER_PKG_MARKER__:", ""
+                                    ).strip()
                                     self.current_pkg = pkg_name
                                     self.pkg_start_time = time.time()
-                                    self.log(f"Building Package: {pkg_name}", "bold cyan")
+                                    self.log(
+                                        f"Building Package: {pkg_name}", "bold cyan"
+                                    )
 
                                     # Interactive Stepping
                                     if self.package_stepping and not self.dry_run:
                                         self.paused_for_package = True
-                                        self.log(f"⏸ PAUSED before {pkg_name}. Press SPACE to continue.", "bold yellow")
+                                        self.log(
+                                            f"⏸ PAUSED before {pkg_name}. Press SPACE to continue.",
+                                            "bold yellow",
+                                        )
                                         os.kill(process.pid, signal.SIGSTOP)
-                                        while self.paused_for_package and not self.aborted:
+                                        while (
+                                            self.paused_for_package and not self.aborted
+                                        ):
                                             time.sleep(0.1)
                         else:
                             # EOF
@@ -657,28 +873,31 @@ class GingerEngine:
                     else:
                         # No output for 1 sec
                         if time.time() - last_output_time > IDLE_TIMEOUT:
-                            self.log(f"ERROR: Step timed out after {IDLE_TIMEOUT}s of silence.", "bold red")
+                            self.log(
+                                f"ERROR: Step timed out after {IDLE_TIMEOUT}s of silence.",
+                                "bold red",
+                            )
                             process.terminate()
-                            process.wait() # Cleanup zombie
+                            process.wait()  # Cleanup zombie
                             step.status = "failed"
                             return
 
                         if process.poll() is not None:
                             break
-            
+
             if not self.dry_run:
                 process.wait()
                 process_returncode = process.returncode
-            
+
             step.end_time = time.time()
             if self.current_pkg and self.pkg_start_time:
                 duration = time.time() - self.pkg_start_time
                 step.packages_completed.append((self.current_pkg, duration))
-            
+
             if self.aborted:
                 step.status = "failed"
                 return
-            
+
             if process_returncode == 0:
                 step.status = "completed"
                 # Persist the completion state only if NOT dry-run
@@ -687,19 +906,23 @@ class GingerEngine:
                         marker_path = os.path.join(STATE_DIR, f"{step.id}.built")
                         with open(marker_path, "w") as f:
                             f.write(f"Completed at {datetime.now()}\n")
-                    except: pass
+                    except:
+                        pass
                 self.current_step_idx += 1
             else:
                 step.status = "failed"
                 if not self.dry_run:
-                    self.log(f"✘ {step.name} FAILED with code {process.returncode}", "bold red")
+                    self.log(
+                        f"✘ {step.name} FAILED with code {process.returncode}",
+                        "bold red",
+                    )
                 else:
                     self.log(f"✘ {step.name} simulated failure", "bold red")
                 self.error_msg = f"{step.name} failed. Check {step.log_file}"
-                
+
             self._save_telemetry()
             self.current_process = None
-                
+
         except Exception as e:
             step.status = "failed"
             self.log(f"!!! EXCEPTION in {step.name}: {str(e)}", "bold red")
@@ -713,7 +936,6 @@ class GingerEngine:
             return True
         return False
 
-
     def list_snapshots(self):
         """Return list of available snapshots sorted newest first."""
         snaps = []
@@ -722,7 +944,9 @@ class GingerEngine:
                 path = os.path.join(SNAPSHOTS_DIR, f)
                 size_gb = os.path.getsize(path) / (1024**3)
                 mtime = os.path.getmtime(path)
-                snaps.append({"name": f, "path": path, "size_gb": size_gb, "mtime": mtime})
+                snaps.append(
+                    {"name": f, "path": path, "size_gb": size_gb, "mtime": mtime}
+                )
         return sorted(snaps, key=lambda x: x["mtime"], reverse=True)
 
     def take_snapshot(self, label):
@@ -731,9 +955,8 @@ class GingerEngine:
         Runs teardown first to ensure the img is cleanly unmounted.
         """
         from datetime import datetime
-        img_path = os.path.join(GINGER_ROOT, CONFIG.get("IMAGE_NAME", "ginger_os.img") if True else "ginger_os.img")
-        # get IMAGE_NAME from constants
         from .constants import IMAGE_NAME
+
         img_path = os.path.join(GINGER_ROOT, IMAGE_NAME)
 
         if not os.path.exists(img_path):
@@ -751,19 +974,27 @@ class GingerEngine:
             # Try reflink first (instant on btrfs/xfs), fall back to regular copy
             result = subprocess.run(
                 ["cp", "--reflink=auto", img_path, snap_path],
-                capture_output=True, text=True
+                capture_output=True,
+                text=True,
             )
-            if result.returncode == 0:
-                size_gb = os.path.getsize(snap_path) / (1024**3)
-                self.log(f"SNAPSHOT: ✅ '{label}' saved ({size_gb:.1f}GB)", "bold green")
-                # Also snapshot the .build_state markers
-                import shutil
-                state_snap = snap_path.replace(".img", ".state")
-                shutil.copytree(STATE_DIR, state_snap, dirs_exist_ok=True)
-                return True
-            else:
+            if result.returncode != 0:
                 self.log(f"SNAPSHOT: ❌ Failed: {result.stderr}", "bold red")
                 return False
+
+            size_gb = os.path.getsize(snap_path) / (1024**3)
+            self.log(f"SNAPSHOT: ✅ '{label}' saved ({size_gb:.1f}GB)", "bold green")
+
+            # Also snapshot the .build_state markers if they exist
+            import shutil
+
+            state_snap = snap_path.replace(".img", ".state")
+            if os.path.exists(STATE_DIR):
+                shutil.copytree(STATE_DIR, state_snap, dirs_exist_ok=True)
+                self.log("SNAPSHOT: Build state snapshot saved.", "dim")
+            else:
+                self.log("SNAPSHOT: No build state found to snapshot.", "dim")
+
+            return True
         except Exception as e:
             self.log(f"SNAPSHOT: ❌ Exception: {str(e)}", "bold red")
             return False
@@ -773,6 +1004,7 @@ class GingerEngine:
         Restore a snapshot — unmounts the img, replaces it, remounts.
         """
         from .constants import IMAGE_NAME
+
         snap_path = os.path.join(SNAPSHOTS_DIR, snap_name)
         img_path = os.path.join(GINGER_ROOT, IMAGE_NAME)
 
@@ -784,20 +1016,26 @@ class GingerEngine:
 
         # Step 1: Teardown current mounts
         self.log("RESTORE: Unmounting current image...", "cyan")
-        subprocess.run(["bash", "scripts/image/teardown.sh"], cwd=GINGER_ROOT, capture_output=True)
+        subprocess.run(
+            ["bash", "scripts/image/teardown.sh"], cwd=GINGER_ROOT, capture_output=True
+        )
 
         # Step 2: Replace the image
         self.log("RESTORE: Replacing image file...", "cyan")
         result = subprocess.run(
             ["cp", "--reflink=auto", snap_path, img_path],
-            capture_output=True, text=True
+            capture_output=True,
+            text=True,
         )
         if result.returncode != 0:
-            self.log(f"RESTORE: ❌ Failed to copy snapshot: {result.stderr}", "bold red")
+            self.log(
+                f"RESTORE: ❌ Failed to copy snapshot: {result.stderr}", "bold red"
+            )
             return False
 
         # Step 3: Restore build state markers
         import shutil
+
         state_snap = snap_path.replace(".img", ".state")
         if os.path.exists(state_snap):
             if os.path.exists(STATE_DIR):
@@ -809,10 +1047,14 @@ class GingerEngine:
         self.log("RESTORE: Remounting image...", "cyan")
         result = subprocess.run(
             ["bash", "scripts/image/prepare-image.sh"],
-            cwd=GINGER_ROOT, capture_output=True, text=True
+            cwd=GINGER_ROOT,
+            capture_output=True,
+            text=True,
         )
         if result.returncode == 0:
-            self.log(f"RESTORE: ✅ Restored to '{snap_name}' successfully.", "bold green")
+            self.log(
+                f"RESTORE: ✅ Restored to '{snap_name}' successfully.", "bold green"
+            )
             # Reset step statuses
             for step in self.steps:
                 step.status = "pending"
@@ -832,24 +1074,39 @@ class GingerEngine:
                 self.current_process.terminate()
                 self.current_process.wait(timeout=5)
             except:
-                try: self.current_process.kill()
-                except: pass
+                try:
+                    self.current_process.kill()
+                except:
+                    pass
             self.current_process = None
+
     def _download_missing_source(self, url):
         """Attempts a host-side download using a background thread."""
+
         def download_worker():
             try:
                 filename = os.path.basename(url)
-                self.log(f"HOST_DOWNLOAD: Requesting {filename} on behalf of chroot...", "bold yellow")
-                
+                self.log(
+                    f"HOST_DOWNLOAD: Requesting {filename} on behalf of chroot...",
+                    "bold yellow",
+                )
+
                 # Using wget on host for maximum reliability
-                cmd = ["wget", "-4", "--continue", "--progress=bar:force:noscroll", "-O", os.path.join(SOURCES_DIR, filename), url]
-                
+                cmd = [
+                    "wget",
+                    "-4",
+                    "--continue",
+                    "--progress=bar:force:noscroll",
+                    "-O",
+                    os.path.join(SOURCES_DIR, filename),
+                    url,
+                ]
+
                 # Execute download
                 subprocess.run(cmd, capture_output=True)
                 self.log(f"HOST_DOWNLOAD: Succeeded for {filename}", "bold green")
             except Exception as e:
                 self.log(f"HOST_DOWNLOAD: Failed: {str(e)}", "bold red")
-        
+
         # Launch background downloader
         threading.Thread(target=download_worker, daemon=True).start()
