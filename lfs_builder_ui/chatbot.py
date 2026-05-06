@@ -45,13 +45,24 @@ def _safe_load_chroma(collection_name, client):
 book_vs = _safe_load_chroma(BOOK_COLLECTION, _client)
 repo_vs = _safe_load_chroma(REPO_COLLECTION, _client)
 
-# For now, we use the repo index as the primary one for search
-vectorstore = repo_vs
-
 # ---------------------------------------------------------------------------
 # Build the RetrievalQA chain.
 # ---------------------------------------------------------------------------
-retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
+from langchain_classic.retrievers import EnsembleRetriever
+
+# Create retrievers for both collections
+book_retriever = book_vs.as_retriever(
+    search_kwargs={"k": 3}, search_type="similarity"
+)
+repo_retriever = repo_vs.as_retriever(
+    search_kwargs={"k": 3}, search_type="similarity"
+)
+
+# Ensemble retriever to search both book (theoretical) and repo (implementation)
+retriever = EnsembleRetriever(
+    retrievers=[book_retriever, repo_retriever], weights=[0.5, 0.5]
+)
+
 # Use OllamaLLM for local generation
 qa = RetrievalQA.from_chain_type(
     llm=get_llm(),
@@ -59,8 +70,8 @@ qa = RetrievalQA.from_chain_type(
     return_source_documents=True,
 )
 
-# Export the underlying store as ``merged``
-merged = vectorstore
+# Export the underlying store as ``merged`` (using repo as primary for compatibility)
+merged = repo_vs
 
 
 # Export a convenient function for the FastAPI endpoint.

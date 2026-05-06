@@ -32,7 +32,7 @@ def get_build_steps():
         BuildStep(
             "03_host_requirements",
             "Host Requirements",
-            "bash ./scripts/host/host-requirements-install.sh",
+            "sudo bash ./scripts/host/host-requirements-install.sh",
             "Host Setup",
         ),
         BuildStep(
@@ -57,14 +57,14 @@ def get_build_steps():
         BuildStep(
             "07_phase1_tools",
             "Phase 1 Tools",
-            "sudo bash ./scripts/host/run-as-lfs.sh ./scripts/phases/build-phase1.sh",
+            f"sudo bash ./scripts/host/run-as-lfs.sh {LFS_MOUNT}/scripts/phases/build-phase1.sh",
             "Phase 1 Tools",
         ),
         # Phase 2 Tools
         BuildStep(
             "08_phase2_tools",
             "Phase 2 Tools",
-            "sudo bash ./scripts/host/run-as-lfs.sh ./scripts/phases/build-phase2.sh",
+            f"sudo bash ./scripts/host/run-as-lfs.sh {LFS_MOUNT}/scripts/phases/build-phase2.sh",
             "Phase 2 Tools",
         ),
         # Phase 3 System
@@ -77,20 +77,20 @@ def get_build_steps():
         BuildStep(
             "10_phase3_system",
             "System Build",
-            "sudo chroot /mnt/lfs /bin/bash -c 'bash /scripts/phases/build-phase3.sh'",
+            f"sudo chroot {LFS_MOUNT} /bin/bash -c 'bash /scripts/phases/build-phase3.sh'",
             "Phase 3 System",
         ),
         # Kernel & Boot
         BuildStep(
             "11_kernel",
             "Kernel Build",
-            "sudo chroot /mnt/lfs /bin/bash -c 'bash /scripts/phases/build-phase4.sh'",
+            f"sudo chroot {LFS_MOUNT} /bin/bash -c 'bash /scripts/phases/build-phase4.sh'",
             "Kernel & Boot",
         ),
         BuildStep(
             "12_finalize",
             "Finalize System",
-            "sudo chroot /mnt/lfs /bin/bash -c 'cd /ginger_os && bash scripts/host/finalize-system.sh'",
+            f"sudo chroot {LFS_MOUNT} /bin/bash -c 'cd /ginger_os && bash scripts/host/finalize-system.sh'",
             "Kernel & Boot",
         ),
         BuildStep(

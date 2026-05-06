@@ -6,8 +6,9 @@ set -e
 set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+source "${SCRIPT_DIR}/../lib/common.sh"
 PHASE1_TOOLS_DIR="$SCRIPT_DIR/../phase1-tools"
-STATE_DIR="/ginger_os/.build_state"
+STATE_DIR="${LFS}/var/lib/ginger"
 mkdir -p "$STATE_DIR"
 
 SCRIPTS=("$PHASE1_TOOLS_DIR"/*.sh)
@@ -32,7 +33,7 @@ for script in "${SCRIPTS[@]}"; do
     if bash "$script"; then
         touch "$STATE_DIR/${FILE_PKG_NAME}.built"
         echo "Successfully built: ${FILE_PKG_NAME}"
-        find /mnt/lfs/sources -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+        find ${LFS}/sources -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
     else
         echo "Error: Failed to build ${FILE_PKG_NAME}"
         exit 1
@@ -40,3 +41,4 @@ for script in "${SCRIPTS[@]}"; do
 done
 
 echo "Phase 1 Toolchain Build Complete."
+mark_built "07_phase1_tools"

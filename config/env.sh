@@ -8,6 +8,11 @@ export GINGER_ROOT=$(echo "$GINGER_ROOT_RAW" | sed 's|^//|/|; s|/$||')
 [ -z "$GINGER_ROOT" ] && GINGER_ROOT="/"
 
 CONF_FILE="${GINGER_ROOT}/ginger.conf"
+# If not found at root, check if we are in a mount point with the repo inside it
+if [ ! -f "$CONF_FILE" ] && [ -f "${GINGER_ROOT}/ginger_os/ginger.conf" ]; then
+    CONF_FILE="${GINGER_ROOT}/ginger_os/ginger.conf"
+fi
+
 if [ -f "$CONF_FILE" ]; then
     # Basic key=value parser for ginger.conf
     while IFS='=' read -r key value || [ -n "$key" ]; do
@@ -20,7 +25,8 @@ fi
 
 # Fallback defaults if ginger.conf is missing or incomplete
 export LFS_VERSION="${LFS_VERSION:-12.4}"
-export LFS="${LFS_MOUNT:-/mnt/lfs}"
+export LFS_MOUNT="${LFS_MOUNT:-/mnt/ginger_lfs}"
+export LFS="${LFS_MOUNT}"
 
 # Core Toolchain (from ginger.conf if available)
 export BINUTILS_VERSION="${BINUTILS_VERSION:-2.45}"
@@ -111,19 +117,19 @@ export LIBISOFS_VERSION="1.5.6"
 export LIBISOBURN_VERSION="1.5.6"
 
 # Target directory for the LFS system
-export LFS="${LFS_MOUNT:-/mnt/lfs}"
+export LFS="${LFS_MOUNT}"
 
 # Chroot detection: clear LFS only in the INNER chroot (phase 3+)
 # where we are actually running inside the LFS system being built.
 # The outer Ubuntu chroot (steps 3-10) still needs LFS=/mnt/lfs.
 # Detect inner chroot by checking if /tools exists (built during phase 1/2)
 # AND /mnt/lfs does not exist (we are past the Ubuntu layer).
-if [ ! -d "/mnt/lfs" ] && [ -d "/tools" ] && [ "$(id -u)" -eq 0 ]; then
+if [ ! -d "$LFS_MOUNT" ] && [ -d "/tools" ] && [ "$(id -u)" -eq 0 ]; then
     export LFS=""
 fi
 
 # In phase 3 chroot, sources and state dir are at known bind-mount paths
-if [ ! -d "/mnt/lfs" ] && [ -d "/sources" ]; then
+if [ ! -d "$LFS_MOUNT" ] && [ -d "/sources" ]; then
     export GINGER_SOURCES="/sources"
 fi
 
@@ -161,8 +167,17 @@ export GINGER_SCRIPTS="${GINGER_ROOT%/}/scripts"
 export GINGER_SOURCES="${GINGER_ROOT%/}/sources"
 export GINGER_LOGS="${GINGER_ROOT%/}/logs"
 
-# Ensure directories exist
-mkdir -p "$GINGER_SOURCES" "$GINGER_LOGS"
+# Ensure logs are writable. If the project logs are root-owned or inaccessible,
+# fall back to the LFS-managed log directory which is owned by lfs.
+if [ "$(id -u)" -ne 0 ] && [ ! -w "$GINGER_LOGS" ]; then
+    if [ -d "${LFS}/var/log/ginger" ]; then
+        export GINGER_LOGS="${LFS}/var/log/ginger"
+    fi
+fi
+
+# Ensure directories exist (silently ignore errors if they exist but are unwritable)
+mkdir -p "$GINGER_SOURCES" 2>/dev/null || true
+mkdir -p "$GINGER_LOGS" 2>/dev/null || true
 
 # Color codes for logging
 export RED='\033[0;31m'

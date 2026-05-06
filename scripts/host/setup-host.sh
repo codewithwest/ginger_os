@@ -28,7 +28,7 @@ fi
 log "INFO" "Using LFS directory: $LFS"
 
 # NOTE: mountpoint/same-device checks from LFS book are intentionally omitted.
-# In our containerized build, chroot /mnt/lfs provides equivalent isolation —
+# In our containerized build, chroot ${LFS} provides equivalent isolation —
 # all operations are confined to the img filesystem regardless.
 
 # ---------------------------------------------------------------------
@@ -110,9 +110,28 @@ log "INFO" "Final ownership checks..."
 chown -v lfs "$LFS/tools"
 chown -v lfs "$LFS/sources"
 
-chown -R lfs:lfs $LFS
+# Targeted ownership changes. We avoid -R on $LFS to prevent 
+# accidentally touching bind-mounts like /proc or the ginger_os repo.
+chown -v lfs "$LFS/tools"
+chown -v lfs "$LFS/sources"
+chown -v lfs "$LFS/usr/include"
+chown -R lfs "$LFS/var/lib/ginger"
+
+# ---------------------------------------------------------------------
+# Mount project files (so lfs user can access them via the LFS path)
+# ---------------------------------------------------------------------
+log "INFO" "Mounting project files into $LFS for the lfs user..."
+mkdir -p "$LFS/scripts" "$LFS/config" "$LFS/sources" "$LFS/ginger_os" "$LFS/var/log/ginger"
+mountpoint -q "$LFS/scripts" || mount --bind "$GINGER_SCRIPTS" "$LFS/scripts"
+mountpoint -q "$LFS/config"  || mount --bind "$GINGER_ROOT/config"  "$LFS/config"
+mountpoint -q "$LFS/sources" || mount --bind "$GINGER_SOURCES" "$LFS/sources"
+mountpoint -q "$LFS/ginger_os" || mount --bind "$GINGER_ROOT" "$LFS/ginger_os"
+
+# Ensure the lfs user owns the logs and state directories inside LFS
+chown -R lfs:lfs "$LFS/var/log/ginger"
+chown -R lfs:lfs "$LFS/var/lib/ginger"
 
 log "INFO" "Host setup complete."
 log "INFO" "Switch to the 'lfs' user to begin Phase 1:"
 log "INFO" "  su - lfs"
-mark_built "03_install_os_base"
+mark_built "05_host_setup"

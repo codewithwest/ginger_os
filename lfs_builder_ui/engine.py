@@ -147,7 +147,7 @@ class GingerEngine:
             except:
                 return False
 
-        if step.id == "11_chroot_mounts":
+        if step.id == "09_chroot_mounts":
             try:
                 if (
                     subprocess.run(
@@ -167,13 +167,13 @@ class GingerEngine:
             return True
 
         # 3. Smart checks for major phases (checks all constituent packages)
-        if step.id == "09_phase1_toolchain":
+        if step.id == "07_phase1_tools":
             return self._check_phase_complete("phase1-tools")
-        if step.id == "10_phase2_toolchain":
+        if step.id == "08_phase2_tools":
             return self._check_phase_complete("phase2-tools")
-        if step.id == "12_phase3_system":
+        if step.id == "10_phase3_system":
             return self._check_phase_complete("phase3-system")
-        if step.id == "13_kernel":
+        if step.id == "11_kernel":
             return self._check_phase_complete("phase4-boot")
 
         # 4. Return false if not completed
@@ -235,6 +235,25 @@ class GingerEngine:
         """
         Execute a single build step.
         """
+        # --- NEW: Dependency Enforcement ---
+        # Ensure all previous steps are completed before running the current one
+        all_steps = self.steps
+        try:
+            current_idx = all_steps.index(step)
+            for i in range(current_idx):
+                prev_step = all_steps[i]
+                if not self._should_skip(prev_step):
+                    self.log(
+                        f"ERROR: Cannot run {step.name} because {prev_step.name} is not completed.",
+                        "bold red",
+                    )
+                    self.log(f"Please complete {prev_step.name} first.", "yellow")
+                    step.status = "failed"
+                    return
+        except ValueError:
+            pass # Step not in list (should not happen)
+        # -----------------------------------
+
         # Verify mount and chroot for dependent phases
         try:
             step_num = int(step.id.split("_")[0])
@@ -246,18 +265,18 @@ class GingerEngine:
                     )
                     step.status = "failed"
                     return
-        except ValueError, IndexError:
+        except (ValueError, IndexError):
             pass  # Non-standard step ID, skip auto-mount check
 
         # Verify chroot for system phases
-        if step.id in ["12_phase3_system", "13_kernel"]:
+        if step.id in ["10_phase3_system", "11_kernel"]:
             if not self._verify_chroot_ready():
                 self.log("WARN: Chroot environments are NOT mounted!", "yellow")
                 self.log("Attempting automated chroot recovery...", "bold cyan")
 
                 # Find the "chroot-mounts" step
                 mount_step = next(
-                    (s for s in self.steps if s.id == "11_chroot_mounts"), None
+                    (s for s in self.steps if s.id == "09_chroot_mounts"), None
                 )
                 if mount_step:
                     # Run it once
@@ -308,7 +327,7 @@ class GingerEngine:
 
         self.log(f"RESUMING PACKAGE: {self.current_pkg}...", "bold yellow")
         marker_paths = [
-            f"/mnt/lfs/var/lib/ginger/{self.current_pkg}.built",
+            f"{LFS_MOUNT}/var/lib/ginger/{self.current_pkg}.built",
             f"/var/lib/ginger/{self.current_pkg}.built",
         ]
         for path in marker_paths:

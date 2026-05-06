@@ -2,9 +2,9 @@ from langchain_ollama import OllamaEmbeddings, OllamaLLM
 import chromadb.utils.embedding_functions as ef
 
 # Configuration for Ollama
-OLLAMA_BASE_URL = "http://192.168.100.18:11434"
-EMBEDDING_MODEL = "qwen3-embedding:8b"
-LLM_MODEL = "qwen2.5:14b"
+OLLAMA_BASE_URL = "http://localhost:11434"
+EMBEDDING_MODEL = "nomic-embed-text-v2-moe:latest"
+LLM_MODEL = "gemma4:31b-cloud"
 
 # Configuration for ChromaDB Server
 CHROMA_HOST = "localhost"

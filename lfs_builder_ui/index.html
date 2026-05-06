@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>GingerOS Build Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background: #020617; }
@@ -70,15 +71,21 @@
     </div>
 
     <!-- Right Panel: Terminal + Info -->
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="flex-1 flex flex-col overflow-hidden relative">
 
         <!-- Top bar: current step info -->
         <div class="px-5 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
-            <div>
-                <div class="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Active Package</div>
-                <div id="current-pkg" class="text-sm font-bold text-white mt-0.5">—</div>
+            <div class="flex items-center gap-6">
+                <div>
+                    <div class="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Active Package</div>
+                    <div id="current-pkg" class="text-sm font-bold text-white mt-0.5">—</div>
+                </div>
+                <div id="step-counter" class="text-[11px] font-mono text-slate-500 pt-3">0 / 0</div>
             </div>
-            <div id="step-counter" class="text-[11px] font-mono text-slate-500">0 / 0</div>
+            
+            <button onclick="toggleChat()" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold hover:bg-cyan-500/20 transition-all">
+                <span class="pulsing">🧠</span> Neural Assistant
+            </button>
         </div>
 
         <!-- Terminal -->
@@ -99,6 +106,40 @@
                 </div>
             </div>
             <div id="terminal" class="terminal flex-1 overflow-y-auto p-4 text-[12px] leading-5 bg-slate-950"></div>
+        </div>
+
+        <!-- Chat Panel (Slide-out) -->
+        <div id="chat-panel" class="absolute top-0 right-0 w-96 h-full bg-slate-900 border-l border-slate-800 shadow-2xl transform translate-x-full transition-all duration-300 z-50 flex flex-col">
+            <!-- Resizer Handle -->
+            <div id="chat-resizer" class="absolute left-0 top-0 w-1.5 h-full cursor-ew-resize hover:bg-cyan-500/30 transition-colors z-[60]"></div>
+            
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🧠</span>
+                    <span class="font-bold text-sm tracking-tight text-cyan-400">Neural Assistant</span>
+                </div>
+                <button onclick="toggleChat()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+                <div class="bg-slate-800/50 rounded-lg p-3 text-slate-300 border border-slate-700/50">
+                    Hello! I'm the GingerOS AI Assistant. I have access to the LFS book and the project codebase. How can I help you today?
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-slate-800 bg-slate-950">
+                <div class="relative">
+                    <input type="text" id="chat-input" placeholder="Ask about LFS or GingerOS..." 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 pl-3 pr-10 text-xs focus:outline-none focus:border-cyan-500 transition-colors"
+                        onkeydown="if(event.key==='Enter') sendChat()">
+                    <button onclick="sendChat()" class="absolute right-2 top-2 text-cyan-500 hover:text-cyan-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+                <div class="mt-2 text-[9px] text-slate-500 text-center">
+                    Powered by RAG over LFS 12.4 & GingerOS Core
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -304,6 +345,131 @@
         } catch(e) {
             console.error('Status update failed:', e);
         }
+    }
+
+    // Chat logic
+    let chatWs = null;
+    let isChatOpen = false;
+    let isResizing = false;
+
+    function toggleChat() {
+        isChatOpen = !isChatOpen;
+        const panel = document.getElementById('chat-panel');
+        if (isChatOpen) {
+            panel.classList.remove('translate-x-full');
+            if (!chatWs) connectChatWebSocket();
+        } else {
+            panel.classList.add('translate-x-full');
+        }
+    }
+
+    // Resizing logic
+    const chatPanel = document.getElementById('chat-panel');
+    const chatResizer = document.getElementById('chat-resizer');
+
+    chatResizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        document.body.style.cursor = 'ew-resize';
+        chatPanel.style.transition = 'none'; // Disable transition during resize
+        e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const width = window.innerWidth - e.clientX;
+        if (width > 300 && width < 800) {
+            chatPanel.style.width = `${width}px`;
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = '';
+            chatPanel.style.transition = 'all 0.3s'; // Re-enable transition
+        }
+    });
+
+    function connectChatWebSocket() {
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        chatWs = new WebSocket(`${protocol}//${location.host}/ws/chat`);
+        
+        chatWs.onopen = () => {
+            console.log('Chat WebSocket connected');
+        };
+        
+        chatWs.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.status === 'thinking') {
+                showThinking();
+            } else if (data.status === 'complete') {
+                removeThinking();
+                appendChatMessage('ai', data.answer, data.sources);
+            }
+        };
+
+        chatWs.onclose = () => {
+            chatWs = null;
+            setTimeout(connectChatWebSocket, 3000);
+        };
+    }
+
+    function sendChat() {
+        const input = document.getElementById('chat-input');
+        const question = input.value.trim();
+        if (!question || !chatWs) return;
+
+        appendChatMessage('user', question);
+        chatWs.send(JSON.stringify({ question }));
+        input.value = '';
+    }
+
+    function appendChatMessage(role, text, sources = []) {
+        const container = document.getElementById('chat-messages');
+        const msg = document.createElement('div');
+        
+        if (role === 'user') {
+            msg.className = 'bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3 text-cyan-100 ml-8';
+            msg.textContent = text;
+        } else {
+            msg.className = 'bg-slate-800 border border-slate-700 rounded-lg p-3 text-slate-200 mr-8';
+            
+            // Render markdown for the AI response
+            const htmlContent = marked.parse(text);
+            let html = `<div class="prose prose-invert prose-xs max-w-none prose-pre:bg-slate-950 prose-pre:border prose-pre:border-slate-800">${htmlContent}</div>`;
+            
+            if (sources.length > 0) {
+                html += `<div class="mt-3 pt-2 border-t border-slate-700/50">
+                    <div class="text-[9px] uppercase font-bold text-slate-500 mb-1">Sources</div>
+                    <div class="flex flex-wrap gap-1">
+                        ${sources.map(s => `
+                            <span class="bg-slate-900 px-1.5 py-0.5 rounded text-[8px] text-cyan-400 border border-slate-800 truncate max-w-[150px]" title="${s.page}">
+                                ${s.page.split('/').pop()}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }
+            msg.innerHTML = html;
+        }
+        
+        container.appendChild(msg);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function showThinking() {
+        const container = document.getElementById('chat-messages');
+        const thinking = document.createElement('div');
+        thinking.id = 'thinking-indicator';
+        thinking.className = 'flex items-center gap-2 text-slate-500 italic ml-1';
+        thinking.innerHTML = `<span class="pulsing">🧠</span> Analyzing...`;
+        container.appendChild(thinking);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function removeThinking() {
+        const thinking = document.getElementById('thinking-indicator');
+        if (thinking) thinking.remove();
     }
 
     // Initialize

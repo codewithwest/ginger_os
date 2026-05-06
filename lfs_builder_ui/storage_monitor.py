@@ -19,7 +19,8 @@ class StorageMonitor:
 
     def update_storage(self):
         """Update storage usage percentages."""
-        paths = {"host": "/", "lfs": "/mnt/lfs"}
+        from .constants import LFS_MOUNT
+        paths = {"host": "/", "lfs": LFS_MOUNT}
         for key, path in paths.items():
             try:
                 if os.path.exists(path):

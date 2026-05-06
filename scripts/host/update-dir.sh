@@ -1,7 +1,7 @@
 #!/bin/bash
 # GingerOS - Update Directory Script
 # set lfs
-LFS=/mnt/lfs
+LFS=${LFS}
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 mkdir -pv $LFS/{etc,var} $LFS/usr/{bin,lib,sbin}

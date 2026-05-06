@@ -9,7 +9,7 @@ EOF
 cat > ~/.bashrc << "EOF"
 set +h
 umask 022
-LFS=/mnt/lfs
+LFS=${LFS}
 LC_ALL=POSIX
 LFS_TGT=$(uname -m)-lfs-linux-gnu
 PATH=/usr/bin

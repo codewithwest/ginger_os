@@ -1,11 +1,14 @@
 #!/bin/bash
 # GingerOS - Full Teardown
-# Unmounts ALL /mnt/lfs mounts (bind mounts, root, and loop device)
+# Unmounts ALL ${LFS} mounts (bind mounts, root, and loop device)
 # MUST BE RUN AS ROOT
 
 set -euo pipefail
 
-LFS="${LFS:-/mnt/lfs}"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+source "${SCRIPT_DIR}/../lib/common.sh"
+
+LFS="${LFS:-/mnt/ginger_lfs}"
 
 log() { echo -e "\033[0;33m[TEARDOWN] $1\033[0m"; }
 ok()  { echo -e "\033[0;32m[TEARDOWN] $1\033[0m"; }
@@ -52,7 +55,7 @@ fi
 
 umount -v "$LFS" && ok "Unmounted $LFS"
 
-# Detach the loop device (only the one that was used for /mnt/lfs)
+# Detach the loop device (only the one that was used for ${LFS})
 if [ -n "$LOOP_DEV" ]; then
     log "Detaching loop device: $LOOP_DEV"
     losetup -d "$LOOP_DEV" 2>/dev/null && ok "Detached $LOOP_DEV" || err "Could not detach $LOOP_DEV (may already be gone)"

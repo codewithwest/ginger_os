@@ -8,7 +8,7 @@ if [ -f /config/env.sh ]; then
     # Use the project’s inner-chroot environment configuration.
     source /config/env.sh
 else
-    export LFS=/mnt/lfs
+    export LFS=${LFS}
     export LC_ALL=POSIX
     export LFS_TGT=$(uname -m)-lfs-linux-gnu
     export PATH=/tools/bin:/bin:/usr/bin
@@ -16,7 +16,7 @@ else
     export CONFIG_SITE=$LFS/usr/share/config.site
 fi
 
-STATE_DIR="/ginger_os/.build_state"
+STATE_DIR="/var/lib/ginger"
 mkdir -p "$STATE_DIR"
 
 LOG_DIR="/var/log/ginger"

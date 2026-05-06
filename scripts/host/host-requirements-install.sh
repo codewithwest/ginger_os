@@ -11,7 +11,7 @@ set -e  # Exit on error
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../../config/env.sh"
 source "${SCRIPT_DIR}/../lib/common.sh"
-PKG_NAME="05_host_reqs"
+PKG_NAME="03_host_requirements"
 
 # Set log file location
 export UI_LOG_FILE="${UI_LOG_FILE:-${GINGER_LOGS}/host-requirements.log}"
@@ -96,7 +96,7 @@ EOF
 tee /home/lfs/.bashrc > /dev/null <<'EOF'
 set +h
 umask 022
-LFS=/mnt/lfs
+LFS=${LFS}
 LC_ALL=POSIX
 LFS_TGT=$(uname -m)-lfs-linux-gnu
 PATH=/usr/bin

@@ -561,11 +561,11 @@ class GingerTUI:
     def delete_marker(self, step_idx):
         """Delete marker for a step"""
         step = self.engine.steps[step_idx]
-        from lfs_builder_ui.constants import STATE_DIR
+        from lfs_builder_ui.constants import STATE_DIR, LFS_MOUNT
 
         marker_paths = [
             os.path.join(STATE_DIR, f"{step.id}.built"),
-            f"/mnt/lfs/var/lib/ginger/{step.id}.built",
+            f"{LFS_MOUNT}/var/lib/ginger/{step.id}.built",
         ]
 
         for path in marker_paths:

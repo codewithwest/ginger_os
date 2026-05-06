@@ -15,19 +15,34 @@ if [ ! -f "$SCRIPT" ]; then
     exit 1
 fi
 
-# Use absolute path for safety during user switch
-ABS_SCRIPT=$(readlink -f "$SCRIPT")
+# Do NOT use readlink -f here! 
+# If the script is in a bind-mount (like /mnt/ginger_lfs/scripts), 
+# readlink will resolve it back to the host path (e.g. /home/west/...)
+# which the lfs user cannot access due to home directory permissions.
+ABS_SCRIPT="$SCRIPT"
 
-# Determine GINGER_ROOT from the script location
-GINGER_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
+# Determine GINGER_ROOT. If LFS is mounted and contains a ginger_os repo, 
+# use that path so the lfs user has permission to access it.
+GINGER_HOST_ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
+source "${GINGER_HOST_ROOT}/scripts/lib/common.sh"
+
+# Ensure LFS is set (falls back to LFS_MOUNT from common.sh/config)
+LFS="${LFS:-$LFS_MOUNT}"
+export LFS
+
+if [ -d "${LFS:-}/ginger_os" ]; then
+    GINGER_ROOT="${LFS}/ginger_os"
+else
+    GINGER_ROOT="$GINGER_HOST_ROOT"
+fi
 
 exec runuser -u lfs -- env -i \
   HOME=/home/lfs \
   TERM=${TERM:-xterm} \
-  LFS=/mnt/lfs \
+  LFS="$LFS" \
   LC_ALL=POSIX \
   LFS_TGT=$(uname -m)-lfs-linux-gnu \
-  PATH=/mnt/lfs/tools/bin:/usr/bin \
+  PATH="$LFS/tools/bin:/usr/bin" \
   MAKEFLAGS=-j$(( $(nproc) > 12 ? 12 : $(nproc) )) \
   MOVE_TO_BUILD_DIR="${MOVE_TO_BUILD_DIR:-false}" \
   GINGER_UI_MASTER_PID="${GINGER_UI_MASTER_PID:-}" \

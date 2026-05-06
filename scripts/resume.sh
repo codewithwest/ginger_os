@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-export LFS=/mnt/lfs
+export LFS=${LFS}
 IMAGE=/opt/ginger_os/ginger_os.img
 
 LOOP=$(losetup -fP --show "$IMAGE")
