@@ -24,12 +24,13 @@ LOGO = """
 | |__| | | | | | (_| |  __/ |   | |__| |____) |
  \\_____|_|_| |_|\\__, |\\___|_|    \\____/|_____/ 
                  __/ |                         
-                |___/         v1.0 [Terminal UI Installer]
+                |___/         v1.0.0 [Terminal UI Installer]
 """
 
 THEME_COLOR = "bright_green"
 SECONDARY_COLOR = "bright_blue"
 ACCENT_COLOR = "bright_cyan"
+LASER_RED = "bright_red"
 
 
 class GingerInstaller:
@@ -103,9 +104,17 @@ class GingerInstaller:
 
     def render_footer(self):
         footer = Text(
-            " [ENTER] Accept/Next  [Q] Abort  [GingerOS Professional Deployment System]",
-            style="dim italic",
+            " [GingerOS Professional Deployment System] ",
+            style=f"bold {THEME_COLOR}",
         )
+        if not self.install_finished:
+            footer.append(" | ", style="dim")
+            footer.append("STATUS: ", style="dim")
+            footer.append("INSTALLING...", style="bold yellow blink")
+        else:
+            footer.append(" | ", style="dim")
+            footer.append("COMPLETE", style=f"bold {THEME_COLOR}")
+            
         return Panel(Align.center(footer), border_style=THEME_COLOR, box=box.SIMPLE)
 
     def welcome_screen(self):
@@ -254,8 +263,8 @@ class GingerInstaller:
         self.console.clear()
         self.console.print(layout)
 
-        ans = input().strip()
-        if ans != "YES":
+        ans = input().strip().upper()
+        if ans not in ["YES", "Y"]:
             self.console.print("[bold red]Installation aborted by user.[/]")
             sys.exit(0)
 
@@ -315,19 +324,19 @@ class GingerInstaller:
                         line = self.log_queue.get_nowait()
                         self.logs.append(line)
 
-                        # Simple heuristic for step detection from bash output
-                        if "Step 0" in line or "Wiping" in line:
-                            self.current_step_idx = 1
-                        elif "Step 1" in line or "Formatting" in line:
-                            self.current_step_idx = 1
-                        elif "Step 2" in line or "Deploying" in line:
-                            self.current_step_idx = 2
-                        elif "Step 3" in line or "Synchronizing" in line:
-                            self.current_step_idx = 3
-                        elif "Step 4" in line or "User & Init" in line:
-                            self.current_step_idx = 4
-                        elif "Step 5" in line or "GRUB" in line:
-                            self.current_step_idx = 5
+                        # Advance side menu based on [STEP X/6] markers from installer.sh
+                        if "STEP 1/6" in line:
+                            self.current_step_idx = 1  # Partitioning
+                        elif "STEP 2/6" in line:
+                            self.current_step_idx = 1  # Formatting (still Partitioning)
+                        elif "STEP 3/6" in line:
+                            self.current_step_idx = 1  # Mounting
+                        elif "STEP 4/6" in line:
+                            self.current_step_idx = 2  # Extractions
+                        elif "STEP 5/6" in line:
+                            self.current_step_idx = 3  # Hardware Sync (UUID)
+                        elif "STEP 6/6" in line:
+                            self.current_step_idx = 5  # Bootloader
                 except queue.Empty:
                     pass
 
@@ -338,6 +347,7 @@ class GingerInstaller:
 
                 layout["header"].update(self.render_header())
                 layout["steps_col"].update(self.render_steps())
+                layout["footer"].update(self.render_footer())
                 layout["main_col"].update(
                     Panel(
                         log_content,

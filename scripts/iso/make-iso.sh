@@ -26,15 +26,66 @@ echo "__GINGER_PKG_MARKER__: Preparation"
 cleanup
 mkdir -p "$ISO_DIR/boot/grub" "$ISO_DIR/installer"
 
-echo "__GINGER_PKG_MARKER__: Kernel"
-if [ -f "$GINGER_ROOT/vmlinuz-ginger" ]; then
-    KERNEL_IMG="$GINGER_ROOT/vmlinuz-ginger"
-else
-    KERNEL_IMG=$(ls "$GINGER_ROOT"/vmlinuz-* 2>/dev/null | head -n 1 || true)
-fi
+echo "__GINGER_PKG_MARKER__: Mount LFS Image"
+LFS_IMG="$GINGER_ROOT/ginger_os.img"
+LFS_ROOTFS="$GINGER_ROOT/gingeros-lfs-rootfs.tar.gz"
+CACHED_KERNEL="$GINGER_ROOT/vmlinuz-ginger-cached"
 
-[ -z "${KERNEL_IMG:-}" ] && { echo "Kernel not found!"; exit 1; }
-cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
+# ── Cache check ────────────────────────────────────────────────────────────
+# If the tarball and kernel are already on disk, skip the slow mount+tar step.
+# Set FORCE_REBUILD=1 to bypass this cache.
+if [ -f "$LFS_ROOTFS" ] && [ -f "$CACHED_KERNEL" ] && [ -z "${FORCE_REBUILD:-}" ]; then
+    echo "[INFO] Using cached LFS rootfs: $(ls -lh "$LFS_ROOTFS" | awk '{print $5}')"
+    echo "[INFO] Using cached kernel: $CACHED_KERNEL"
+    cp "$LFS_ROOTFS" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
+    cp "$CACHED_KERNEL" "$ISO_DIR/boot/vmlinuz"
+else
+    # ── Full mount + extract ───────────────────────────────────────────────
+    if [ ! -f "$LFS_IMG" ]; then
+        echo "[ERROR] LFS disk image not found at $LFS_IMG"
+        exit 1
+    fi
+
+    LFS_MOUNT=$(mktemp -d)
+    LOOP_DEV=$(losetup --find --show --partscan "$LFS_IMG")
+    echo "[INFO] Loop device: $LOOP_DEV  (partition 1: ${LOOP_DEV}p1)"
+    sleep 1
+    partprobe "$LOOP_DEV" 2>/dev/null || true
+    mount -o ro "${LOOP_DEV}p1" "$LFS_MOUNT"
+    echo "[INFO] LFS image mounted at $LFS_MOUNT"
+
+    # Cleanup trap for this block
+    trap 'umount "$LFS_MOUNT" 2>/dev/null || true; losetup -d "$LOOP_DEV" 2>/dev/null || true; rmdir "$LFS_MOUNT" 2>/dev/null || true' EXIT
+
+    # Kernel
+    KERNEL_IMG=$(ls "$LFS_MOUNT"/boot/vmlinuz* 2>/dev/null | head -n1 || true)
+    if [ -z "$KERNEL_IMG" ]; then
+        echo "[ERROR] No kernel found in $LFS_MOUNT/boot/"
+        ls "$LFS_MOUNT/boot/" || true
+        exit 1
+    fi
+    echo "[INFO] Using LFS kernel: $KERNEL_IMG"
+    cp -v "$KERNEL_IMG" "$ISO_DIR/boot/vmlinuz"
+    cp -v "$KERNEL_IMG" "$CACHED_KERNEL"    # cache for next run
+
+    # Rootfs tarball
+    echo "[INFO] Creating LFS rootfs tarball (this may take a few minutes)..."
+    tar -czpf "$LFS_ROOTFS" \
+        --one-file-system \
+        --exclude="./proc/*" \
+        --exclude="./sys/*" \
+        --exclude="./dev/*" \
+        --exclude="./run/*" \
+        --exclude="./tmp/*" \
+        -C "$LFS_MOUNT" .
+    echo "[INFO] LFS rootfs tarball size: $(ls -lh "$LFS_ROOTFS" | awk '{print $5}')"
+    cp "$LFS_ROOTFS" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
+
+    umount "$LFS_MOUNT"
+    losetup -d "$LOOP_DEV"
+    rmdir "$LFS_MOUNT"
+    trap 'sudo rm -rf "$ISO_DIR" "$INITRD_WORK"' EXIT
+fi
 
 echo "__GINGER_PKG_MARKER__: Initrd"
 sudo rm -rf "$INITRD_WORK"
@@ -44,8 +95,9 @@ ESSENTIAL_TOOLS=(
     parted partprobe mkfs.ext4 tar lsblk blkid wipefs gzip udevadm
     grub-install tee sleep which clear ps kill tput 
     readlink dirname touch du df
-    head tail sort uniq date wc tr cut xargs cp mv ln
-    python3 chmod env find losetup fuser locale
+    head tail sort uniq date wc tr cut xargs cp mv ln rm mv
+    python3 chmod chown env find losetup fuser locale reboot poweroff chroot
+    mktemp sync dd false true test install
 )
 
 # Create essential system directory structure
@@ -173,19 +225,6 @@ cp -r "$RICH_PATH" "$INITRD_WORK/usr/lib/python3/dist-packages/"
 # Ensure python looks in the right place
 export PYTHONPATH="/usr/lib/python3/dist-packages:/usr/lib/python$PY_VER"
 
-# Rootfs payload
-ROOTFS_PATH="$GINGER_ROOT/gingeros-base-rootfs.tar.gz"
-echo "[DEBUG] Looking for RootFS at: $ROOTFS_PATH"
-if [ -f "$ROOTFS_PATH" ]; then
-    echo "[INFO] Found RootFS, copying..."
-    ls -lh "$ROOTFS_PATH"
-    cp "$ROOTFS_PATH" "$ISO_DIR/installer/" || { echo "[ERROR] Failed to copy RootFS"; exit 1; }
-else
-    echo "[ERROR] RootFS not found at $ROOTFS_PATH"
-    echo "Directory contents of $GINGER_ROOT:"
-    ls -lh "$GINGER_ROOT" | head -n 5
-    echo "[WARN] Continuing without RootFS (ISO will be small/incomplete)"
-fi
 
 # Init script
 cat << 'EOF' > "$INITRD_WORK/init"
@@ -221,8 +260,19 @@ if [ -n "$FOUND_ISO" ]; then
     if ! python3 ./installer.py; then
         echo "ERROR: Professional TUI failed to start."
         echo "Dropping to recovery shell..."
-        /bin/sh
+        exec /bin/sh
     fi
+    
+    # Keep init alive after installer finishes
+    echo "Installation process has concluded."
+    echo "Press [R] to Reboot or [S] for Shell"
+    while true; do
+        read -n 1 -r ACTION
+        case "$ACTION" in
+            [Rr]*) /bin/reboot -f ;;
+            [Ss]*) /bin/sh ;;
+        esac
+    done
 else
     echo "ERROR: GingerOS ISO not found."
     exec /bin/sh
