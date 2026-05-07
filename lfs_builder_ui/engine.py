@@ -149,21 +149,23 @@ class GingerEngine:
 
         if step.id == "09_chroot_mounts":
             try:
+                # Check for proc mount inside LFS as a proxy for all chroot mounts
                 if (
                     subprocess.run(
                         ["grep", "-q", f"{LFS_MOUNT}/proc", "/proc/mounts"],
                         capture_output=True,
                         timeout=5,
                     ).returncode
-                    != 0
+                    == 0
                 ):
-                    return False
+                    return True
             except:
-                return False
+                pass
 
         # 2. Direct marker check in the central state dir
         central_marker = os.path.join(STATE_DIR, f"{step.id}.built")
-        if os.path.exists(central_marker):
+        lfs_marker = os.path.join(LFS_MOUNT, "var/lib/ginger", f"{step.id}.built")
+        if os.path.exists(central_marker) or os.path.exists(lfs_marker):
             return True
 
         # 3. Smart checks for major phases (checks all constituent packages)
@@ -210,10 +212,20 @@ class GingerEngine:
                 )
 
             found = False
+            # Check host state dir
             for m in possible_marker_names:
                 if os.path.exists(os.path.join(STATE_DIR, m)):
                     found = True
                     break
+            
+            # Check LFS state dir if not found on host
+            if not found:
+                lfs_state_dir = os.path.join(LFS_MOUNT, "var/lib/ginger")
+                if os.path.exists(lfs_state_dir):
+                    for m in possible_marker_names:
+                        if os.path.exists(os.path.join(lfs_state_dir, m)):
+                            found = True
+                            break
 
             if not found:
                 return False
@@ -364,6 +376,27 @@ class GingerEngine:
     def restore_snapshot(self, snap_name):
         """Restore a snapshot."""
         return self.snapshot_manager.restore_snapshot(snap_name)
+
+    def rescue_downloads(self):
+        """Execute the rescue downloads script."""
+        rescue_script = os.path.join(self.ginger_root, "scripts/host/rescue-downloads.sh")
+        if not os.path.exists(rescue_script):
+            self.log(f"ERROR: Rescue script not found at {rescue_script}", "bold red")
+            return
+
+        self.log("🚀 INITIATING DOWNLOAD RESCUE SEQUENCE...", "bold cyan")
+        
+        # We'll use a temporary "pseudo-step" to run this so it shows up in logs
+        from lfs_builder_ui.models import BuildStep
+        rescue_step = BuildStep(
+            "99_rescue_downloads",
+            "Rescue Downloads",
+            f"bash {rescue_script}",
+            "Maintenance"
+        )
+        
+        # Run it through the process monitor
+        self.execute_step(rescue_step)
 
     def _download_missing_source(self, url):
         """Download a missing source file."""

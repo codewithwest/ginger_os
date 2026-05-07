@@ -77,20 +77,20 @@ def get_build_steps():
         BuildStep(
             "10_phase3_system",
             "System Build",
-            f"sudo chroot {LFS_MOUNT} /bin/bash -c 'bash /scripts/phases/build-phase3.sh'",
+            "sudo bash scripts/chroot.sh /scripts/phases/build-phase3.sh",
             "Phase 3 System",
         ),
         # Kernel & Boot
         BuildStep(
             "11_kernel",
             "Kernel Build",
-            f"sudo chroot {LFS_MOUNT} /bin/bash -c 'bash /scripts/phases/build-phase4.sh'",
+            "sudo bash scripts/chroot.sh /scripts/phases/build-phase4.sh",
             "Kernel & Boot",
         ),
         BuildStep(
             "12_finalize",
             "Finalize System",
-            f"sudo chroot {LFS_MOUNT} /bin/bash -c 'cd /ginger_os && bash scripts/host/finalize-system.sh'",
+            "sudo bash scripts/host/finalize-system.sh",
             "Kernel & Boot",
         ),
         BuildStep(

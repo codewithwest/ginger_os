@@ -11,6 +11,12 @@ ISO_DIR="$GINGER_ROOT/iso_work"
 ISO_OUTPUT="$GINGER_ROOT/gingeros-installer.iso"
 INITRD_WORK="$GINGER_ROOT/initrd_work"
 
+log() {
+    local TYPE=$1
+    local MSG=$2
+    echo "[$(date +'%H:%M:%S')] [$TYPE] $MSG"
+}
+
 cleanup() {
     sudo rm -rf "$ISO_DIR" "$INITRD_WORK"
 }
@@ -39,7 +45,7 @@ ESSENTIAL_TOOLS=(
     grub-install tee sleep which clear ps kill tput 
     readlink dirname touch du df
     head tail sort uniq date wc tr cut xargs cp mv ln
-    python3 chmod env find losetup
+    python3 chmod env find losetup fuser locale
 )
 
 # Create essential system directory structure
@@ -49,6 +55,31 @@ mkdir -p "$INITRD_WORK"/{bin,dev,etc,lib,lib64,mnt,proc,run,sys,tmp,var,root,usr
 ln -sf bin "$INITRD_WORK/sbin"
 ln -sf ../bin "$INITRD_WORK/usr/bin"
 ln -sf ../bin "$INITRD_WORK/usr/sbin"
+# Function to copy binary and its dependencies
+copy_exe() {
+    local exe=$1
+    local dest=$2
+    local binary_path=$(which "$exe")
+    
+    if [ -z "$binary_path" ]; then
+        log "WARN" "Binary $exe not found, skipping."
+        return
+    fi
+    
+    # Copy the binary
+    cp "$binary_path" "$dest/bin/"
+    
+    # Copy its libraries
+    ldd "$binary_path" | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' "$dest/lib/x86_64-linux-gnu/" 2>/dev/null || true
+    # Also copy the loader if present
+    ldd "$binary_path" | grep "/lib64/" | awk '{print $1}' | xargs -I '{}' cp -v '{}' "$dest/lib64/" 2>/dev/null || true
+}
+
+log "INFO" "Preparing tool binaries..."
+mkdir -p "$INITRD_WORK/bin" "$INITRD_WORK/lib/x86_64-linux-gnu" "$INITRD_WORK/lib64"
+for tool in "${ESSENTIAL_TOOLS[@]}"; do
+    copy_exe "$tool" "$INITRD_WORK"
+done
 ln -sf ../lib "$INITRD_WORK/usr/lib"
 ln -sf ../lib64 "$INITRD_WORK/usr/lib64"
 
@@ -97,6 +128,7 @@ fi
 # Copy installer payload
 cp "$GINGER_ROOT/scripts/iso/ginger-installer-bin" "$ISO_DIR/installer/installer-bin"
 cp "$GINGER_ROOT/scripts/iso/installer.sh" "$ISO_DIR/installer/"
+cp "$GINGER_ROOT/scripts/iso/installer.py" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/scripts/lib/ui.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/scripts/lib/disk.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/scripts/lib/bash_config.sh" "$ISO_DIR/installer/"
@@ -119,6 +151,27 @@ elif [ -d /lib/terminfo ]; then
      mkdir -p "$INITRD_WORK/lib"
      cp -r /lib/terminfo "$INITRD_WORK/lib/"
 fi
+
+# Copy Professional Python Environment
+log "INFO" "Bundling Python standard library..."
+PY_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+mkdir -p "$INITRD_WORK/usr/lib/python$PY_VER"
+
+# Copy all top-level .py files
+cp -r /usr/lib/python$PY_VER/*.py "$INITRD_WORK/usr/lib/python$PY_VER/" 2>/dev/null || true
+
+# Copy ALL subdirectories
+cp -r /usr/lib/python$PY_VER/*/ "$INITRD_WORK/usr/lib/python$PY_VER/" 2>/dev/null || true
+
+# Remove massive/unneeded folders to save space
+rm -rf "$INITRD_WORK/usr/lib/python$PY_VER/"{test,tkinter,idlelib,turtledemo,pydoc_data,ensurepip,__pycache__}
+
+# Copy Rich library
+RICH_PATH=$(python3 -c "import rich; import os; print(os.path.dirname(rich.__file__))")
+mkdir -p "$INITRD_WORK/usr/lib/python3/dist-packages"
+cp -r "$RICH_PATH" "$INITRD_WORK/usr/lib/python3/dist-packages/"
+# Ensure python looks in the right place
+export PYTHONPATH="/usr/lib/python3/dist-packages:/usr/lib/python$PY_VER"
 
 # Rootfs payload
 ROOTFS_PATH="$GINGER_ROOT/gingeros-base-rootfs.tar.gz"
@@ -163,68 +216,13 @@ done
 
 if [ -n "$FOUND_ISO" ]; then
     cd /mnt/iso/installer
-    
-    # Interactive Installer Menu
-    while true; do
-        clear
-        echo "========================================"
-        echo "   GingerOS Installer - Select Target"
-        echo "========================================"
-        echo ""
-        echo "Available Disks:"
-        lsblk -d -n -o NAME,SIZE,MODEL,TYPE | grep "disk" | grep -v "sr0" | grep -v "loop"
-        echo ""
-        echo "Type the disk name to install to (e.g. sda)"
-        echo "Type 'shell' to drop to a debug shell"
-        echo "Type 'reboot' to restart system"
-        echo ""
-        printf "Target Disk > "
-        read TARGET
-        
-        if [ "$TARGET" = "shell" ]; then
-            echo "Starting debug shell..."
-            /bin/bash
-            continue
-        elif [ "$TARGET" = "reboot" ]; then
-            reboot -f
-        fi
-        
-        # Check if disk exists
-        if [ -b "/dev/$TARGET" ]; then
-            echo ""
-            echo "WARNING: ALL DATA ON /dev/$TARGET WILL BE ERASED!"
-            printf "Are you sure? (y/N) > "
-            read CONFIRM
-            
-            if [ "$CONFIRM" = "y" ] || [ "$CONFIRM" = "Y" ]; then
-                echo "Starting installation..."
-                /bin/bash ./installer.sh "/dev/$TARGET"
-                
-                if [ $? -eq 0 ]; then
-                    echo ""
-                    echo "Installation Complete!"
-                    echo "Press COMMAND to continue:"
-                    echo "  [Enter] Reboot"
-                    echo "  [s]     Shell"
-                    read ACTION
-                    if [ "$ACTION" = "s" ]; then
-                        /bin/bash
-                    else
-                        reboot -f
-                    fi
-                else
-                    echo "Installation failed. Dropping to shell."
-                    /bin/bash
-                fi
-            else
-                echo "Aborted."
-                sleep 1
-            fi
-        else
-            echo "Invalid disk: /dev/$TARGET not found."
-            sleep 2
-        fi
-    done
+    export PYTHONPATH="/usr/lib/python3/dist-packages:/usr/lib/python$PY_VER"
+    # Launch Professional TUI Installer with fail-safe
+    if ! python3 ./installer.py; then
+        echo "ERROR: Professional TUI failed to start."
+        echo "Dropping to recovery shell..."
+        /bin/sh
+    fi
 else
     echo "ERROR: GingerOS ISO not found."
     exec /bin/sh

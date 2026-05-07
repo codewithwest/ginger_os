@@ -4,6 +4,7 @@ source "/scripts/lib/common.sh"
 PKG_NAME="procps-ng"
 check_built "$PKG_NAME" && exit 0
 extract "procps-ng"
+sed -i '/#include "xalloc.h"/a #include <stdbool.h>' src/watch.c
 
 ./configure --prefix=/usr                           \
             --docdir=/usr/share/doc/procps-ng-4.0.5 \

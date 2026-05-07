@@ -330,6 +330,7 @@ class GingerTUI:
             ("P", "Toggle Package Stepping"),
             ("F", "Force Module Re-build"),
             ("D", "Purge Module State"),
+            ("M", "Rescue Missing Sources"),
             ("S", "Skip to Next Pending"),
             ("?", "Toggle Neural Help"),
             ("Q", "Terminate Session"),
@@ -588,16 +589,19 @@ class GingerTUI:
 
     def handle_key(self, key):
         """Handle keyboard input"""
+        # Normalize key for comparisons (handle case sensitivity)
+        key_lower = key.lower()
+
         # Navigation
-        if key in ["j", "\x1b[B"]:  # j or DOWN
+        if key_lower in ["j", "\x1b[b"]:  # j or DOWN (case-insensitive for j)
             if self.selected_step < len(self.engine.steps) - 1:
                 self.selected_step += 1
 
-        elif key in ["k", "\x1b[A"]:  # k or UP
+        elif key_lower in ["k", "\x1b[a"]:  # k or UP
             if self.selected_step > 0:
                 self.selected_step -= 1
 
-        elif key == "\x1b[5~":  # PgUp - scroll log up
+        elif key == "\x1b[5~":  # PgUp - scroll log up (stays same)
             self.log_scroll = min(
                 self.log_scroll + 10, max(0, len(self.engine.logs) - 28)
             )
@@ -605,48 +609,51 @@ class GingerTUI:
         elif key == "\x1b[6~":  # PgDn - scroll log down / resume auto-scroll
             self.log_scroll = max(0, self.log_scroll - 10)
 
-        elif key == "g":  # Go to first
-            self.selected_step = 0
-
-        elif key == "G":  # Go to last
-            self.selected_step = len(self.engine.steps) - 1
+        elif key_lower == "g":  # Go to first/last
+            if key == "G":
+                self.selected_step = len(self.engine.steps) - 1
+            else:
+                self.selected_step = 0
 
         # Actions
         elif key == "\r" or key == "\n":  # ENTER - run step
             return "run"
 
-        elif key == "f":  # Force run
+        elif key_lower == "f":  # Force run
             return "force"
 
-        elif key == "d":  # Delete marker
+        elif key_lower == "d":  # Delete marker
             return "delete"
 
-        elif key == "a":  # Run all
+        elif key_lower == "m":  # Rescue downloads
+            return "rescue_downloads"
+
+        elif key_lower == "a":  # Run all
             return "run_all"
 
-        elif key == "p":  # Toggle stepping
+        elif key_lower == "p":  # Toggle stepping
             return "toggle_stepping"
 
         elif key == " ":  # Resume from pause
             return "resume"
 
-        elif key == "s":  # Skip to next pending
+        elif key_lower == "s":  # Skip to next pending
             for idx in range(self.selected_step + 1, len(self.engine.steps)):
                 if not self.engine._should_skip(self.engine.steps[idx]):
                     self.selected_step = idx
                     break
 
-        elif key == "b":  # take snapshot
+        elif key_lower == "b":  # take snapshot
             return "snapshot"
 
-        elif key == "r":  # restore snapshot menu
+        elif key_lower == "r":  # restore snapshot menu
             return "restore"
 
         # Other
         elif key == "?":
             self.show_help = not self.show_help
 
-        elif key in ["q", "\x1b"]:  # q or ESC
+        elif key_lower in ["q", "\x1b"]:  # q or ESC
             self.running = False
 
         return None
@@ -714,6 +721,8 @@ class GingerTUI:
 
                         if action == "delete":
                             self.delete_marker(self.selected_step)
+                        elif action == "rescue_downloads":
+                            self.engine.rescue_downloads()
                         elif action == "run_all":
                             self.run_all_pending()
                         elif action == "run":

@@ -5,7 +5,11 @@ PKG_NAME="ncurses"
 check_built "$PKG_NAME" && exit 0
 extract "ncurses"
 
-# 1. Configure for Wide-Character support (Mandatory for LFS 12.4)
+# 1. Fix GCC 15 compatibility: Prevent ncurses from redefining 'bool' as 'unsigned char'
+# which causes conflicts with libstdc++ template specializations.
+sed -i 's/typedef unsigned char NCURSES_BOOL/typedef bool NCURSES_BOOL/' include/curses.h.in
+
+# 2. Configure for Wide-Character support (Mandatory for LFS 12.4)
 ./configure --prefix=/usr           \
             --mandir=/usr/share/man \
             --with-shared           \
@@ -13,6 +17,7 @@ extract "ncurses"
             --without-normal        \
             --with-cxx-shared       \
             --enable-pc-files       \
+            --without-cxx-binding   \
             --with-pkg-config-libdir=/usr/lib/pkgconfig
 
 # 2. Build & Install

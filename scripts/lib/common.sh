@@ -197,12 +197,12 @@ extract() {
     # 1. Try to find local archive with smart filtering
     # We prefer case-sensitive first, then case-insensitive
     local ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" \
-        ! -name "*-docs-*" ! -name "*-html-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
+        ! -name "*-docs-*" ! -name "*-html-*" ! -name "*-man-*" ! -name "*-manpages-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
     
     if [ -z "$ARCHIVE_NAME" ]; then
         # Fallback to case-insensitive search
         ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -iname "${PKG_PATTERN}*" \
-            ! -iname "*-docs-*" ! -iname "*-html-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
+            ! -iname "*-docs-*" ! -iname "*-html-*" ! -iname "*-man-*" ! -iname "*-manpages-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
     fi
     
     # If still not found or if the file is basically empty/incomplete
@@ -211,7 +211,7 @@ extract() {
         if fetch_missing_source "$PKG_PATTERN"; then
             log "INFO" "Recovery successful. Re-checking for archive..."
             ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -iname "${PKG_PATTERN}*" \
-                ! -iname "*-docs-*" ! -iname "*-html-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
+                ! -iname "*-docs-*" ! -iname "*-html-*" ! -iname "*-man-*" ! -iname "*-manpages-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
         fi
     fi
 
@@ -258,8 +258,16 @@ extract() {
         log "PROCESS" "Triggering self-healing recovery..."
         
         if fetch_missing_source "$PKG_PATTERN"; then
-            # Re-locate the archive (it might have a different name)
-            local NEW_SEARCH=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" | grep -E "\.(tar\..*|tgz)$" | head -n 1)
+            # Re-locate the archive, prioritizing non-doc/non-man archives
+            local NEW_SEARCH=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" | \
+                               grep -E "\.(tar\..*|tgz)$" | \
+                               grep -vE "-(man|docs|doc|manual|html|pdf|extra)" | head -n 1)
+            # If that failed, try any match as a fallback
+            if [ -z "$NEW_SEARCH" ]; then
+                NEW_SEARCH=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" | \
+                             grep -E "\.(tar\..*|tgz)$" | head -n 1)
+            fi
+            
             if [ -n "$NEW_SEARCH" ]; then
                 ARCHIVE_NAME=$(basename "$NEW_SEARCH")
                 SRC_PATH="${CLEAN_SOURCES%/}/$ARCHIVE_NAME"
@@ -276,14 +284,15 @@ extract() {
         fi
     fi
     
-    # Find the newly created directory (it might not exactly match DIR_NAME)
-    local NEW_DIR=$(ls -td */ | head -n 1 | cut -d'/' -f1)
+    # Determine the directory name from the tarball itself to be deterministic
+    local NEW_DIR=$(tar -tf "$SRC_PATH" | head -n 1 | cut -d/ -f1)
+    
     if [ -d "$NEW_DIR" ]; then
         cd "$NEW_DIR"
         # Export for cleanup later
         export GINGER_CURRENT_BUILD_DIR="$BUILD_BASE/$NEW_DIR"
     else
-        log "ERROR" "Failed to find extracted directory in $BUILD_BASE"
+        log "ERROR" "Failed to find extracted directory '$NEW_DIR' in $BUILD_BASE"
         exit 1
     fi
 }

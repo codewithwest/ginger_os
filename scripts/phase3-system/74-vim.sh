@@ -10,7 +10,8 @@ echo '#define SYS_VIMRC_FILE "/etc/vimrc"' >> src/feature.h
 ./configure --prefix=/usr
 
 make $MAKEFLAGS
-make install
+rm -fv /usr/bin/{ex,view,rview,rvim,vimdiff}
+make -j1 install
 
 ln -sfv vim /usr/bin/vi
 for L in  /usr/share/man/{,*/}man1/vim.1; do
@@ -18,8 +19,6 @@ for L in  /usr/share/man/{,*/}man1/vim.1; do
 done
 
 ln -sfv ../vim/vim91/doc /usr/share/doc/vim-9.1.1629
-
-
 
 cat > /etc/vimrc << "EOF"
 " Begin /etc/vimrc
