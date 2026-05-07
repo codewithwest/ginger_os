@@ -133,16 +133,33 @@ cat > "$MNT/etc/hosts" << 'HOSTS'
 ::1         localhost ip6-localhost ip6-loopback
 HOSTS
 
-# ── Network & Silence ──────────────────────────────────────────────────────
-log_and_show "[STEP 6/6] Configuring auto-networking and silencing kernel..."
-# Add to rcS or profile to ensure it runs
-cat >> "$MNT/etc/profile" << 'PROF'
-# Silence kernel messages on TTY
+# ── Network, Silence & Identity ────────────────────────────────────────────
+log_and_show "[STEP 6/6] Configuring boot scripts (Network, Identity, Silence)..."
+mkdir -p "$MNT/etc/init.d"
+cat > "$MNT/etc/init.d/rcS" << 'RCS'
+#!/bin/sh
+# GingerOS System Startup Script
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mount -o remount,rw /
+
+# Set Identity
+if [ -f /etc/hostname ]; then hostname -F /etc/hostname; fi
+
+# Silence noise
 dmesg -n 1
-# Try to bring up network
-if ip link | grep -q "eth0"; then ip link set eth0 up && udhcpc -i eth0 -n -t 2 &>/dev/null & fi
-if ip link | grep -q "enp0s3"; then ip link set enp0s3 up && udhcpc -i enp0s3 -n -t 2 &>/dev/null & fi
-PROF
+
+# Bring up Network (DHCP)
+echo "Starting network discovery..."
+for iface in eth0 enp0s3; do
+    if ip link show $iface >/dev/null 2>&1; then
+        ip link set $iface up
+        udhcpc -i $iface -n -t 3 &
+    fi
+done
+RCS
+chmod +x "$MNT/etc/init.d/rcS"
 
 # ── User & Password Setup ──────────────────────────────────────────────────
 log_and_show "[STEP 6/6] Creating user: $NEW_USER..."
