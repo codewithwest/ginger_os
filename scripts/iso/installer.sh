@@ -134,10 +134,79 @@ cat > "$MNT/etc/hosts" << 'HOSTS'
 HOSTS
 
 # ── Network, Silence & Identity ────────────────────────────────────────────
-log_and_show "[STEP 6/6] Configuring boot scripts (Network, Identity, Silence)..."
+log_and_show "[STEP 6/6] Configuring LFS Networking (Static QEMU Config)..."
+mkdir -p "$MNT/etc/sysconfig"
 mkdir -p "$MNT/etc/init.d"
+
+# Detect interface for config naming (fallback to eth0)
+MAIN_IFACE=$(ls /sys/class/net | grep -v lo | head -n1 || echo "eth0")
+
+# 1. Create LFS-style static config
+cat > "$MNT/etc/sysconfig/ifconfig.$MAIN_IFACE" << EOF
+ONBOOT=yes
+IFACE=$MAIN_IFACE
+SERVICE=ipv4-static
+IP=10.0.2.15
+GATEWAY=10.0.2.2
+PREFIX=24
+BROADCAST=10.0.2.255
+EOF
+
+# 2. Setup DNS
+cat > "$MNT/etc/resolv.conf" << 'EOF'
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+EOF
+
+# ── Library & System Health Fixups ─────────────────────────────────────────
+log_and_show "[STEP 6/6] Sanitizing library environment..."
+# 1. Force a clean LFS library configuration (no Ubuntu paths!)
+cat > "$MNT/etc/ld.so.conf" << 'LDCONF'
+/lib
+/usr/lib
+/usr/local/lib
+LDCONF
+
+# 2. Ensure /lib64 is correct and kill any host-style subdirs
+rm -rf "$MNT/lib/x86_64-linux-gnu"
+rm -rf "$MNT/usr/lib/x86_64-linux-gnu"
+if [ ! -L "$MNT/lib64" ]; then rm -rf "$MNT/lib64"; ln -sf lib "$MNT/lib64"; fi
+
+# 3. Create the missing 'rc' script that init is looking for
+cat > "$MNT/etc/init.d/rc" << 'RC'
+#!/bin/sh
+# Minimal runlevel handler
+echo "Entering runlevel $1..."
+RC
+chmod +x "$MNT/etc/init.d/rc"
+
+# ── Raw Network Test Tool ──────────────────────────────────────────────────
+cat > "$MNT/usr/bin/net-test" << 'TEST'
+#!/bin/bash
+echo "--- GingerOS Network Health Check ---"
+echo "1. Checking Loopback..."
+ip addr show lo | grep -q "UP" && echo "[OK] Loopback is UP" || echo "[FAIL] Loopback is DOWN"
+
+echo "2. Checking Gateway..."
+ip route | grep -q "default" && echo "[OK] Default route exists" || echo "[FAIL] No default route"
+
+echo "3. Testing Raw DNS Connection (UDP 53)..."
+# Try to open a raw socket to Google DNS
+(echo > /dev/udp/8.8.8.8/53) >/dev/null 2>&1 && echo "[OK] Can reach Google DNS" || echo "[FAIL] Internet unreachable"
+
+echo "4. Testing HTTP Handshake (TCP 80)..."
+(echo > /dev/tcp/google.com/80) >/dev/null 2>&1 && echo "[OK] Web handshake successful" || echo "[FAIL] Web unreachable"
+TEST
+chmod +x "$MNT/usr/bin/net-test"
+
+# ── Network Bring-up (In rcS) ──────────────────────────────────────────────
 cat > "$MNT/etc/init.d/rcS" << 'RCS'
 #!/bin/sh
+# Clean path for LFS
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin
+# Refresh library cache using LFS config only
+ldconfig -X
+
 # GingerOS System Startup Script
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
@@ -146,18 +215,22 @@ mount -o remount,rw /
 
 # Set Identity
 if [ -f /etc/hostname ]; then hostname -F /etc/hostname; fi
-
 # Silence noise
 dmesg -n 1
 
-# Bring up Network (DHCP)
-echo "Starting network discovery..."
-for iface in eth0 enp0s3; do
-    if ip link show $iface >/dev/null 2>&1; then
-        ip link set $iface up
-        udhcpc -i $iface -n -t 3 &
-    fi
-done
+# Network Initialization
+ip link set lo up
+IFACE=$(ls /sys/class/net | grep -v lo | head -n1)
+if [ -n "$IFACE" ]; then
+    ip link set "$IFACE" up
+    ip addr add 10.0.2.15/24 dev "$IFACE" 2>/dev/null
+    ip route add default via 10.0.2.2 dev "$IFACE" 2>/dev/null
+    ip addr show "$IFACE" | grep "inet "
+    echo "Default Route:"
+    ip route show | grep default
+else
+    echo "[WARN] No network interface found!"
+fi
 RCS
 chmod +x "$MNT/etc/init.d/rcS"
 
@@ -189,7 +262,7 @@ cat > "$MNT/etc/issue" << 'ISSUE'
                  |___/                        
 
  GingerOS LFS Edition - \l
- Kernel \r on an \m
+Kernel \r on an \m
 
 ISSUE
 

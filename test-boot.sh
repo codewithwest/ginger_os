@@ -10,6 +10,9 @@ if [ ! -f "$DISK_PATH" ]; then
     exit 1
 fi
 
+# Clear any existing locks
+pkill qemu-system-x86 2>/dev/null || true
+
 echo "--- Booting GingerOS from Hard Disk ---"
 echo "TIP: Select 'Standard Boot (sda1)' from the GRUB menu."
 qemu-system-x86_64 \
@@ -18,6 +21,6 @@ qemu-system-x86_64 \
     -smp 4 \
     -hda "$DISK_PATH" \
     -boot c \
-    -vga std \
-    -display gtk,zoom-to-fit=on \
-    -net nic -net user,hostfwd=tcp::2222-:22
+    -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+    -device e1000,netdev=net0 \
+    -nographic

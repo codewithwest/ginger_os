@@ -17,6 +17,9 @@ if [ ! -f "$DISK_PATH" ]; then
     qemu-img create -f qcow2 "$DISK_PATH" 20G
 fi
 
+# Clear any existing locks
+pkill qemu-system-x86 2>/dev/null || true
+
 echo "--- Launching GingerOS Installer ---"
 qemu-system-x86_64 \
     -enable-kvm \
@@ -27,4 +30,5 @@ qemu-system-x86_64 \
     -boot d \
     -vga std \
     -display gtk,zoom-to-fit=on \
-    -net nic -net user,hostfwd=tcp::2222-:22
+    -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+    -device e1000,netdev=net0

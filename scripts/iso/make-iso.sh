@@ -283,18 +283,11 @@ chmod +x "$INITRD_WORK/init"
 (cd "$INITRD_WORK" && find . | cpio -o -H newc | gzip -c > "$ISO_DIR/boot/initrd.img")
 
 cat << EOF > "$ISO_DIR/boot/grub/grub.cfg"
-set default=1
-set timeout=10
-terminal_input console
-terminal_output console
+set default=0
+set timeout=5
 
 menuentry "Install GingerOS" {
     linux /boot/vmlinuz root=/dev/ram0 rw console=tty0 loglevel=3 quiet
-    initrd /boot/initrd.img
-}
-
-menuentry "Install GingerOS (Terminal Debug)" {
-    linux /boot/vmlinuz root=/dev/ram0 rw console=tty0 console=ttyS0,115200 loglevel=7 debug earlyprintk=serial
     initrd /boot/initrd.img
 }
 EOF
