@@ -23,4 +23,3 @@ qemu-system-x86_64 \
     -boot c \
     -netdev user,id=net0,hostfwd=tcp::2222-:22 \
     -device e1000,netdev=net0 \
-    -nographic
