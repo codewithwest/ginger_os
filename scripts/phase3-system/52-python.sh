@@ -7,7 +7,7 @@ extract "Python"
 
 ./configure --prefix=/usr          \
             --enable-shared        \
-            # --with-system-expat    \
+            --with-system-expat    \
             --enable-optimizations \
             --without-static-libpython
 

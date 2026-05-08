@@ -21,6 +21,6 @@ make DESTDIR=$LFS install
 ln -sfv bash $LFS/bin/sh
 
 cd ..
-rm -rf "bash-"*
+cleanup
 
 mark_built "$PKG_NAME"

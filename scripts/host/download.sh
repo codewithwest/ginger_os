@@ -87,6 +87,14 @@ fi
 # Extra Tools Verification
 # ---------------------------------------------------------------------
 echo "__GINGER_PKG_MARKER__: BLFS Tools"
+
+# Additional packages needed for ISO creation and other tools
+extra_urls=(
+    "https://files.libburnia-project.org/releases/libburn-1.5.6.tar.gz"
+    "https://files.libburnia-project.org/releases/libisofs-1.5.6.tar.gz"
+    "https://files.libburnia-project.org/releases/libisoburn-1.5.6.tar.gz"
+)
+
 for url in "${extra_urls[@]}"; do
     pkg=$(basename "$url")
     if [ ! -f "$pkg" ] || [ ! -s "$pkg" ]; then

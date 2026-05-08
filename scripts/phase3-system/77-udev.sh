@@ -85,5 +85,5 @@ unset udev_helpers
 
 udev-hwdb update
 
-cd ../.. && rm -rf "systemd-"*
+cd ../.. && cleanup
 mark_built "$PKG_NAME"

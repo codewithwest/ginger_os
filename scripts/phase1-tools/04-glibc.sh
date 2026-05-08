@@ -56,6 +56,6 @@ grep found dummy.log
 rm -v a.out dummy.log
 
 cd ../..
-rm -rf "glibc-"*
+cleanup
 
 mark_built "$PKG_NAME"

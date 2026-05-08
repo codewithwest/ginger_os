@@ -27,6 +27,6 @@ make $MAKEFLAGS
 make install
 
 cd ../..
-rm -rf "binutils-"*
+cleanup
 
 mark_built "$PKG_NAME"

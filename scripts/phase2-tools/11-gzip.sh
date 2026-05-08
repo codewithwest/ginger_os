@@ -12,6 +12,6 @@ make $MAKEFLAGS
 make DESTDIR=$LFS install
 
 cd ..
-rm -rf "gzip-"*
+cleanup
 
 mark_built "$PKG_NAME"

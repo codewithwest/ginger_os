@@ -64,5 +64,6 @@ else
 fi
 
 rm -v ginger_os.img
+rm -rf .build_state
 
 ok "Full teardown complete."

@@ -195,17 +195,18 @@ class GingerEngine:
             script_path = os.path.join(scripts_dir, script)
             pkg_name = self._get_script_pkg_name(script_path)
             file_name = script.replace(".sh", "")
+            marker_names = [file_name]
 
             # For Phase 3/4, file names often have prefixes like 01-
-            if script_subdir in ["phase3-system", "phase4-boot"]:
-                file_name = (
-                    "-".join(file_name.split("-")[1:])
-                    if "-" in file_name
-                    else file_name
-                )
+            if script_subdir in ["phase3-system", "phase4-boot"] and "-" in file_name:
+                stripped_name = "-".join(file_name.split("-")[1:])
+                if stripped_name != file_name:
+                    marker_names.append(stripped_name)
 
             # Prioritize the central host marker as the single source of truth
-            possible_marker_names = [f"{file_name}.built", f"{file_name}-temp.built"]
+            possible_marker_names = []
+            for name in marker_names:
+                possible_marker_names.extend([f"{name}.built", f"{name}-temp.built"])
             if pkg_name:
                 possible_marker_names.extend(
                     [f"{pkg_name}.built", f"{pkg_name}-temp.built"]

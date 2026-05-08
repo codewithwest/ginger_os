@@ -36,6 +36,6 @@ else
 fi
 
 cd ..
-rm -rf "linux-"* 
+cleanup
 
 mark_built "$PKG_NAME"

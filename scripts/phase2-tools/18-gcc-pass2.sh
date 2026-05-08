@@ -53,6 +53,6 @@ make DESTDIR=$LFS install
 ln -sfv gcc $LFS/usr/bin/cc
 
 cd ../..
-rm -rf "gcc-"*
+cleanup
 
 mark_built "$PKG_NAME"

@@ -66,5 +66,5 @@ include /etc/ld.so.conf.d/*.conf
 EOF
 
 
-cd ../.. && rm -rf "glibc-"*
+cd ../.. && cleanup
 mark_built "$PKG_NAME"

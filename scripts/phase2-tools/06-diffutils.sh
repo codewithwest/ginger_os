@@ -19,6 +19,6 @@ make $MAKEFLAGS
 make DESTDIR=$LFS install
 
 cd ..
-rm -rf "diffutils-"*
+cleanup
 
 mark_built "$PKG_NAME"

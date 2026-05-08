@@ -76,6 +76,6 @@ fi
 log "INFO" "GCC Pass 1 finalized. Header located at: $GCC_INCLUDE_DIR/limits.h"
 
 cd ..
-rm -rf "gcc-"*
+cleanup
 
 mark_built "$PKG_NAME"

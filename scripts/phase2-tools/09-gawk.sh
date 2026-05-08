@@ -17,6 +17,6 @@ make $MAKEFLAGS
 make DESTDIR=$LFS install
 
 cd ..
-rm -rf "gawk-"*
+cleanup
 
 mark_built "$PKG_NAME"

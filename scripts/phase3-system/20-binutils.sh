@@ -26,5 +26,5 @@ make tooldir=/usr install
 rm -rfv /usr/lib/lib{bfd,ctf,ctf-nobfd,gprofng,opcodes,sframe}.a \
         /usr/share/doc/gprofng/
 
-cd ../.. && rm -rf "binutils-"*
+cd ../.. && cleanup
 mark_built "$PKG_NAME"

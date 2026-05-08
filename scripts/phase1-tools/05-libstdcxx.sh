@@ -27,6 +27,6 @@ make DESTDIR=$LFS install
 rm -v $LFS/usr/lib/lib{stdc++{,exp,fs},supc++}.la
 
 cd ../..
-rm -rf "gcc-"*
+cleanup
 
 mark_built "$PKG_NAME"

@@ -41,6 +41,9 @@ if ! id lfs &>/dev/null; then
     log "INFO" "lfs user created."
 fi
 
+# Allow lfs to run ln with sudo without password
+echo 'lfs ALL=(ALL) NOPASSWD: /bin/ln' >> /etc/sudoers
+
 # ---------------------------------------------------------------------
 # Prepare base LFS directory
 # ---------------------------------------------------------------------
@@ -78,6 +81,9 @@ for dir in bin lib sbin; do
         ln -snv "usr/$dir" "$LFS/$dir"
     fi
 done
+
+# Change ownership of key directories to lfs so temp tools can install there
+chown -R lfs "$LFS"/{usr,etc,var,lib,lib64}
 
 # Architecture-specific dynamic linker setup
 case "$(uname -m)" in

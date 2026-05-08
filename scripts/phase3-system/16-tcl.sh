@@ -51,5 +51,5 @@ cd ..
 # cp -v -r  ./html/* /usr/share/doc/tcl-8.6.16
 
 
-cd ../.. && rm -rf "tcl"*
+cd ../.. && cleanup
 mark_built "$PKG_NAME"

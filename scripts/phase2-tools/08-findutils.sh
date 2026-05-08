@@ -16,6 +16,6 @@ make $MAKEFLAGS
 make DESTDIR=$LFS install
 
 cd ..
-rm -rf "findutils-"*
+cleanup
 
 mark_built "$PKG_NAME"

@@ -42,6 +42,6 @@ sed -e 's/^#if.*XOPEN.*$/#if 1/' \
     -i $LFS/usr/include/curses.h
 
 cd ..
-rm -rf "ncurses"*
+cleanup
 
 mark_built "$PKG_NAME"

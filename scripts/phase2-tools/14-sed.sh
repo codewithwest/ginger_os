@@ -15,6 +15,6 @@ make $MAKEFLAGS
 make DESTDIR=$LFS install
 
 cd ..
-rm -rf "sed-"*
+cleanup
 
 mark_built "$PKG_NAME"

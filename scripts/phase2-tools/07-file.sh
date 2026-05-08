@@ -26,6 +26,6 @@ make DESTDIR=$LFS install
 rm -v $LFS/usr/lib/libmagic.la
 
 cd ..
-rm -rf "file-"*
+cleanup
 
 mark_built "$PKG_NAME"
