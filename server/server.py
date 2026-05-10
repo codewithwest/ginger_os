@@ -3,10 +3,11 @@ import json
 import asyncio
 import queue
 import threading
+import logging
+from typing import List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from typing import List
-import logging
+from fastapi.staticfiles import StaticFiles
 from llm.chatbot import chatbot
 
 logging.getLogger("uvicorn.error").setLevel(logging.ERROR)
@@ -50,14 +51,14 @@ manager = ConnectionManager()
 # Background task that drains the queue and broadcasts to all WS clients
 async def _broadcast_worker():
     """Continuously drain the log queue and broadcast to connected WebSocket clients."""
+    loop = asyncio.get_running_loop()
     while True:
         try:
-            msg = _log_queue.get_nowait()
+            # Use run_in_executor to avoid blocking the event loop on the thread-safe queue
+            msg = await loop.run_in_executor(None, _log_queue.get)
             await manager.broadcast(msg)
-        except queue.Empty:
-            await asyncio.sleep(0.02)
-        except Exception:
-            await asyncio.sleep(0.05)
+        except Exception as e:
+            await asyncio.sleep(0.1)
 
 
 @app.on_event("startup")
@@ -70,27 +71,33 @@ async def startup_event():
 async def get_status():
     if not engine:
         return {"status": "error", "message": "Engine not initialized"}
-    return {
-        "running": engine.is_running,
-        "aborted": engine.aborted,
-        "current_pkg": engine.current_pkg or "",
-        "executing_step": tui.executing_step if tui else None,
-        "auto_all": tui.auto_all if tui else False,
-        "steps": [
-            {
-                "id": s.id,
-                "name": s.name,
-                "phase": s.phase,
-                "status": s.status
-                if not engine._should_skip(s) or s.status == "running"
-                else "completed",
-                "progress": s.progress,
-                "duration": round(s.duration(), 1),
-            }
-            for s in engine.steps
-        ],
-        "storage": engine.storage_stats,
-    }
+    try:
+        return {
+            "status": "ok",
+            "running": engine.is_running,
+            "aborted": engine.aborted,
+            "current_pkg": engine.current_pkg or "",
+            "executing_step": tui.state.executing_step if tui else None,
+            "auto_all": tui.state.auto_all if tui else False,
+            "steps": [
+                {
+                    "id": s.id,
+                    "name": s.name,
+                    "phase": s.phase,
+                    "status": s.status
+                    if not engine._should_skip(s) or s.status == "running"
+                    else "completed",
+                    "progress": s.progress,
+                    "duration": round(s.duration(), 1),
+                }
+                for s in engine.steps
+            ],
+            "storage": engine.storage_stats,
+        }
+    except Exception as e:
+        import traceback
+        logging.error(f"STATUS_ERROR: {str(e)}\n{traceback.format_exc()}")
+        return {"status": "error", "message": str(e)}
 
 
 @app.post("/api/step/{step_idx}/run")
@@ -100,7 +107,7 @@ async def run_step(step_idx: int):
     if step_idx < 0 or step_idx >= len(engine.steps):
         return {"status": "error", "message": "Invalid step index"}
     tui.selected_step = step_idx
-    tui.run_step(step_idx, force=False)
+    tui.run_selected_step(force=False)
     return {"status": "ok", "step": engine.steps[step_idx].name}
 
 
@@ -110,7 +117,8 @@ async def force_step(step_idx: int):
         return {"status": "error", "message": "TUI not initialized"}
     if step_idx < 0 or step_idx >= len(engine.steps):
         return {"status": "error", "message": "Invalid step index"}
-    tui.run_step(step_idx, force=True)
+    tui.selected_step = step_idx
+    tui.run_selected_step(force=True)
     return {"status": "ok", "step": engine.steps[step_idx].name}
 
 
@@ -187,7 +195,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             await asyncio.sleep(5)
             await websocket.send_text(json.dumps({"ping": True}))
-    except WebSocketDisconnect, Exception:
+    except (WebSocketDisconnect, Exception):
         manager.disconnect(websocket)
 
 
@@ -231,7 +239,7 @@ async def chat_websocket_endpoint(websocket: WebSocket):
                     }
                 )
             )
-    except WebSocketDisconnect, Exception:
+    except (WebSocketDisconnect, Exception):
         pass
 
 
@@ -256,18 +264,10 @@ async def restore_snapshot(snap_name: str):
     return {"status": "ok", "message": f"Restore from '{snap_name}' started"}
 
 
-# Get the directory where this server.py file is located
-_UI_DIR = os.path.dirname(os.path.abspath(__file__))
-_INDEX_PATH = os.path.join(_UI_DIR, "index.html")
-
-
-@app.get("/", response_class=HTMLResponse)
-async def get_index():
-    if os.path.exists(_INDEX_PATH):
-        with open(_INDEX_PATH, "r") as f:
-            return f.read()
-    return "<h1>UI not found</h1>"
-
+# Server-side setup will be initialized in start_server()
+_SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
+_GINGER_ROOT = os.path.dirname(_SERVER_DIR)
+_UI_DIST = os.path.join(_GINGER_ROOT, "ui", "web", "dist")
 
 loop = None
 
@@ -283,6 +283,14 @@ def start_server(engine_instance, tui_instance, host="127.0.0.1", port=8000):
         engine = engine_instance
         tui = tui_instance
         engine.on_log_callbacks.append(broadcast_log)
+
+        # Mount static files AFTER all API routes are defined
+        if os.path.exists(_UI_DIST):
+            app.mount("/", StaticFiles(directory=_UI_DIST, html=True), name="static")
+        else:
+            @app.get("/", response_class=HTMLResponse)
+            async def get_index():
+                return "<h1>UI dist not found. Please run 'npm run build' in ui/web.</h1>"
 
         import uvicorn
         import socket
@@ -310,6 +318,14 @@ def start_server(engine_instance, tui_instance, host="127.0.0.1", port=8000):
             engine.log(
                 f"NEURAL_LINK: Dashboard active at http://{host}:{port}", "bold green"
             )
+            
+            # Periodically check if engine was aborted to stop the server
+            async def check_abort():
+                while not engine.aborted:
+                    await asyncio.sleep(1)
+                server.should_exit = True
+
+            loop.create_task(check_abort())
             loop.run_until_complete(server.serve())
         except Exception as e:
             engine.log(

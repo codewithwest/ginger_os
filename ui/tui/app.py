@@ -6,10 +6,12 @@ from textual.widgets import Header, Footer, Static, RichLog, ListView, ListItem
 from textual.reactive import reactive
 
 from server.engine import GingerEngine
+from server.server import start_server
 from ui.tui.state import TUIState
 from ui.tui.widgets import Branding, NeuralCore, SystemMX, StepItem
 from ui.tui.screens import HelpScreen
 import time
+import threading
 
 
 class GingerTUI(App):
@@ -406,8 +408,19 @@ class GingerTUI(App):
 
         log_view.write(message)
 
+    def on_unmount(self) -> None:
+        """Ensure all background processes are stopped when the TUI exits."""
+        self.engine.abort()
+
     def on_mount(self) -> None:
         self.populate_steps_list()
+
+        # Start the Web Dashboard server in a background thread
+        threading.Thread(
+            target=start_server,
+            args=(self.engine, self),
+            daemon=True
+        ).start()
 
         self.log_message(
             "[bold #00f0ff]NEURAL_SYSTEM_INTERFACE :: ONLINE[/]"

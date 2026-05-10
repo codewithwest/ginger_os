@@ -7,6 +7,8 @@ import time
 import threading
 import subprocess
 import re
+import signal
+import json
 
 from config.constants import (
     GINGER_ROOT,
@@ -363,13 +365,16 @@ class GingerEngine:
         self.paused_for_package = False
 
     def abort(self):
-        """Abort the current build process."""
+        """Abort the current build process and stop background tasks."""
+        self.log("SYSTEM_SHUTDOWN :: Terminating all active processes...", "bold red")
         self.aborted = True
         self.paused_for_package = False
         if self.current_process:
             try:
-                self.current_process.terminate()
-                self.current_process.wait(timeout=5)
+                # Kill the entire process group to catch sub-processes (tail, etc.)
+                pgid = os.getpgid(self.current_process.pid)
+                os.killpg(pgid, signal.SIGTERM)
+                self.current_process.wait(timeout=2)
             except:
                 try:
                     self.current_process.kill()
