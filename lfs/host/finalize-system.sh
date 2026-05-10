@@ -75,3 +75,5 @@ sudo tar --xattrs --acls --one-file-system \
 
 log "SUCCESS" "Host-side finalization complete."
 log "INFO" "RootFS Tarball: $OUTPUT_TAR"
+
+mark_built "12_finalize"

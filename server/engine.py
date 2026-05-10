@@ -159,10 +159,17 @@ class GingerEngine:
 
         # 2. Direct marker check in the central state dir
         central_marker = os.path.join(STATE_DIR, f"{step.id}.built")
-        lfs_marker = os.path.join(
-            LFS_MOUNT, "var/lib/ginger", f"{step.id}.built")
-        if os.path.exists(central_marker) or os.path.exists(lfs_marker):
+        if os.path.exists(central_marker):
             return True
+
+        # 2.5. Check LFS state dir ONLY if it is actually mounted (prevents FPs)
+        try:
+            if subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True).returncode == 0:
+                lfs_marker = os.path.join(LFS_MOUNT, "var/lib/ginger", f"{step.id}.built")
+                if os.path.exists(lfs_marker):
+                    return True
+        except:
+            pass
 
         # 3. Smart checks for major phases (checks all constituent packages)
         if step.id == "07_phase1_tools":
@@ -194,8 +201,8 @@ class GingerEngine:
             file_name = script.replace(".sh", "")
             marker_names = [file_name]
 
-            # For Phase 3/4, file names often have prefixes like 01-
-            if script_subdir in ["phase3-system", "phase4-boot"] and "-" in file_name:
+            # For all phases, file names often have prefixes like 01-
+            if "-" in file_name:
                 stripped_name = "-".join(file_name.split("-")[1:])
                 if stripped_name != file_name:
                     marker_names.append(stripped_name)
@@ -217,14 +224,18 @@ class GingerEngine:
                     found = True
                     break
 
-            # Check LFS state dir if not found on host
+            # Check LFS state dir if not found on host, but only if mounted
             if not found:
-                lfs_state_dir = os.path.join(LFS_MOUNT, "var/lib/ginger")
-                if os.path.exists(lfs_state_dir):
-                    for m in possible_marker_names:
-                        if os.path.exists(os.path.join(lfs_state_dir, m)):
-                            found = True
-                            break
+                try:
+                    if subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True).returncode == 0:
+                        lfs_state_dir = os.path.join(LFS_MOUNT, "var/lib/ginger")
+                        if os.path.exists(lfs_state_dir):
+                            for m in possible_marker_names:
+                                if os.path.exists(os.path.join(lfs_state_dir, m)):
+                                    found = True
+                                    break
+                except:
+                    pass
 
             if not found:
                 return False

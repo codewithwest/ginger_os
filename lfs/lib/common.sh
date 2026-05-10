@@ -62,13 +62,18 @@ mark_built() {
     local PKG_NAME=$1
     
     # Use the host's state directory as the single source of truth.
-    # We MUST ensure this doesn't crash the script if running as a restricted 'lfs' user,
-    # though eventually we should ensure 'lfs' has write access to this specific dir.
     if [ -n "${GINGER_STATE_DIR:-}" ]; then
         if [ ! -d "$GINGER_STATE_DIR" ]; then
-            mkdir -p "$GINGER_STATE_DIR" 2>/dev/null || true
+            mkdir -p "$GINGER_STATE_DIR" 2>/dev/null || sudo mkdir -p "$GINGER_STATE_DIR" 2>/dev/null || true
         fi
-        touch "$GINGER_STATE_DIR/$PKG_NAME.built" 2>/dev/null || true
+        
+        # Try touching normally first
+        if ! touch "$GINGER_STATE_DIR/$PKG_NAME.built" 2>/dev/null; then
+            # Fallback to sudo if permission denied
+            sudo touch "$GINGER_STATE_DIR/$PKG_NAME.built" 2>/dev/null || true
+            # Try to give ownership back to the current user so the TUI can manage it
+            sudo chown $(id -u):$(id -g) "$GINGER_STATE_DIR/$PKG_NAME.built" 2>/dev/null || true
+        fi
     fi
     
     log "INFO" "Finished building $PKG_NAME"

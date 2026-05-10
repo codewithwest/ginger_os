@@ -29,3 +29,5 @@ mountpoint -q $LFS/dev     && umount -v $LFS/dev
 mountpoint -q $LFS/ginger_os && umount -v $LFS/ginger_os
 
 log "Teardown complete."
+
+mark_built "13_teardown"

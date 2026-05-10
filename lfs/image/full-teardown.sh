@@ -55,7 +55,7 @@ if [ -z "$LOOP_DEV" ]; then
 fi
 
 umount -v "$LFS" && ok "Unmounted $LFS"
-r
+
 # Detach the loop device (only the one that was used for ${LFS})
 if [ -n "$LOOP_DEV" ]; then
     log "Detaching loop device: $LOOP_DEV"

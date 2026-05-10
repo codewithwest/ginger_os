@@ -60,11 +60,11 @@ else
     log "INFO" "Mirror: $UBUNTU_MIRROR"
     log "INFO" "This may take several minutes depending on network speed..."
 
-    debootstrap \
-        --arch=amd64 \
-        --include=apt,wget,curl,sudo,bash,coreutils,util-linux,procps,net-tools \
-        "${UBUNTU_RELEASE}" \
-        "${LFS}" \
+        debootstrap \
+            --arch=amd64 \
+            --include=apt,wget,curl,sudo,bash,coreutils,util-linux,procps,net-tools \
+            "${UBUNTU_RELEASE}" \
+            "${LFS}" \
         "${UBUNTU_MIRROR}" \
         > "${GINGER_LOGS}/debootstrap.log" 2>&1 &
     DEBOOTSTRAP_PID=$!
