@@ -17,6 +17,7 @@ interface Status {
   steps: Step[];
   cores: number;
   max_cores: number;
+  cpu_usage: number;
   timers: {
     package: number;
     phase: number;
@@ -115,8 +116,8 @@ function App() {
     return classes;
   };
 
-  const completedSteps = status?.steps.filter(s => s.status === 'completed').length || 0;
-  const totalProgress = status ? Math.round((completedSteps / status.steps.length) * 100) : 0;
+  const completedSteps = status?.steps?.filter(s => s.status === 'completed').length || 0;
+  const totalProgress = status?.steps ? Math.round((completedSteps / status.steps.length) * 100) : 0;
 
   const updateCoreCount = (count: number) => {
     fetch(`/api/control/cores/${count}`, { method: 'POST' });
@@ -148,10 +149,35 @@ function App() {
         </div>
         
         <div className="flex items-center gap-4">
+          <div className="flex gap-4 mr-6">
+            <div className="flex flex-col items-center">
+              <div className="text-[9px] text-text-dim uppercase font-bold">CPU Load</div>
+              <div className="text-xs font-mono text-accent-cyan">
+                {Math.round(status?.cpu_usage || 0)}% <span className="opacity-40 text-[9px]">({status?.max_cores} Cores)</span>
+              </div>
+            </div>
+            <div className="h-6 w-[1px] bg-white/10 self-center" />
+            <div className="flex flex-col items-center">
+              <div className="text-[9px] text-text-dim uppercase font-bold">Package</div>
+              <div className="text-xs font-mono text-accent-cyan">{formatTime(status?.timers.package || 0)}</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-[9px] text-text-dim uppercase font-bold">Phase</div>
+              <div className="text-xs font-mono text-accent-cyan">{formatTime(status?.timers.phase || 0)}</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-[9px] text-text-dim uppercase font-bold">Total</div>
+              <div className="text-xs font-mono text-accent-green">{formatTime(status?.timers.overall || 0)}</div>
+            </div>
+          </div>
+
           <div className="flex flex-col items-end mr-4">
             <div className="text-[10px] text-text-dim uppercase font-bold">Uptime</div>
             <div className="text-xs font-mono">02:14:55:09</div>
           </div>
+          <button onClick={() => controlAction('rebuild_ui')} className="px-5 py-2 glass glass-hover text-[10px] font-bold uppercase tracking-widest text-accent-green hover:text-white transition-all">
+            Rebuild UI
+          </button>
           <button onClick={() => controlAction('auto')} className="px-5 py-2 glass glass-hover text-[10px] font-bold uppercase tracking-widest text-accent-cyan hover:text-white transition-all">
             Auto Protocol
           </button>
@@ -225,22 +251,6 @@ function App() {
         <section className="w-80 flex flex-col gap-4">
           {/* TELEMETRY */}
           <div className="glass p-5 rounded-xl space-y-6">
-            <h2 className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mb-4">Temporal Diagnostics</h2>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-white/5 p-2 rounded border border-white/5 text-center">
-                <div className="text-[8px] text-text-dim uppercase font-bold mb-1">Package</div>
-                <div className="text-xs font-mono text-accent-cyan">{formatTime(status?.timers.package || 0)}</div>
-              </div>
-              <div className="bg-white/5 p-2 rounded border border-white/5 text-center">
-                <div className="text-[8px] text-text-dim uppercase font-bold mb-1">Phase</div>
-                <div className="text-xs font-mono text-accent-cyan">{formatTime(status?.timers.phase || 0)}</div>
-              </div>
-              <div className="bg-white/5 p-2 rounded border border-white/5 text-center">
-                <div className="text-[8px] text-text-dim uppercase font-bold mb-1">Total</div>
-                <div className="text-xs font-mono text-accent-green">{formatTime(status?.timers.overall || 0)}</div>
-              </div>
-            </div>
-
             <h2 className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mb-4">Core Telemetry</h2>
             
             <div className="space-y-2">

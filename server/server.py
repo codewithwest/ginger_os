@@ -4,6 +4,7 @@ import asyncio
 import queue
 import threading
 import logging
+import psutil
 from typing import List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
@@ -95,6 +96,7 @@ async def get_status():
             "storage": engine.storage_stats,
             "cores": getattr(engine, "cores", 1),
             "max_cores": os.cpu_count() or 1,
+            "cpu_usage": psutil.cpu_percent(interval=None),
             "timers": {
                 "package": round(time.time() - engine.pkg_start_time, 1) if engine.pkg_start_time else 0,
                 "phase": round(time.time() - engine.phase_start_time, 1) if engine.phase_start_time else 0,

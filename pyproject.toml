@@ -22,4 +22,5 @@ dependencies = [
     "chromadb>=0.8.1",
     "langchain-chroma>=1.1.0",
     "textual>=8.2.5",
+    "psutil>=7.2.2",
 ]
