@@ -1,93 +1,120 @@
-# GingerOS - Command-First Build System
+# GingerOS - System Analysis Report
 
-## Launch
-```bash
-python3 ginger_os.py
+## 🏗️ Software Architecture (Architect Perspective)
+
+GingerOS is a **Command-First Build System** designed to automate the creation of a Linux distribution based on Linux From Scratch (LFS 12.4). It employs a "Zero-Host-Pollution" architecture, ensuring the host machine remains clean by isolating the entire build process.
+
+### System Design
+
+The system follows an **Orchestrator-Worker** pattern where a Python-based engine manages the execution of a series of predefined build steps.
+
+#### Key Architectural Components:
+
+- **Orchestrator (GingerEngine)**: The central brain that manages the build pipeline, tracks state, and handles process execution.
+- **Isolation Layer (QEMU + chroot)**:
+  - Uses a raw QEMU image (`.img`) as the target filesystem.
+  - Employs `debootstrap` to create a minimal Ubuntu base.
+  - Uses `chroot` and bind-mounts to execute build scripts inside the isolated environment, mimicking a "Docker-Exec" style workflow.
+- **State Management**: Uses marker files in `.build_state/` and `/var/lib/ginger/` to track completed packages and steps, allowing for seamless resumes after failures.
+- **Interface Layer**: Provides both a TUI (Terminal User Interface) and a Web UI (via FastAPI and WebSockets) for real-time monitoring and control.
+
+### System Architecture Diagram
+
+```mermaid
+graph TD
+    subgraph Host_Machine [Host Machine]
+        Orchestrator[GingerEngine Python]
+        TUI[TUI Interface]
+        WebUI[FastAPI Server / Web UI]
+        Config[ginger.conf]
+    end
+
+    subgraph Isolation_Layer [Isolation Layer]
+        QEMU_Img[QEMU Virtual Disk .img]
+        Ubuntu_Base[Ubuntu 24.04 Base]
+        Chroot_Env[chroot / LFS Environment]
+    end
+
+    Orchestrator -->|Manages| TUI
+    Orchestrator -->|Exposes API| WebUI
+    Orchestrator -->|Executes Scripts| Chroot_Env
+    Chroot_Env -->|Writes to| QEMU_Img
+    Orchestrator -->|Mounts/Unmounts| QEMU_Img
+    Config -->|Configures| Orchestrator
 ```
 
-## Interface
+---
 
-The TUI shows:
-- **Header**: Stats (total/complete/pending)
-- **Left Panel**: List of all build steps with status
-- **Right Panel**: Details of selected step + live output
-- **Footer**: Keyboard shortcuts
+## 💻 Software Implementation (Developer Perspective)
 
-## How It Works
+### Code Structure
 
-**YOU** control everything with keyboard commands. Nothing runs automatically.
+The project is organized into functional modules:
 
-### Containerized Architecture (Docker-Exec Style)
-GingerOS builds itself completely isolated from your host system using a "Zero-Host-Pollution" workflow:
-1. **Virtual Disk**: It creates a raw QEMU `.img` file and mounts it natively.
-2. **Ubuntu Base**: It uses `debootstrap` to install a minimal Ubuntu 24.04 base directly into the image.
-3. **Bind Execution**: The orchestrator bind-mounts the `ginger_os` repository into the image and runs all compilation scripts using `chroot` (acting exactly like `docker exec`).
+- `server/`: Contains the core logic.
+  - `engine.py`: The main execution loop and state manager.
+  - `build_steps.py`: Definition of the 15-step build pipeline.
+  - `process_monitor.py`: Handles subprocess execution and real-time log streaming.
+  - `mount_manager.py`: Manages the complex mounting/unmounting of the virtual disk and bind-mounts.
+  - `models.py`: Data structures for build steps.
+- `lfs/`: Contains the actual shell scripts that perform the LFS build.
+  - `host/`, `image/`, `phase2-tools/`, `phase3-system/`: Organized by build phase.
+- `config/`: Centralized constants and configuration loading.
+- `ui/`: User interface implementations (TUI and Web).
 
-This means your host machine stays completely clean, and the final output is a portable QEMU disk image.
+### Implementation Details
 
-## Keyboard Commands
+- **Language**: Python 3 (Backend), Bash (Build Scripts), TypeScript/React (Web UI).
+- **Key Libraries**:
+  - `FastAPI` & `WebSockets`: For the web-based monitoring server.
+  - `subprocess`: For executing shell commands.
+  - `re`: For parsing logs and identifying package progress.
+- **Coding Style**: Object-oriented approach in Python, with a strong emphasis on idempotency in Bash scripts (using `check_built` and `mark_built` functions).
 
-### Navigation
-- **↑** or **k** - Move up
-- **↓** or **j** - Move down  
-- **g** or **Home** - Go to first step
-- **G** or **End** - Go to last step
+### Data Flow Diagram
 
-### Actions
-- **ENTER** - Run selected step (skips if already done)
-- **f** - Force run (ignore marker, run anyway)
-- **d** - Delete marker (reset step to pending)
-- **a** - Run ALL pending steps (auto-continues)
-- **s** - Skip to next pending step
+```mermaid
+sequenceDiagram
+    participant User
+    participant Orchestrator
+    participant ProcessMonitor
+    participant ChrootEnv
+    participant Disk
 
-### Other
-- **?** - Toggle help panel
-- **q** or **ESC** - Quit
-
-## Workflow
-
-1. **Launch**: `python3 ginger_os.py`
-2. **Navigate**: Use **j/k** or arrow keys to select a step
-3. **Execute**: Press **ENTER** to run it
-4. **Watch**: See live output in the details panel
-5. **Continue**: Navigate to next step and repeat
-
-## Features
-
-✅ **Command-driven** - Nothing runs unless you tell it to
-✅ **Visual selection** - See exactly what you're running
-✅ **Live output** - Watch logs as step executes
-✅ **Smart skipping** - ENTER skips completed steps
-✅ **Force mode** - Press **f** to re-run anything
-✅ **Batch mode** - Press **a** to run all pending
-✅ **Bright colors** - Works great on transparent terminals
-
-## Examples
-
-### Run Steps One-by-One
-```
-1. Launch TUI
-2. Press j to move down
-3. Press ENTER to run
-4. Wait for completion
-5. Press j, ENTER for next
+    User->>Orchestrator: Trigger Step (ENTER/API)
+    Orchestrator->>ProcessMonitor: execute_step(step)
+    ProcessMonitor->>ChrootEnv: Run Bash Script
+    ChrootEnv->>Disk: Write Binaries/Config
+    ChrootEnv-->>ProcessMonitor: Stream Stdout/Stderr
+    ProcessMonitor-->>Orchestrator: Update Status/Logs
+    Orchestrator-->>User: Update TUI/WebUI
 ```
 
-### Run All Pending
-```
-1. Launch TUI
-2. Press a
-3. Watch it run all pending steps
-```
+---
 
-### Re-run a Failed Step
-```
-1. Navigate to failed step
-2. Press d to delete marker
-3. Press ENTER to run again
-```
+## 📦 Product Perspective (Product Manager Perspective)
 
-### Force Re-run
+### Core Purpose
+
+GingerOS transforms the traditionally manual and error-prone process of building a Linux system from scratch into a managed, visual, and recoverable experience.
+
+### Key Features
+
+- **Zero-Host-Pollution**: No need to install LFS dependencies on the host; everything happens in a virtual disk.
+- **Command-Driven Control**: The user decides when to start, skip, or force-run steps.
+- **Visual Progress Tracking**: A roadmap of all build steps with real-time status (Pending $\rightarrow$ Running $\rightarrow$ Completed $\rightarrow$ Failed).
+- **Intelligent Recovery**: Marker-based skipping allows users to resume from the exact package that failed without restarting the entire phase.
+- **Multi-Interface Support**: High-performance TUI for power users and a Web UI for remote monitoring.
+
+### User Flow
+
+1. **Launch**: User runs `python3 ginger_os.py`.
+2. **Orientation**: User reviews the build roadmap in the TUI.
+3. **Execution**: User presses `a` (Auto-run) or `ENTER` (Step-by-step).
+4. **Monitoring**: User watches live logs and storage stats.
+5. **Intervention**: If a step fails, the user fixes the issue (e.g., network) and resumes.
+6. **Completion**: User runs `./qemu-run.sh` to boot their new OS.
+
 ```
 1. Navigate to any step
 2. Press f to force run
@@ -98,6 +125,7 @@ This means your host machine stays completely clean, and the final output is a p
 **Simple. Command-driven. Full control.**
 
 ## Requirements
+
 - Python 3.8+
 - `rich` library (`pip install rich`)
 - `fastapi` + `uvicorn` for the web dashboard (`pip install fastapi uvicorn`) — optional, TUI works without them
@@ -105,7 +133,8 @@ This means your host machine stays completely clean, and the final output is a p
 - `debootstrap` (for installing the Ubuntu Base container environment)
 
 ## Directory Structure
+
 - `logs/`: Build logs for each step
 - `.build_state/`: Internal state markers
 - `sources/`: Downloaded tarballs (LFS sources)
-- `scripts/`: Build logic (Host, Phase 1-3)
+- `lfs`: Build logic (Host, Phase 1-3)

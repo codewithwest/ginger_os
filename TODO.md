@@ -1,29 +1,30 @@
 # GingerOS TODO List
+
 ## From Audit Report - 2026-02-13
 
 ---
 
 ## 🔴 CRITICAL (Must Fix Before Merge)
 
-- [x] **Issue #5**: Fix race condition in `scripts/lib/ui.sh` ui_monitor startup (Line 300-304)
+- [x] **Issue #5**: Fix race condition in `lfs/lib/ui.sh` ui_monitor startup (Line 300-304)
   - Replace `pgrep` check with atomic PID file creation
-  - File: `scripts/lib/ui.sh`
+  - File: `lfs/lib/ui.sh`
 
-- [x] **Issue #2**: Add safety checks to `scripts/lib/common.sh` wildcard removal (Line 145)
+- [x] **Issue #2**: Add safety checks to `lfs/lib/common.sh` wildcard removal (Line 145)
   - Prevent accidental deletion if DIR_NAME is empty/malformed
-  - File: `scripts/lib/common.sh`
+  - File: `lfs/lib/common.sh`
 
 - [x] **Issue #4**: Fix error handler to call cleanup (Line 202-206)
   - Ensure build directories are cleaned up on error
-  - File: `scripts/lib/common.sh`
+  - File: `lfs/lib/common.sh`
 
 - [x] **Build Failsafes**: Automated Mount & Chroot Recovery
   - Automatically re-mounts /mnt/lfs if lost during build
   - Automatically restores chroot virtual filesystems if missing for phase 3/4
-  - Files: `lfs_builder_ui/engine.py`, `scripts/image/prepare-image.sh`
+  - Files: `lfs_builder_ui/engine.py`, `lfsimage/prepare-image.sh`
 
 - [x] **Deprecated Test Operator**: Replace `-a` with `&&` in phase scripts
-  - Files: `scripts/phases/build-phase1.sh`, `build-phase2.sh`
+  - Files: `lfs/phases/build-phase1.sh`, `build-phase2.sh`
 
 - [x] **Chroot Verification**: Add mount verification before Phase 3
   - Add `_verify_chroot_ready()` method to engine.py
@@ -41,7 +42,7 @@
 - [x] **Issue #8**: Fix terminal resource conflict in keyboard listener
   - Use `select()` with timeout instead of blocking read
   - File: `lfs_builder_ui/engine.py` (Lines 75-99)
-  - *Note: Superseded by new TUI architecture in ginger_os.py*
+  - _Note: Superseded by new TUI architecture in ginger_os.py_
 
 - [x] **Issue #11**: Add subprocess timeout mechanism
   - Prevent hangs on stuck build steps
@@ -54,7 +55,7 @@
 
 - [x] **Issue #12**: Add input validation to `run-as-lfs.sh`
   - Validate script path before execution
-  - File: `scripts/host/run-as-lfs.sh`
+  - File: `lfs/host/run-as-lfs.sh`
 
 ---
 
@@ -62,7 +63,7 @@
 
 - [x] **Issue #6**: Replace `source` with safe parsing in `ui_load_state`
   - Prevent arbitrary code execution from corrupted state files
-  - File: `scripts/lib/ui.sh` (Line 102)
+  - File: `lfs/lib/ui.sh` (Line 102)
 
 - [x] **CI/CD**: Add shellcheck to pipeline
   - Run on all `.sh` files
@@ -73,7 +74,7 @@
 
 - [x] **Issue #9**: Make `GINGER_PKG:` marker more unique
   - Change to `__GINGER_PKG_MARKER__:` to avoid false positives
-  - Files: `scripts/phases/*.sh`, `lfs_builder_ui/engine.py`
+  - Files: `lfs/phases/*.sh`, `lfs_builder_ui/engine.py`
 
 - [x] **Issue #10**: Fix storage update timing logic
   - Replace probabilistic timing with explicit counter
@@ -107,6 +108,7 @@
 ## 📝 NOTES
 
 ### Issue Reference Guide
+
 - **Issue #1**: Unsafe variable expansion in common.sh (Line 113) - Already quoted
 - **Issue #2**: Dangerous wildcard removal (Line 145) - CRITICAL
 - **Issue #3**: Path normalization edge case (Line 149) - Minor

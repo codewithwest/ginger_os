@@ -1,5 +1,10 @@
 #!/bin/bash
 # GingerOS Environment Configuration
+# Color codes for logging
+export RED='\033[0;31m'
+export GREEN='\033[0;32m'
+export YELLOW='\033[1;33m'
+export NC='\033[0m' # No Color
 
 # Source the central configuration file
 # This allows overriding variables like LFS_VERSION, LFS_MOUNT, etc. in one place.
@@ -156,14 +161,14 @@ export GINGER_ROOT=$(echo "$GINGER_ROOT_RAW" | sed 's|^//|/|; s|/$||')
 # --- CRITICAL SAFETY CHECK (Issue #14) ---
 # Skip this check inside chroot where GINGER_ROOT may resolve to /
 if [ -n "${LFS:-}" ]; then
-    if [ ! -d "$GINGER_ROOT/scripts" ] || [ ! -d "$GINGER_ROOT/config" ]; then
+    if [ ! -d "$GINGER_ROOT/lfs" ] || [ ! -d "$GINGER_ROOT/config" ]; then
         echo -e "${RED}ERROR: Invalid GINGER_ROOT detected: $GINGER_ROOT${NC}"
         echo "This script must be run from within the GingerOS source tree."
         exit 1
     fi
 fi
 
-export GINGER_SCRIPTS="${GINGER_ROOT%/}/scripts"
+export GINGER_SCRIPTS="${GINGER_ROOT%/}/lfs"
 export GINGER_SOURCES="${GINGER_ROOT%/}/sources"
 export GINGER_LOGS="${GINGER_ROOT%/}/logs"
 
@@ -179,8 +184,3 @@ fi
 mkdir -p "$GINGER_SOURCES" 2>/dev/null || true
 mkdir -p "$GINGER_LOGS" 2>/dev/null || true
 
-# Color codes for logging
-export RED='\033[0;31m'
-export GREEN='\033[0;32m'
-export YELLOW='\033[1;33m'
-export NC='\033[0m' # No Color

@@ -3,9 +3,11 @@
 This guide explains how to set up the host environment and execute the automated GingerOS build process.
 
 ## 1. Creating the Build VM (The Host)
+
 Before building GingerOS, you need a safe sandbox. Use these settings to create your Ubuntu VM:
 
 ### Using QEMU (Command Line)
+
 ```bash
 # 1. Create a 50GB virtual disk for the Ubuntu Host
 qemu-img create -f qcow2 ubuntu_host.qcow2 50G
@@ -19,6 +21,7 @@ qemu-system-x86_64 \
 ```
 
 ### Using VirtualBox / VMware
+
 - **OS**: Ubuntu 24.04 64-bit
 - **RAM**: 16 GB (Minimum 4096 MB)
 - **CPU**: 4 Cores
@@ -27,6 +30,7 @@ qemu-system-x86_64 \
 ---
 
 ## 2. Infrastructure Setup (Inside the Ubuntu VM)
+
 Once Ubuntu is installed, run these commands to prepare the host:
 
 ```bash
@@ -48,6 +52,7 @@ git config --global --add safe.directory /opt/ginger_os
 ---
 
 ## 3. The Automated Build Workflow
+
 GingerOS uses a single master script to manage the entire process.
 
 ```bash
@@ -56,6 +61,7 @@ sudo ./ginger_os.sh
 ```
 
 ### What `ginger_os.sh` handles:
+
 1.  **Safety Checks**: Validates host tool versions.
 2.  **Resource Prep**: Downloads sources (parallel) and prepares the 20GB disk image.
 3.  **Cross-Toolchain**: Builds the initial compiler as the `lfs` user.
@@ -67,20 +73,27 @@ sudo ./ginger_os.sh
 ## 4. Recovery & Maintenance
 
 ### How to Resume:
+
 If the build fails (e.g., due to a compilation error), simply fix the issue and **run the script again**. It will automatically skip all successfully built packages.
 
 ### Safe Exit (Reboot/Shutdown):
+
 If you need to stop the VM or reboot the host, ALWAYS run:
+
 ```bash
-sudo ./scripts/teardown.sh
+sudo ./lfsteardown.sh
 ```
-*This safely unmounts all virtual filesystems and detaches the loopback device.*
+
+_This safely unmounts all virtual filesystems and detaches the loopback device._
 
 ### Testing the Result:
+
 To test your new GingerOS image in QEMU:
+
 ```bash
 qemu-system-x86_64 -enable-kvm -m 2G -drive file=ginger_os.img,format=raw
 ```
 
 ---
-*Refer to README.md for project architecture and design philosophy.*
+
+_Refer to README.md for project architecture and design philosophy._

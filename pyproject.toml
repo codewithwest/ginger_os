@@ -21,4 +21,5 @@ dependencies = [
     "langchain-classic>=1.0.6",
     "chromadb>=0.8.1",
     "langchain-chroma>=1.1.0",
+    "textual>=8.2.5",
 ]

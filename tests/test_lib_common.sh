@@ -1,5 +1,5 @@
 #!/bin/bash
-# Test script for scripts/lib/common.sh
+# Test script for lfs/lib/common.sh
 
 # Setup mock environment
 export GINGER_ROOT="/tmp/ginger_test"
@@ -17,7 +17,7 @@ mkdir -p "$GINGER_ROOT/logs"
 mkdir -p "$GINGER_ROOT/sources"
 
 # Source library - it will source real env.sh
-source ./scripts/lib/common.sh
+source ./lfs/lib/common.sh
 
 # FORCE MOCKS AFTER SOURCING
 export GINGER_ROOT="/tmp/ginger_test"
