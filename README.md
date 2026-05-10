@@ -100,19 +100,21 @@ GingerOS transforms the traditionally manual and error-prone process of building
 
 ### Key Features
 
+- **Neural Command Matrix**: A state-of-the-art React/Tailwind v4 web dashboard with a "High-Tech Glassmorphism" aesthetic.
+- **Dynamic Resource Allocation**: Real-time control over CPU core usage (`-jN`) directly from the dashboard.
+- **Advanced Telemetry**: Digital timers for package, phase, and overall build duration, plus CPU load and storage health meters.
 - **Zero-Host-Pollution**: No need to install LFS dependencies on the host; everything happens in a virtual disk.
 - **Command-Driven Control**: The user decides when to start, skip, or force-run steps.
-- **Visual Progress Tracking**: A roadmap of all build steps with real-time status (Pending $\rightarrow$ Running $\rightarrow$ Completed $\rightarrow$ Failed).
+- **Visual Progress Tracking**: A roadmap of all build steps with real-time status (Pending → Running → Completed → Failed).
 - **Intelligent Recovery**: Marker-based skipping allows users to resume from the exact package that failed without restarting the entire phase.
-- **Multi-Interface Support**: High-performance TUI for power users and a Web UI for remote monitoring.
 
 ### User Flow
 
 1. **Launch**: User runs `python3 ginger_os.py`.
-2. **Orientation**: User reviews the build roadmap in the TUI.
-3. **Execution**: User presses `a` (Auto-run) or `ENTER` (Step-by-step).
-4. **Monitoring**: User watches live logs and storage stats.
-5. **Intervention**: If a step fails, the user fixes the issue (e.g., network) and resumes.
+2. **Dashboard**: The Web UI automatically initializes at `http://localhost:8000`.
+3. **Execution**: User presses `a` (Auto-run) in TUI or toggles "Auto Protocol" in the dashboard.
+4. **Monitoring**: User watches live "Neural Stream" logs and Temporal Diagnostics.
+5. **Optimization**: User adjusts "Core Allocation" slider to balance performance.
 6. **Completion**: User runs `./qemu-run.sh` to boot their new OS.
 
 ```
@@ -128,7 +130,8 @@ GingerOS transforms the traditionally manual and error-prone process of building
 
 - Python 3.8+
 - `rich` library (`pip install rich`)
-- `fastapi` + `uvicorn` for the web dashboard (`pip install fastapi uvicorn`) — optional, TUI works without them
+- `fastapi`, `uvicorn`, `psutil` for the web dashboard (`pip install fastapi uvicorn psutil`)
+- Node.js & NPM (only for building the Web UI source)
 - `qemu-utils` (for creating the raw image)
 - `debootstrap` (for installing the Ubuntu Base container environment)
 
