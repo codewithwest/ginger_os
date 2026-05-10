@@ -34,6 +34,8 @@ class ProcessMonitor:
         self.engine.log(f"Starting step: {step.name}", "bold cyan")
         step.start_time = time.time()
         self.engine.phase_start_time = step.start_time
+        if self.engine.overall_start_time is None:
+            self.engine.overall_start_time = step.start_time
         step.status = "running"
         self.engine.logs = []  # Clear previous logs for this run
         self.engine.aborted = False

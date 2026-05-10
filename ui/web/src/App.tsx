@@ -17,6 +17,11 @@ interface Status {
   steps: Step[];
   cores: number;
   max_cores: number;
+  timers: {
+    package: number;
+    phase: number;
+    overall: number;
+  };
   storage: {
     lfs: number;
     host: number;
@@ -117,6 +122,13 @@ function App() {
     fetch(`/api/control/cores/${count}`, { method: 'POST' });
   };
 
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="flex flex-col h-screen bg-bg-deep text-text-main font-sans selection:bg-accent-cyan/30">
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@300;500&display=swap" rel="stylesheet" />
@@ -213,6 +225,22 @@ function App() {
         <section className="w-80 flex flex-col gap-4">
           {/* TELEMETRY */}
           <div className="glass p-5 rounded-xl space-y-6">
+            <h2 className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mb-4">Temporal Diagnostics</h2>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-white/5 p-2 rounded border border-white/5 text-center">
+                <div className="text-[8px] text-text-dim uppercase font-bold mb-1">Package</div>
+                <div className="text-xs font-mono text-accent-cyan">{formatTime(status?.timers.package || 0)}</div>
+              </div>
+              <div className="bg-white/5 p-2 rounded border border-white/5 text-center">
+                <div className="text-[8px] text-text-dim uppercase font-bold mb-1">Phase</div>
+                <div className="text-xs font-mono text-accent-cyan">{formatTime(status?.timers.phase || 0)}</div>
+              </div>
+              <div className="bg-white/5 p-2 rounded border border-white/5 text-center">
+                <div className="text-[8px] text-text-dim uppercase font-bold mb-1">Total</div>
+                <div className="text-xs font-mono text-accent-green">{formatTime(status?.timers.overall || 0)}</div>
+              </div>
+            </div>
+
             <h2 className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em] mb-4">Core Telemetry</h2>
             
             <div className="space-y-2">

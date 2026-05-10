@@ -95,6 +95,11 @@ async def get_status():
             "storage": engine.storage_stats,
             "cores": getattr(engine, "cores", 1),
             "max_cores": os.cpu_count() or 1,
+            "timers": {
+                "package": round(time.time() - engine.pkg_start_time, 1) if engine.pkg_start_time else 0,
+                "phase": round(time.time() - engine.phase_start_time, 1) if engine.phase_start_time else 0,
+                "overall": round(time.time() - engine.overall_start_time, 1) if engine.overall_start_time else 0,
+            }
         }
     except Exception as e:
         import traceback
@@ -147,6 +152,32 @@ async def set_cores(count: int):
     engine.cores = count
     engine.log(f"SYSTEM_CONFIG :: CPU_CORES set to {count}", "bold cyan")
     return {"status": "ok", "cores": count}
+
+
+@app.post("/api/control/rebuild_ui")
+async def rebuild_ui():
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
+    
+    def run_build():
+        engine.log("SYSTEM_MAINTENANCE :: Starting UI rebuild...", "bold cyan")
+        try:
+            res = subprocess.run(
+                "npm run build", 
+                shell=True, 
+                cwd=os.path.join(_GINGER_ROOT, "ui", "web"),
+                capture_output=True,
+                text=True
+            )
+            if res.returncode == 0:
+                engine.log("SYSTEM_MAINTENANCE :: UI rebuild complete.", "bold green")
+            else:
+                engine.log(f"SYSTEM_ERROR :: UI rebuild failed: {res.stderr}", "bold red")
+        except Exception as e:
+            engine.log(f"SYSTEM_ERROR :: UI rebuild exception: {str(e)}", "bold red")
+
+    threading.Thread(target=run_build, daemon=True).start()
+    return {"status": "ok", "message": "Rebuild sequence initiated"}
 
 
 @app.post("/api/control/{action}")
