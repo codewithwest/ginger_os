@@ -93,6 +93,8 @@ async def get_status():
                 for s in engine.steps
             ],
             "storage": engine.storage_stats,
+            "cores": getattr(engine, "cores", 1),
+            "max_cores": os.cpu_count() or 1,
         }
     except Exception as e:
         import traceback
@@ -131,6 +133,20 @@ async def reset_step(step_idx: int):
     tui.delete_marker(step_idx)
     engine.steps[step_idx].status = "pending"
     return {"status": "ok", "step": engine.steps[step_idx].name}
+
+
+@app.post("/api/control/cores/{count}")
+async def set_cores(count: int):
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
+    
+    max_c = os.cpu_count() or 1
+    if count < 1 or count > max_c:
+        return {"status": "error", "message": f"Invalid core count. Range: 1-{max_c}"}
+    
+    engine.cores = count
+    engine.log(f"SYSTEM_CONFIG :: CPU_CORES set to {count}", "bold cyan")
+    return {"status": "ok", "cores": count}
 
 
 @app.post("/api/control/{action}")

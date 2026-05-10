@@ -57,6 +57,12 @@ class ProcessMonitor:
                 )
                 return 0
 
+            # Prepare environment with core allocation
+            env = os.environ.copy()
+            cores_val = str(getattr(self.engine, "cores", 1))
+            env["GINGER_CORES"] = cores_val
+            env["MAKEFLAGS"] = f"-j{cores_val}"
+
             # Start the process
             process = subprocess.Popen(
                 step.command,
@@ -66,7 +72,7 @@ class ProcessMonitor:
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,  # Line buffered
-                env=os.environ.copy(),
+                env=env,
             )
             self.engine.current_process = process
 

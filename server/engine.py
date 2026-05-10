@@ -63,6 +63,12 @@ class GingerEngine:
         self.paused_for_package = False
         self.current_process = None
         self.on_log_callbacks = []
+        
+        # CPU Core Allocation
+        try:
+            self.cores = os.cpu_count() or 1
+        except:
+            self.cores = 1
 
         # Regex patterns
         self.ansi_escape = re.compile(
