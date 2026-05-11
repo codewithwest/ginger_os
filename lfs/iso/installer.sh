@@ -54,35 +54,30 @@ tar -xpvf /mnt/iso/installer/gingeros-base-rootfs.tar.gz -C "$MNT" 2>&3 | \
     done
 log_and_show "[STEP 4/6] Extraction complete."
 
-# Create /etc/inittab if missing — SysVinit needs this to find TTYs
+# Create /etc/inittab — LFS Standard (Section 7.6.2)
 if [ ! -f "$MNT/etc/inittab" ]; then
-    log_and_show "[STEP 4/6] Creating /etc/inittab (SysVinit config)..."
+    log_and_show "[STEP 4/6] Creating /etc/inittab (LFS standard)..."
     cat > "$MNT/etc/inittab" << 'INITTAB'
-# /etc/inittab — GingerOS SysVinit configuration
-id:2:initdefault:
+# /etc/inittab — GingerOS LFS configuration
+id:3:initdefault:
 
-# System init script
-si::sysinit:/etc/init.d/rcS
+si::sysinit:/etc/rc.d/init.d/rc S
 
-# Runlevels
-l0:0:wait:/etc/init.d/rc 0
-l1:1:wait:/etc/init.d/rc 1
-l2:2:wait:/etc/init.d/rc 2
-l3:3:wait:/etc/init.d/rc 3
-l4:4:wait:/etc/init.d/rc 4
-l5:5:wait:/etc/init.d/rc 5
-l6:6:wait:/etc/init.d/rc 6
+l0:0:wait:/etc/rc.d/init.d/rc 0
+l1:S1:wait:/etc/rc.d/init.d/rc 1
+l2:2:wait:/etc/rc.d/init.d/rc 2
+l3:3:wait:/etc/rc.d/init.d/rc 3
+l4:4:wait:/etc/rc.d/init.d/rc 4
+l5:5:wait:/etc/rc.d/init.d/rc 5
+l6:6:wait:/etc/rc.d/init.d/rc 6
 
-# Emergency shell on failure
-z6:6:respawn:/sbin/sulogin
-
-# Ctrl+Alt+Del
 ca:12345:ctrlaltdel:/sbin/shutdown -t1 -a -r now
 
-# Virtual consoles
-1:2345:respawn:/sbin/getty 38400 tty1
-2:23:respawn:/sbin/getty 38400 tty2
-3:23:respawn:/sbin/getty 38400 tty3
+su:S016:once:/sbin/sulogin
+
+1:2345:respawn:/sbin/agetty --noclear tty1 9600
+2:2345:respawn:/sbin/agetty tty2 9600
+3:2345:respawn:/sbin/agetty tty3 9600
 INITTAB
     log_and_show "[STEP 4/6] /etc/inittab created."
 fi
@@ -128,34 +123,52 @@ log_and_show "[STEP 6/6] GRUB installed."
 log_and_show "[STEP 6/6] Setting hostname: gingeros..."
 echo "gingeros" > "$MNT/etc/hostname"
 cat > "$MNT/etc/hosts" << 'HOSTS'
-127.0.0.1   localhost
-127.0.1.1   gingeros
-::1         localhost ip6-localhost ip6-loopback
+# Begin /etc/hosts (Section 7.5.4)
+127.0.0.1   localhost.localdomain localhost
+127.0.1.1   gingeros.example.org gingeros
+::1         localhost.localdomain localhost ip6-localhost ip6-loopback
+ff02::1     ip6-allnodes
+ff02::2     ip6-allrouters
+# End /etc/hosts
 HOSTS
 
 # ── Network, Silence & Identity ────────────────────────────────────────────
-log_and_show "[STEP 6/6] Configuring LFS Networking (Static QEMU Config)..."
+log_and_show "[STEP 6/6] Configuring LFS Networking..."
 mkdir -p "$MNT/etc/sysconfig"
-mkdir -p "$MNT/etc/init.d"
 
 # Detect interface for config naming (fallback to eth0)
 MAIN_IFACE=$(ls /sys/class/net | grep -v lo | head -n1 || echo "eth0")
 
-# 1. Create LFS-style static config
+# Determine IP settings (QEMU vs Bare Metal)
+IP="192.168.1.2"
+GW="192.168.1.1"
+PREFIX="24"
+BROADCAST="192.168.1.255"
+
+if grep -qi "qemu" /sys/class/dmi/id/sys_vendor 2>/dev/null || grep -qi "qemu" /proc/cpuinfo; then
+    log_and_show "[STEP 6/6] Detected QEMU environment - applying virtual network defaults."
+    IP="10.0.2.15"
+    GW="10.0.2.2"
+    BROADCAST="10.0.2.255"
+fi
+
+# 1. Create LFS-style configuration (Section 7.5.1)
 cat > "$MNT/etc/sysconfig/ifconfig.$MAIN_IFACE" << EOF
 ONBOOT=yes
 IFACE=$MAIN_IFACE
 SERVICE=ipv4-static
-IP=10.0.2.15
-GATEWAY=10.0.2.2
-PREFIX=24
-BROADCAST=10.0.2.255
+IP=$IP
+GATEWAY=$GW
+PREFIX=$PREFIX
+BROADCAST=$BROADCAST
 EOF
 
-# 2. Setup DNS
+# 2. Setup DNS (Section 7.5.2)
 cat > "$MNT/etc/resolv.conf" << 'EOF'
+# Begin /etc/resolv.conf
 nameserver 8.8.8.8
 nameserver 8.8.4.4
+# End /etc/resolv.conf
 EOF
 
 # ── Library & System Health Fixups ─────────────────────────────────────────
@@ -172,13 +185,12 @@ rm -rf "$MNT/lib/x86_64-linux-gnu"
 rm -rf "$MNT/usr/lib/x86_64-linux-gnu"
 if [ ! -L "$MNT/lib64" ]; then rm -rf "$MNT/lib64"; ln -sf lib "$MNT/lib64"; fi
 
-# 3. Create the missing 'rc' script that init is looking for
-cat > "$MNT/etc/init.d/rc" << 'RC'
-#!/bin/sh
-# Minimal runlevel handler
-echo "Entering runlevel $1..."
-RC
-chmod +x "$MNT/etc/init.d/rc"
+# 3. Ensure standard LFS bootscript paths
+if [ -d "$MNT/etc/rc.d/init.d" ] && [ ! -L "$MNT/etc/init.d" ]; then
+    log_and_show "[STEP 6/6] Linking /etc/init.d to /etc/rc.d/init.d..."
+    rm -rf "$MNT/etc/init.d"
+    ln -sf rc.d/init.d "$MNT/etc/init.d"
+fi
 
 # ── Raw Network Test Tool ──────────────────────────────────────────────────
 cat > "$MNT/usr/bin/net-test" << 'TEST'
@@ -199,40 +211,15 @@ echo "4. Testing HTTP Handshake (TCP 80)..."
 TEST
 chmod +x "$MNT/usr/bin/net-test"
 
-# ── Network Bring-up (In rcS) ──────────────────────────────────────────────
-cat > "$MNT/etc/init.d/rcS" << 'RCS'
-#!/bin/sh
-# Clean path for LFS
-export PATH=/bin:/usr/bin:/sbin:/usr/sbin
-# Refresh library cache using LFS config only
-ldconfig -X
+# ── Boot Sequence Finalization ─────────────────────────────────────────────
+log_and_show "[STEP 6/6] Finalizing boot sequence..."
+# We now rely on standard LFS-bootscripts handled by /etc/rc.d/init.d/rc.
+# No manual rcS is needed if the rootfs extraction is complete.
 
-# GingerOS System Startup Script
-mount -t proc proc /proc
-mount -t sysfs sysfs /sys
-mount -t devtmpfs devtmpfs /dev
-mount -o remount,rw /
-
-# Set Identity
-if [ -f /etc/hostname ]; then hostname -F /etc/hostname; fi
-# Silence noise
-dmesg -n 1
-
-# Network Initialization
-ip link set lo up
-IFACE=$(ls /sys/class/net | grep -v lo | head -n1)
-if [ -n "$IFACE" ]; then
-    ip link set "$IFACE" up
-    ip addr add 10.0.2.15/24 dev "$IFACE" 2>/dev/null
-    ip route add default via 10.0.2.2 dev "$IFACE" 2>/dev/null
-    ip addr show "$IFACE" | grep "inet "
-    echo "Default Route:"
-    ip route show | grep default
-else
-    echo "[WARN] No network interface found!"
+# Ensure ldconfig is run on first boot or now
+if command -v chroot >/dev/null 2>&1; then
+    chroot "$MNT" ldconfig
 fi
-RCS
-chmod +x "$MNT/etc/init.d/rcS"
 
 # ── User & Password Setup ──────────────────────────────────────────────────
 log_and_show "[STEP 6/6] Creating user: $NEW_USER..."
@@ -277,21 +264,24 @@ menuentry 'GingerOS' {
     linux /boot/vmlinuz-ginger \
       root=/dev/sda1 \
       rw rootwait \
-      systemd.show_status=1
+      systemd.show_status=1 \
+      net.ifnames=0
 }
 
 menuentry 'GingerOS (UUID)' {
     linux /boot/vmlinuz-ginger \
       root=UUID=$ROOT_UUID \
       rw rootwait \
-      systemd.show_status=1
+      systemd.show_status=1 \
+      net.ifnames=0
 }
 
 menuentry 'GingerOS Recovery Shell' {
     linux /boot/vmlinuz-ginger \
       root=/dev/sda1 \
       rw rootwait \
-      init=/bin/sh
+      init=/bin/sh \
+      net.ifnames=0
 }
 EOF
 

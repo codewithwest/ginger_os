@@ -178,9 +178,9 @@ if [ -f /lib64/ld-linux-x86-64.so.2 ]; then
 fi
 
 # Copy installer payload
-cp "$GINGER_ROOT/lfsiso/ginger-installer-bin" "$ISO_DIR/installer/installer-bin"
-cp "$GINGER_ROOT/lfsiso/installer.sh" "$ISO_DIR/installer/"
-cp "$GINGER_ROOT/lfsiso/installer.py" "$ISO_DIR/installer/"
+cp "$GINGER_ROOT/lfs/iso/ginger-installer-bin" "$ISO_DIR/installer/installer-bin"
+cp "$GINGER_ROOT/lfs/iso/installer.sh" "$ISO_DIR/installer/"
+cp "$GINGER_ROOT/lfs/iso/installer.py" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/lfs/lib/ui.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/lfs/lib/disk.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/lfs/lib/bash_config.sh" "$ISO_DIR/installer/"

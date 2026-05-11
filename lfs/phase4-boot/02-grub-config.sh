@@ -37,7 +37,7 @@ insmod part_msdos
 insmod ext2
 
 menuentry 'GingerOS (LFS 12.4)' {
-    linux /boot/vmlinuz-6.16.1-lfs-12.4 root=/dev/sda1 rw quiet loglevel=3 console=tty0
+    linux /boot/vmlinuz-6.16.1-lfs-12.4 root=/dev/sda1 rw quiet loglevel=3 console=tty0 net.ifnames=0
 }
 GRUB_EOF
 

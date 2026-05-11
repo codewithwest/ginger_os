@@ -14,7 +14,10 @@ class StorageMonitor:
 
     def __init__(self, engine):
         self.engine = engine
-        self.storage_stats = {"host": 0, "lfs": 0}
+        self.storage_stats = {
+            "host": {"percent": 0, "used_gb": 0, "total_gb": 0},
+            "lfs": {"percent": 0, "used_gb": 0, "total_gb": 0}
+        }
 
     def update_storage(self):
         """Update storage usage percentages."""
@@ -28,15 +31,22 @@ class StorageMonitor:
                     total = st.f_blocks
                     if total > 0:
                         percent = (used / total) * 100
-                        self.storage_stats[key] = percent
+                        used_gb = used * st.f_frsize / (1024**3)
+                        total_gb = total * st.f_frsize / (1024**3)
+                        
+                        self.storage_stats[key] = {
+                            "percent": percent,
+                            "used_gb": used_gb,
+                            "total_gb": total_gb
+                        }
 
                         # Emergency cleanup for host disk
                         if key == "host" and percent > 95:
                             self._emergency_cleanup()
                 else:
-                    self.storage_stats[key] = 0
+                    self.storage_stats[key] = {"percent": 0, "used_gb": 0, "total_gb": 0}
             except:
-                self.storage_stats[key] = 0
+                self.storage_stats[key] = {"percent": 0, "used_gb": 0, "total_gb": 0}
 
     def _emergency_cleanup(self):
         """Perform emergency cleanup when host disk is full."""

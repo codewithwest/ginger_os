@@ -9,7 +9,7 @@ ISO_PATH="$GINGER_ROOT/gingeros-installer.iso"
 # Safety: Check if ISO exists
 if [ ! -f "$ISO_PATH" ]; then
     echo "ERROR: ISO not found at $ISO_PATH"
-    echo "Please run: bash lfsiso/make-iso.sh first."
+    echo "Please run: bash lfs/iso/make-iso.sh first."
     exit 1
 fi
 

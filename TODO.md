@@ -21,7 +21,7 @@
 - [x] **Build Failsafes**: Automated Mount & Chroot Recovery
   - Automatically re-mounts /mnt/lfs if lost during build
   - Automatically restores chroot virtual filesystems if missing for phase 3/4
-  - Files: `lfs_builder_ui/engine.py`, `lfsimage/prepare-image.sh`
+  - Files: `lfs_builder_ui/engine.py`, `lfs/image/prepare-image.sh`
 
 - [x] **Deprecated Test Operator**: Replace `-a` with `&&` in phase scripts
   - Files: `lfs/phases/build-phase1.sh`, `build-phase2.sh`

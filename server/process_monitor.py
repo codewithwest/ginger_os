@@ -201,17 +201,13 @@ class ProcessMonitor:
 
     def _handle_special_markers(self, line, step):
         """Handle special markers in log output."""
-        # Package building marker
-        if "__GINGER_PKG_MARKER__" in line:
-            self.engine.current_pkg = line.split(":")[-1].strip()
+        # Package completion/start marker
+        if line.startswith("__GINGER_PKG_MARKER__:"):
+            self._handle_package_completion(step, line)
 
         # Package count marker
         elif "__GINGER_PKG_COUNT__:" in line:
             self._parse_package_count(line)
-
-        # Package completion marker
-        elif line.startswith("__GINGER_PKG_MARKER__:"):
-            self._handle_package_completion(step, line)
 
         # Missing source URL
         elif "__GINGER_MISSING_SOURCE_URL__:" in line:

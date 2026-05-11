@@ -119,7 +119,7 @@ class SnapshotManager:
         # Step 1: Teardown current mounts
         self.engine.log("RESTORE: Unmounting current image...", "cyan")
         subprocess.run(
-            ["bash", "lfsimage/teardown.sh"], cwd=GINGER_ROOT, capture_output=True
+            ["bash", "lfs/image/teardown.sh"], cwd=GINGER_ROOT, capture_output=True
         )
 
         # Step 2: Replace the image
@@ -146,7 +146,7 @@ class SnapshotManager:
         # Step 4: Remount
         self.engine.log("RESTORE: Remounting image...", "cyan")
         result = subprocess.run(
-            ["bash", "lfsimage/prepare-image.sh"],
+            ["bash", "lfs/image/prepare-image.sh"],
             cwd=GINGER_ROOT,
             capture_output=True,
             text=True,

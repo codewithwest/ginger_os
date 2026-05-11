@@ -58,10 +58,13 @@ class NeuralCore(Static):
                 else:
                     content.append("\n")
 
+            # Timers
             content.append(f"UPTIME: {format_time(elapsed)}\n", style=NEON_YELLOW)
-            content.append("\n🧠 AI_CORE:\n", style=f"bold {NEON_MAGENTA}")
-            content.append(get_ai_thought(step.name), style="italic bright_blue")
-            content.append(f"\n\n{pulsar} NEURAL_CORE_ACTIVE", style="dim cyan")
+            content.append(f"PHASE_TIME:   {format_time(elapsed)}\n", style=NEON_YELLOW)
+            if self.app.engine.pkg_start_time:
+                pkg_elapsed = time.time() - self.app.engine.pkg_start_time
+                content.append(f"PACKAGE_TIME: {format_time(pkg_elapsed)}\n", style=NEON_YELLOW)
+
         else:
             content.append("🟢 NEURAL_CORE_READY\n", style=f"bold {LASER_GREEN}")
             content.append("\nAwaiting operator command...", style="dim italic")
@@ -91,10 +94,15 @@ class SystemMX(Static):
         # Storage Stats
         text.append("\n 💾 STORAGE\n", style=f"bold {BRIGHT_WHITE}")
         stats = self.app.engine.storage_stats
-        for key, val in stats.items():
-            color = LASER_RED if val > 90 else (NEON_YELLOW if val > 70 else LASER_GREEN)
+        for key, data in stats.items():
+            percent = data["percent"]
+            used = data["used_gb"]
+            total = data["total_gb"]
+            
+            color = LASER_RED if percent > 90 else (NEON_YELLOW if percent > 70 else LASER_GREEN)
             text.append(f"  {key.upper():<5}: ", style="dim")
-            text.append(f"{val:>5.1f}%\n", style=color)
+            text.append(f"{percent:>5.1f}% ", style=color)
+            text.append(f"[{used:.1f}/{total:.0f}GB]\n", style="dim cyan")
         
         self.update(Panel(text, title="[bold bright_blue]══ SYS_MX ══[/]", border_style=GINGER_BLUE, box=box.ROUNDED))
 

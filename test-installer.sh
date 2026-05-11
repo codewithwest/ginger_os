@@ -7,7 +7,7 @@ ISO_PATH="$GINGER_ROOT/gingeros-installer.iso"
 DISK_PATH="$GINGER_ROOT/test-target.qcow2"
 
 if [ ! -f "$ISO_PATH" ]; then
-    echo "Error: ISO not found at $ISO_PATH. Run lfsiso/make-iso.sh first."
+    echo "Error: ISO not found at $ISO_PATH. Run lfs/iso/make-iso.sh first."
     exit 1
 fi
 

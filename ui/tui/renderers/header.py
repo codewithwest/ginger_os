@@ -50,20 +50,20 @@ def render_header(app):
             style="bright_yellow",
         )
 
-        metrics.append(
-            "\n🧠 AI_CORE:\n",
-            style="bold bright_magenta",
-        )
+        # metrics.append(
+        #     "\n🧠 AI_CORE:\n",
+        #     style="bold bright_magenta",
+        # )
 
-        metrics.append(
-            get_ai_thought(step.name),
-            style="italic bright_blue",
-        )
+        # metrics.append(
+        #     get_ai_thought(step.name),
+        #     style="italic bright_blue",
+        # )
 
-        metrics.append(
-            f"\n\n{pulsar} NEURAL_CORE_READY",
-            style="dim cyan",
-        )
+        # metrics.append(
+        #     f"\n\n{pulsar} NEURAL_CORE_READY",
+        #     style="dim cyan",
+        # )
 
     else:
 

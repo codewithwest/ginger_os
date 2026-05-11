@@ -81,5 +81,5 @@ If you need to force a rebuild of a specific phase, highlight it in the TUI and 
 If you ever need to abort the build and unmount the virtual disk safely from your host, highlight **Step 15 (Teardown)** in the TUI and press **ENTER**, or run:
 
 ```bash
-sudo ./lfsimage/teardown.sh
+sudo ./lfs/image/teardown.sh
 ```

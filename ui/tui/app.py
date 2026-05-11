@@ -16,220 +16,168 @@ import threading
 
 class GingerTUI(App):
     CSS = """
-    /* =========================================================
-       GINGER // NEURAL OPS CONSOLE v9.4
-       ========================================================= */
+  Screen {
+    padding: 0;
+    background: #020304;
+    color: #d7f7ff;
+    layers: base overlay;
+}
 
-    Screen {
-        padding:0;
-        background: #020304;
-        color: #d7f7ff;
-        layers: base overlay;
-    }
+* {
+    scrollbar-size: 1 1;
+    scrollbar-background: #05080a;
+    scrollbar-color: #00f0ff;
+}
 
-    /* =========================
-       GLOBAL
-       ========================= */
+Header, Footer {
+    color: #00f0ff;
+}
 
-    * {
-        scrollbar-size: 1 1;
-        scrollbar-background: #05080a;
-        scrollbar-color: #00f0ff;
-    }
+Header {
+    border-bottom: solid #00f0ff;
+}
 
-    Header {
-        # background: #041018;
-        color: #00f0ff;
-        text-style: bold;
-        border-bottom: heavy #00f0ff 20%;
-    }
+Footer {
+    background: #041018;
+    color: #9be7ff;
+    border-top: heavy #00f0ff 20%;
+}
 
-    Footer {
-        background: #041018;
-        color: #9be7ff;
-        border-top: heavy #00f0ff 20%;
-    }
+#branding,
+#neural_core,
+#log_view,
+#system_mx {
+    height: 1fr;
+    border: double #00f0ff;
+    background: #06131a;
+}
 
-    /* =========================
-       LAYOUT
-       ========================= */
+#left_col {
+    width: 30%;
+    background: #05080b;
+}
 
-    #left_col {
-        width: 30%;
-        background: #05080b;
-        border-right: heavy #00f0ff;
-        padding: 1;
-    }
+#terminal_col {
+    width: 70%;
+}
 
-    #terminal_col {
-        width: 70%;
-        # background: #010203;
-        padding: 1;
-    }
 
-    /* =========================
-       MODULE PANELS
-       ========================= */
+#branding {
+    content-align: center middle;
+    color: #8df5ff;
+}
 
-    #branding {
-        height: 12;
-        margin-bottom: 1;
-        content-align: center middle;
-        border: double #00f0ff;
-        background: #06131a;
-        color: #8df5ff;
-    }
+#neural_core {
+    color: #00ffd0;
+    background: #041116;
+}
 
-    #neural_core {
-        height: 8;
-        margin-bottom: 1;
-        border: round #00ffd0;
-        background: #041116;
-        color: #00ffd0;
-    }
+#system_mx {
+    color: #ff7ad9;
+    background: #100411;
+}
 
-    #system_mx {
-        height: 8;
-        margin-top: 1;
-        border: heavy #ff00aa;
-        background: #100411;
-        color: #ff7ad9;
-    }
+#log_view {
+    height: 1fr;
+    background: #000;
+    color: #c7f7ff;
+}
 
-    /* =========================
-       LOG TERMINAL
-       ========================= */
+RichLog {
+    text-style: none;
+}
 
-    #log_view {
-        height: 1fr;
-        border: heavy #00f0ff;
-        background: #000000;
-        color: #c7f7ff;
-        padding: 1;
-    }
+ListView {
+    height: 1fr;
+    border: tall #00f0ff;
+    background: #040608;
+    padding: 0 1;
+}
 
-    RichLog {
-        text-style: none;
-    }
+ListItem {
+    background: transparent;
+    color: #b9d9e2;
+    padding: 0 1;
+    border-left: wide transparent;
+}
 
-    /* =========================
-       STEP LIST
-       ========================= */
+ListItem > Horizontal {
+    height: 1;
+}
 
-    ListView {
-        height: 1fr;
-        border: tall #00f0ff;
-        background: #040608;
-        margin: 1 0;
-        padding: 0 1;
-    }
+ListItem.--highlight,
+ListItem.running {
+    background: #09141a;
+    border-left: wide #00f0ff;
+}
 
-    ListItem {
-        background: transparent;
-        color: #b9d9e2;
-        padding: 0 1;
-        margin: 0;
-        border-left: wide transparent;
-    }
+.step-index {
+    width: 5;
+    color: #00f0ff;
+    text-style: bold;
+}
 
-    ListItem > Horizontal {
-        height: 1;
-    }
+.step-name {
+    width: 1fr;
+    color: #d7f7ff;
+}
 
-    ListItem.--highlight {
-        background: #09141a;
-        border-left: wide #00f0ff;
-    }
+.step-status {
+    width: 14;
+    text-align: right;
+    text-style: bold;
+}
 
-    .step-index {
-        width: 5;
-        color: #00f0ff;
-        text-style: bold;
-    }
+ListItem.running .step-name,
+ListItem.running .step-status {
+    color: #00f0ff;
+    text-style: bold;
+}
 
-    .step-name {
-        width: 1fr;
-        color: #d7f7ff;
-    }
+ListItem.completed {
+    background: #06140d;
+    border-left: wide #00ff88;
+}
 
-    .step-status {
-        width: 14;
-        text-align: right;
-        text-style: bold;
-    }
+ListItem.completed .step-name {
+    color: #6dffb3;
+}
 
-    /* =========================
-       STATE COLORS
-       ========================= */
+ListItem.completed .step-status {
+    color: #00ff88;
+}
 
-    ListItem.running {
-        background: #07151c;
-        border-left: wide #00f0ff;
-    }
+ListItem.failed {
+    background: #170608;
+    border-left: wide #ff004c;
+}
 
-    ListItem.running .step-name {
-        color: #00f0ff;
-        text-style: bold;
-    }
+ListItem.failed .step-name,
+ListItem.failed .step-status {
+    color: #ff6b8a;
+    text-style: bold;
+}
 
-    ListItem.running .step-status {
-        color: #00f0ff;
-    }
+.panel-title,
+.accent {
+    color: #00f0ff;
+    text-style: bold;
+}
 
-    ListItem.completed {
-        background: #06140d;
-        border-left: wide #00ff88;
-    }
+.warning {
+    color: #ffcc00;
+    text-style: bold;
+}
 
-    ListItem.completed .step-name {
-        color: #6dffb3;
-    }
+.danger {
+    color: #ff004c;
+    text-style: bold;
+}
 
-    ListItem.completed .step-status {
-        color: #00ff88;
-    }
-
-    ListItem.failed {
-        background: #170608;
-        border-left: wide #ff004c;
-    }
-
-    ListItem.failed .step-name {
-        color: #ff6b8a;
-        text-style: bold;
-    }
-
-    ListItem.failed .step-status {
-        color: #ff004c;
-    }
-
-    /* =========================
-       CYBER FX
-       ========================= */
-
-    .panel-title {
-        color: #00f0ff;
-        text-style: bold;
-    }
-
-    .warning {
-        color: #ffcc00;
-        text-style: bold;
-    }
-
-    .danger {
-        color: #ff004c;
-        text-style: bold;
-    }
-
-    .success {
-        color: #00ff88;
-        text-style: bold;
-    }
-
-    .accent {
-        color: #00f0ff;
-    }
+.success {
+    color: #00ff88;
+    text-style: bold;
+}
     """
 
     BINDINGS = [

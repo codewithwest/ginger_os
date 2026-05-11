@@ -4,7 +4,7 @@
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
+echo $SCRIPT_DIR
 source "$SCRIPT_DIR/.venv/bin/activate"
 
 uv sync --project "$SCRIPT_DIR" --quiet
