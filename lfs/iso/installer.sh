@@ -54,6 +54,49 @@ tar -xpvf /mnt/iso/installer/gingeros-base-rootfs.tar.gz -C "$MNT" 2>&3 | \
     done
 log_and_show "[STEP 4/6] Extraction complete."
 
+# -----------------------------------------------------------------
+# 5️⃣  Create the required absolute merged‑/usr symlinks inside the new root
+# -----------------------------------------------------------------
+# These links must be absolute because early‑boot scripts run before any
+# chroot or working‑directory context exists.  They replace the relative links
+# that were previously created by update-dir.sh.
+log_and_show "[STEP 5/6] Creating absolute merged‑/usr symlinks..."
+
+# Helper to (re)create an absolute symlink, removing any existing entry first
+create_abs_link() {
+    local target="$1"
+    local link="$2"
+    if [ -e "$MNT/$link" ]; then
+        rm -rf "$MNT/$link"
+    fi
+    ln -sv "$target" "$MNT/$link"
+    log_and_show "    $link -> $target"
+}
+
+# remove_abs_link() {
+#     local link="$1"
+#     if [ -L "$MNT/$link" ]; then
+#         rm -rf "$MNT/$link"
+#         log_and_show "    Removed existing symlink: $link"
+#     fi
+# }
+
+# bin, sbin, lib
+# create_abs_link "/usr/bin"   "/bin"
+# create_abs_link "/usr/sbin"  "/sbin"
+# create_abs_link "/usr/lib"   "/lib"
+
+# lib64 – point to /usr/lib64 if it exists, otherwise to /usr/lib
+# if [ -d "$MNT/usr/lib64" ]; then
+#     lib64_target="/usr/lib64"
+# else
+#     lib64_target="/usr/lib"
+# fi
+# create_abs_link "$lib64_target" "lib64"
+
+ 
+log_and_show "[STEP 5/6] Absolute symlinks created."
+
 # Create /etc/inittab — LFS Standard (Section 7.6.2)
 if [ ! -f "$MNT/etc/inittab" ]; then
     log_and_show "[STEP 4/6] Creating /etc/inittab (LFS standard)..."

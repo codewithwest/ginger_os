@@ -58,8 +58,8 @@ log "INFO" "Packaging Extra-Lean root filesystem into $OUTPUT_TAR..."
 
 # We use direct directory exclusions and --warning=no-file-changed
 # This is the most robust way to tar a live root.
-sudo ln -sv usr/lib/lsb "$LFS/lib/lsb"
-sudo ln -sv ../usr/bin/kmod "$LFS/sbin/kmod"
+# sudo ln -sv usr/lib/lsb "$LFS/lib/lsb"
+# sudo ln -sv ../usr/bin/kmod "$LFS/sbin/kmod"
 
 # 2. Tell every boot script to actually use the functions
 sudo find "$LFS/etc/rc.d/init.d/" -type f -not -name "README" \

@@ -366,7 +366,7 @@ ListItem.failed .step-status {
         # Start the Web Dashboard server in a background thread
         threading.Thread(
             target=start_server,
-            args=(self.engine, self),
+            args=(self.engine,),
             daemon=True
         ).start()
 

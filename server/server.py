@@ -18,7 +18,6 @@ logging.getLogger("uvicorn.error").setLevel(logging.ERROR)
 app = FastAPI()
 
 engine = None
-tui = None
 
 # Thread-safe queue for log messages from engine thread → async broadcast
 _log_queue: queue.Queue = queue.Queue()
@@ -80,8 +79,8 @@ async def get_status():
             "running": engine.is_running,
             "aborted": engine.aborted,
             "current_pkg": engine.current_pkg or "",
-            "executing_step": tui.state.executing_step if tui else None,
-            "auto_all": tui.state.auto_all if tui else False,
+            "executing_step": next((i for i, s in enumerate(engine.steps) if s.status == "running"), None),
+            "auto_all": getattr(engine, "auto_all", False),
             "steps": [
                 {
                     "id": s.id,
@@ -113,33 +112,34 @@ async def get_status():
 
 @app.post("/api/step/{step_idx}/run")
 async def run_step(step_idx: int):
-    if not tui:
-        return {"status": "error", "message": "TUI not initialized"}
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
     if step_idx < 0 or step_idx >= len(engine.steps):
         return {"status": "error", "message": "Invalid step index"}
-    tui.selected_step = step_idx
-    tui.run_selected_step(force=False)
-    return {"status": "ok", "step": engine.steps[step_idx].name}
+    step = engine.steps[step_idx]
+    if engine._should_skip(step):
+        return {"status": "ok", "message": f"Step {step.name} already completed"}
+    threading.Thread(target=lambda: engine._execute_step(step), daemon=True).start()
+    return {"status": "ok", "step": step.name}
 
 
 @app.post("/api/step/{step_idx}/force")
 async def force_step(step_idx: int):
-    if not tui:
-        return {"status": "error", "message": "TUI not initialized"}
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
     if step_idx < 0 or step_idx >= len(engine.steps):
         return {"status": "error", "message": "Invalid step index"}
-    tui.selected_step = step_idx
-    tui.run_selected_step(force=True)
-    return {"status": "ok", "step": engine.steps[step_idx].name}
+    step = engine.steps[step_idx]
+    threading.Thread(target=lambda: engine._execute_step(step), daemon=True).start()
+    return {"status": "ok", "step": step.name}
 
 
 @app.post("/api/step/{step_idx}/reset")
 async def reset_step(step_idx: int):
-    if not tui:
-        return {"status": "error", "message": "TUI not initialized"}
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
     if step_idx < 0 or step_idx >= len(engine.steps):
         return {"status": "error", "message": "Invalid step index"}
-    tui.delete_marker(step_idx)
     engine.steps[step_idx].status = "pending"
     return {"status": "ok", "step": engine.steps[step_idx].name}
 
@@ -186,14 +186,18 @@ async def rebuild_ui():
 
 @app.post("/api/control/{action}")
 async def control_build(action: str):
-    if not tui:
-        return {"status": "error", "message": "TUI not initialized"}
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
     if action == "auto":
-        tui.run_all_pending()
+        engine.auto_all = True
+        def run_all():
+            for step in engine.steps:
+                if getattr(engine, "auto_all", False) and not engine._should_skip(step):
+                    engine._execute_step(step)
+        threading.Thread(target=run_all, daemon=True).start()
     elif action == "abort":
         engine.abort()
-        tui.auto_all = False
-        tui.executing_step = None
+        engine.auto_all = False
     elif action == "resume":
         engine.resume_package()
     return {"status": "ok", "action": action}
@@ -208,6 +212,19 @@ async def full_teardown():
 
     def run_teardown():
         try:
+            import datetime
+            import tarfile
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            export_dir = os.path.join(_GINGER_ROOT, "exported_logs")
+            os.makedirs(export_dir, exist_ok=True)
+            archive_path = os.path.join(export_dir, f"llm_training_logs_{timestamp}.tar.gz")
+            
+            logs_dir = os.path.join(_GINGER_ROOT, "logs")
+            if os.path.exists(logs_dir):
+                with tarfile.open(archive_path, "w:gz") as tar:
+                    tar.add(logs_dir, arcname="logs")
+                engine.log(f"Logs preserved for LLM training: {archive_path}", "green")
+
             # Run the full teardown script
             script_path = os.path.join(
                 os.path.dirname(os.path.dirname(__file__)),
@@ -328,11 +345,10 @@ def broadcast_log(msg, style):
     _log_queue.put(json.dumps({"msg": msg, "style": style or ""}))
 
 
-def start_server(engine_instance, tui_instance, host="127.0.0.1", port=8000):
-    global engine, tui
+def start_server(engine_instance, host="127.0.0.1", port=8087):
+    global engine
     try:
         engine = engine_instance
-        tui = tui_instance
         engine.on_log_callbacks.append(broadcast_log)
 
         # Mount static files AFTER all API routes are defined

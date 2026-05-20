@@ -111,7 +111,7 @@ GingerOS transforms the traditionally manual and error-prone process of building
 ### User Flow
 
 1. **Launch**: User runs `python3 ginger_os.py`.
-2. **Dashboard**: The Web UI automatically initializes at `http://localhost:8000`.
+2. **Dashboard**: The Web UI automatically initializes at `http://localhost:8087`.
 3. **Execution**: User presses `a` (Auto-run) in TUI or toggles "Auto Protocol" in the dashboard.
 4. **Monitoring**: User watches live "Neural Stream" logs and Temporal Diagnostics.
 5. **Optimization**: User adjusts "Core Allocation" slider to balance performance.
