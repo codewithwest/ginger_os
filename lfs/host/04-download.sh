@@ -10,7 +10,7 @@ command -v wget >/dev/null || {
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../../config/env.sh"
-source "${SCRIPT_DIR}/../lib/common.sh"
+source "${SCRIPT_DIR}/../lfs/lib/common.sh"
 
 # 1. Prepare directory
 echo "__GINGER_PKG_MARKER__: Directory Preparation"
@@ -22,8 +22,8 @@ cd "$GINGER_SOURCES"
 # 2. Get list and checksums
 echo "__GINGER_PKG_MARKER__: Fetching Package Lists"
 log "INFO" "Fetching package lists for LFS ${LFS_VERSION}..."
-wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/wget-list"
-wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}/md5sums"
+wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}-systemd/wget-list"
+wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}-systemd/md5sums"
 
 # 3. Pre-Download Checksum Verification
 echo "__GINGER_PKG_MARKER__: Pre-download Check"

@@ -13,7 +13,7 @@ sed -i 's/-Wl,-rpath,[^ ]*//' support/shobj-conf
 ./configure --prefix=/usr    \
             --disable-static \
             --with-curses    \
-            --docdir=/usr/share/doc/readline-8.3
+            --docdir=/usr/share/doc/readline-${READLINE_VERSION}
 
 make SHLIB_LIBS="-lncursesw" $MAKEFLAGS
 make SHLIB_LIBS="-lncursesw" install

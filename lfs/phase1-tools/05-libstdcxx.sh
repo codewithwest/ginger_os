@@ -18,7 +18,7 @@ cd build
     --disable-multilib         \
     --disable-nls              \
     --disable-libstdcxx-pch    \
-    --with-gxx-include-dir=/tools/$LFS_TGT/include/c++/15.2.0
+    --with-gxx-include-dir=/tools/$LFS_TGT/include/c++/${GCC_VERSION}
 
 make $MAKEFLAGS
 make DESTDIR=$LFS install
