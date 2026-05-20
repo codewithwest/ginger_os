@@ -13,7 +13,7 @@ ver_check()
 {
    if ! type -p $2 &>/dev/null
    then 
-     echo "ERROR: Cannot find $2 ($1)"; return 1; 
+     echo "ERROR: Cannot find $2 ($1)"; return 1;
    fi
    v=$($2 --version 2>&1 | grep -E -o '[0-9]+\.[0-9\.]+[a-z]*' | head -n1)
    if printf '%s\n' $3 $v | sort --version-sort --check &>/dev/null

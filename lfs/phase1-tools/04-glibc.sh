@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 5.5. Glibc-2.42
+# LFS 13.0 - 5.5. Glibc-2.43
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="glibc"
@@ -18,7 +18,7 @@ case $(uname -m) in
     ;;
 esac
 
-patch -Np1 -i "$GINGER_SOURCES/glibc-2.42-fhs-1.patch"
+patch -Np1 -i "$GINGER_SOURCES/glibc-fhs-1.patch"
 
 mkdir -v build
 cd build

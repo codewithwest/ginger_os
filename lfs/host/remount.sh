@@ -15,7 +15,7 @@ fi
 
 # Remount the LFS image (creates if missing)
 # This script will create the image if it does not exist and mount it to $LFS
-"$(cd "$(dirname "${BASH_SOURCE[0]}")/../image" && pwd)/prepare-image.sh"
+"$(cd "$(dirname "${BASH_SOURCE[0]}")/../image" && pwd)/01-prepare-image.sh"
 
 # Run the host finalization script
 # "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/finalize-system.sh"

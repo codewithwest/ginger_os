@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.77. Udev from Systemd-257.8 (or standalone)
+# LFS 13.0 - 8.77. Udev from Systemd-259.1 (or standalone)
 # LFS SysV uses a specific Udev setup. 
 source "/lfs/lib/common.sh"
 PKG_NAME="udev"
@@ -62,7 +62,7 @@ tar -xvf /sources/udev-lfs-20230818.tar.xz
 make -f udev-lfs-20230818/Makefile.lfs install
 
 
-tar -xf /sources/systemd-man-pages-257.8.tar.xz                            \
+tar -xf /sources/systemd-man-pages-$UDEV_VERSION.tar.xz                            \
     --no-same-owner --strip-components=1                              \
     -C /usr/share/man --wildcards '*/udev*' '*/libudev*'              \
                                   '*/systemd.link.5'                  \

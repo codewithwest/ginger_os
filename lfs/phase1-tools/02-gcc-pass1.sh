@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 5.3. GCC-15.2.0 - Pass 1
+# LFS 13.0 - 5.3. GCC-15.2.0 - Pass 1
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="gcc-pass1"
@@ -27,7 +27,7 @@ cd build
 ../configure                  \
     --target=$LFS_TGT         \
     --prefix=$LFS/tools       \
-    --with-glibc-version=2.42 \
+    --with-glibc-version=2.43 \
     --with-sysroot=$LFS       \
     --with-newlib             \
     --without-headers         \

@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 6.18. GCC-15.2.0 - Pass 2
+# LFS 13.0 - 6.18. GCC-15.2.0 - Pass 2
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="gcc-pass2"

@@ -5,7 +5,7 @@ PKG_NAME="bison-bridge"
 check_built "$PKG_NAME" && exit 0
 extract "bison"
 
-./configure --prefix=/usr --docdir=/usr/share/doc/bison-3.8.2
+./configure --prefix=/usr --docdir=/usr/share/doc/bison-${BISON_VERSION}
 
 make $MAKEFLAGS
 make install

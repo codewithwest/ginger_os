@@ -235,6 +235,9 @@ func (m SidebarModel) View() string {
 		}
 
 		displayName := step.Name
+		if len(displayName) > 4 && displayName[2] == '.' && displayName[3] == ' ' {
+			displayName = displayName[4:]
+		}
 		if len(displayName) > nameWidth {
 			displayName = displayName[:nameWidth-3] + "..."
 		}
