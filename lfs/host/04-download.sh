@@ -22,8 +22,12 @@ cd "$GINGER_SOURCES"
 # 2. Get list and checksums
 echo "__GINGER_PKG_MARKER__: Fetching Package Lists"
 log "INFO" "Fetching package lists for LFS ${LFS_VERSION}..."
-wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}-systemd/wget-list"
-wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/${LFS_VERSION}-systemd/md5sums"
+# 2. Get list and checksums
+echo "__GINGER_PKG_MARKER__: Fetching Package Lists"
+log "INFO" "Fetching package lists for LFS ${LFS_VERSION}..."
+# Download unified list from stable-systemd (includes all packages)
+wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/13.0-systemd/wget-list" -O wget-list
+wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/13.0-systemd/md5sums" -O md5sums
 
 # 3. Pre-Download Checksum Verification
 echo "__GINGER_PKG_MARKER__: Pre-download Check"
@@ -92,7 +96,7 @@ echo "__GINGER_PKG_MARKER__: BLFS Tools"
 extra_urls=(
     "https://files.libburnia-project.org/releases/libburn-1.5.6.tar.gz"
     "https://files.libburnia-project.org/releases/libisofs-1.5.6.tar.gz"
-    "https://files.libburnia-project.org/releases/libisoburn-1.5.6.tar.gz"
+    "https://www.freedesktop.org/software/systemd/systemd-${SYSTEMD_VERSION}.tar.xz"
 )
 
 for url in "${extra_urls[@]}"; do
