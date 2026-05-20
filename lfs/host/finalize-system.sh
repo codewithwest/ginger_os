@@ -43,6 +43,17 @@ if [ -n "$KERNEL_FILE" ]; then
     cp -v "$KERNEL_FILE" "${GINGER_ROOT}/vmlinuz-ginger"
 fi
 
+# 3.5. Consolidate build logs into target filesystem and host history
+log "INFO" "Consolidating build logs into target filesystem..."
+sudo mkdir -p "$LFS/var/log/ginger_build"
+sudo cp -v "${GINGER_ROOT}/logs/"*.log "$LFS/var/log/ginger_build/" 2>/dev/null || true
+sudo chmod 644 "$LFS/var/log/ginger_build/"* 2>/dev/null || true
+
+log "INFO" "Consolidating build logs into host history folder..."
+HISTORY_DIR="${GINGER_ROOT}/logs/history/build_$(date +'%Y%m%d_%H%M%S')"
+mkdir -p "$HISTORY_DIR"
+cp -v "${GINGER_ROOT}/logs/"*.log "$HISTORY_DIR/" 2>/dev/null || true
+
 # 4. Clean Machine-Specific Data and Temp Logs
 log "INFO" "Purging non-essential data (tmp, machine-id, logs)..."
 sudo rm -rf "$LFS"/tmp/* "$LFS"/var/tmp/*

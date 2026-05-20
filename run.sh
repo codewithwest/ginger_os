@@ -1,17 +1,39 @@
 #!/bin/bash
-# GingerOS Runner
+# GingerOS Unified Runner
 
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-echo $SCRIPT_DIR
-source "$SCRIPT_DIR/.venv/bin/activate"
 
-uv sync --project "$SCRIPT_DIR" --quiet
+echo "======================================================================"
+print_cyan() {
+    echo -e "\033[36m$1\033[0m"
+}
 
-cd "$SCRIPT_DIR/ui/web"
-npm run build
+print_cyan "🚀 Launching GingerOS Development Environment..."
+echo "======================================================================"
 
-cd "$SCRIPT_DIR"
+# 1. Spin up the FastAPI server inside our virtual environment
+print_cyan "⚙️  Starting build engine server..."
+"$SCRIPT_DIR/.venv/bin/python3" "$SCRIPT_DIR/server/main.py" > "$SCRIPT_DIR/backend.log" 2>&1 &
+SERVER_PID=$!
 
-python3 -m ui.tui.main "$@"
+cleanup() {
+    echo ""
+    print_cyan "🔌 Stopping backend engine server..."
+    kill $SERVER_PID 2>/dev/null || true
+}
+trap cleanup EXIT
+
+# Wait briefly for backend to bind port
+sleep 1.2
+
+# 2. Build and launch our high-performance Go TUI
+print_cyan "🛸 Booting high-density Go HUD..."
+cd "$SCRIPT_DIR/ui/gotui"
+go build -o ginger-hud .
+./ginger-hud
+
+echo "======================================================================"
+print_cyan "🏁 Environment closed."
+echo "======================================================================"
