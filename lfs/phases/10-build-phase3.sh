@@ -28,15 +28,32 @@ SCRIPTS=(/lfs/phase3-system/*.sh)
 TOTAL_PKGS=${#SCRIPTS[@]}
 CURRENT_PKG_IDX=0
 
+# Determine if a specific package was targeted via argument or env var
+TARGET_PKG="${1:-${GINGER_ONLY_PKG:-${ONLY_PKG:-}}}"
+
+if [ -n "$TARGET_PKG" ]; then
+    echo "Filtering Phase 3: Only executing package matching '$TARGET_PKG'"
+fi
+
 for script in "${SCRIPTS[@]}"; do
     CURRENT_PKG_IDX=$((CURRENT_PKG_IDX + 1))
     SCRIPT_PKG_NAME=$(grep -E "^PKG_NAME=" "$script" | cut -d'"' -f2 || echo "")
     FILE_PKG_NAME=$(basename "$script" .sh | cut -d'-' -f2-)
     FULL_SCRIPT_NAME=$(basename "$script" .sh)
 
-    if [ -f "$STATE_DIR/${FULL_SCRIPT_NAME}.built" ]; then
-        echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME (Skipped)"
-        continue
+    # Check if target package filter applies
+    if [ -n "$TARGET_PKG" ]; then
+        if [[ ! "$FILE_PKG_NAME" =~ "$TARGET_PKG" ]] && [[ ! "$SCRIPT_PKG_NAME" =~ "$TARGET_PKG" ]] && [[ ! "$FULL_SCRIPT_NAME" =~ "$TARGET_PKG" ]]; then
+            # Skip silent to avoid noise
+            continue
+        fi
+        echo "Found matching target package: $FILE_PKG_NAME"
+    else
+        # Standard build check only if no specific package was targeted
+        if [ -f "$STATE_DIR/${FULL_SCRIPT_NAME}.built" ]; then
+            echo "__GINGER_PKG_COUNT__: $CURRENT_PKG_IDX/$TOTAL_PKGS : $FILE_PKG_NAME (Skipped)"
+            continue
+        fi
     fi
 
     # Phase 3 scripts must only be skipped if their specific full script name marker exists.
@@ -56,3 +73,7 @@ for script in "${SCRIPTS[@]}"; do
         exit 1
     fi
 done
+
+if [ -n "$TARGET_PKG" ]; then
+    echo "Single package build attempt completed for: $TARGET_PKG"
+fi

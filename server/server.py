@@ -111,27 +111,27 @@ async def get_status():
 
 
 @app.post("/api/step/{step_idx}/run")
-async def run_step(step_idx: int):
+async def run_step(step_idx: int, pkg: str = None):
     if not engine:
         return {"status": "error", "message": "Engine not initialized"}
     if step_idx < 0 or step_idx >= len(engine.steps):
         return {"status": "error", "message": "Invalid step index"}
     step = engine.steps[step_idx]
-    if engine._should_skip(step):
+    if not pkg and engine._should_skip(step):
         return {"status": "ok", "message": f"Step {step.name} already completed"}
-    threading.Thread(target=lambda: engine._execute_step(step), daemon=True).start()
-    return {"status": "ok", "step": step.name}
+    threading.Thread(target=lambda: engine._execute_step(step, pkg=pkg), daemon=True).start()
+    return {"status": "ok", "step": step.name, "pkg": pkg}
 
 
 @app.post("/api/step/{step_idx}/force")
-async def force_step(step_idx: int):
+async def force_step(step_idx: int, pkg: str = None):
     if not engine:
         return {"status": "error", "message": "Engine not initialized"}
     if step_idx < 0 or step_idx >= len(engine.steps):
         return {"status": "error", "message": "Invalid step index"}
     step = engine.steps[step_idx]
-    threading.Thread(target=lambda: engine._execute_step(step), daemon=True).start()
-    return {"status": "ok", "step": step.name}
+    threading.Thread(target=lambda: engine._execute_step(step, pkg=pkg), daemon=True).start()
+    return {"status": "ok", "step": step.name, "pkg": pkg}
 
 
 @app.post("/api/step/{step_idx}/reset")

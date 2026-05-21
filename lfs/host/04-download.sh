@@ -26,16 +26,20 @@ log "INFO" "Fetching package lists for LFS ${LFS_VERSION}..."
 echo "__GINGER_PKG_MARKER__: Fetching Package Lists"
 log "INFO" "Fetching package lists for LFS ${LFS_VERSION}..."
 # Download unified list from stable-systemd (includes all packages)
-wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/13.0-systemd/wget-list" -O wget-list
-wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/13.0-systemd/md5sums" -O md5sums
+if [ ! -f "wget-list" ] || [ ! -f "md5sums" ]; then
+    wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/13.0-systemd/wget-list" -O wget-list
+    wget -nc --progress=bar:force:noscroll "https://www.linuxfromscratch.org/lfs/downloads/13.0-systemd/md5sums" -O md5sums
+
+    log "INFO" "Package lists downloaded."
+fi
 
 # 3. Pre-Download Checksum Verification
 echo "__GINGER_PKG_MARKER__: Pre-download Check"
 log "INFO" "Performing pre-download checksum verification..."
 # If all standard packages match, we might skip the whole thing
 if grep -v '^#' md5sums | xargs -P "$(nproc)" -I {} sh -c "echo '{}' | md5sum -c --status" 2>/dev/null; then
-    # Also check BLFS extras
-    if [ -f "libburn-1.5.6.tar.gz" ] && [ -f "libisofs-1.5.6.tar.gz" ] && [ -f "libisoburn-1.5.6.tar.gz" ]; then
+    # Also check BLFS extras and bootscripts
+    if [ -f "libburn-1.5.6.tar.gz" ] && [ -f "libisofs-1.5.6.tar.gz" ] && [ -f "libisoburn-1.5.6.tar.gz" ] && [ -f "lfs-bootscripts-20250827.tar.xz" ]; then
         log "INFO" "All packages already exist and are valid. Marking complete."
         mark_built "04_setup_downloads"
         exit 0
@@ -60,9 +64,9 @@ grep -v '^#' wget-list | while read -r url; do
     fi
 
     # ncurses snapshots move frequently — use stable ftp.gnu.org release
-    if [[ "$url" == *"invisible-mirror.net"* ]] || [[ "$url" == *"invisible-island.net"* ]]; then
-        url="https://ftp.gnu.org/gnu/ncurses/ncurses-6.5.tar.gz"
-    fi
+    # if [[ "$url" == *"invisible-mirror.net"* ]] || [[ "$url" == *"invisible-island.net"* ]]; then
+    #     url="https://ftp.gnu.org/gnu/ncurses/ncurses-6.5.tar.gz"
+    # fi
 
     pkg=$(basename "$url")
     
@@ -70,8 +74,18 @@ grep -v '^#' wget-list | while read -r url; do
         echo "__GINGER_PKG_MARKER__: $pkg [$current/$total]"
         log "PROCESS" "Missing: $pkg. Downloading..."
         if ! wget -4 --continue --progress=bar:force:noscroll --tries=3 --timeout=15 "$url"; then
-            log "ERROR" "Failed to download $pkg"
-            exit 1
+            if [[ "$url" == *"lfs-bootscripts"* ]]; then
+                log "WARN" "Failed to download $pkg, trying stable alternative..."
+                if wget -4 --continue --progress=bar:force:noscroll --tries=3 --timeout=15 "https://www.linuxfromscratch.org/lfs/downloads/stable/lfs-bootscripts-20250827.tar.xz"; then
+                    log "INFO" "Successfully downloaded lfs-bootscripts from alternative URL."
+                else
+                    log "ERROR" "Failed to download lfs-bootscripts from alternative URL as well."
+                    exit 1
+                fi
+            else
+                log "ERROR" "Failed to download $pkg"
+                exit 1
+            fi
         fi
         missing_count=$((missing_count + 1))
         echo $missing_count > "$tmp_missing"
@@ -96,7 +110,8 @@ echo "__GINGER_PKG_MARKER__: BLFS Tools"
 extra_urls=(
     "https://files.libburnia-project.org/releases/libburn-1.5.6.tar.gz"
     "https://files.libburnia-project.org/releases/libisofs-1.5.6.tar.gz"
-    "https://www.freedesktop.org/software/systemd/systemd-${SYSTEMD_VERSION}.tar.xz"
+    "https://files.libburnia-project.org/releases/libisoburn-1.5.6.tar.gz"
+    "https://www.linuxfromscratch.org/lfs/downloads/stable/lfs-bootscripts-20250827.tar.xz"
 )
 
 for url in "${extra_urls[@]}"; do

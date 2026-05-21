@@ -261,7 +261,7 @@ class GingerEngine:
             pass
         return None
 
-    def _execute_step(self, step):
+    def _execute_step(self, step, pkg: str = None):
         """
         Execute a single build step.
         """
@@ -272,7 +272,7 @@ class GingerEngine:
             current_idx = all_steps.index(step)
             for i in range(current_idx):
                 prev_step = all_steps[i]
-                if not self._should_skip(prev_step):
+                if not pkg and not self._should_skip(prev_step):
                     self.log(
                         f"ERROR: Cannot run {step.name} because {prev_step.name} is not completed.",
                         "bold red",
@@ -338,12 +338,18 @@ class GingerEngine:
                     return
 
         # Execute the step
-        return_code = self.process_monitor.execute_step(step)
+        return_code = self.process_monitor.execute_step(step, pkg=pkg)
 
         # Handle completion
         if return_code == 0:
-            step.status = "completed"
-            self.log(f"✅ Step completed: {step.name}", "bold green")
+            # If a specific package was targeted, we do NOT set the entire step to completed
+            # so that it can be run in full later!
+            if not pkg:
+                step.status = "completed"
+                self.log(f"✅ Step completed: {step.name}", "bold green")
+            else:
+                step.status = "pending"
+                self.log(f"✅ Package {pkg} built successfully. Step remains pending for remaining packages.", "bold green")
         else:
             step.status = "failed"
             self.log(f"❌ Step failed: {step.name}", "bold red")

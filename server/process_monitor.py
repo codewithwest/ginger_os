@@ -21,17 +21,19 @@ class ProcessMonitor:
             r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
         self.non_printable = re.compile(r"[^\x20-\x7E\n\t]")
 
-    def execute_step(self, step):
+    def execute_step(self, step, pkg: str = None):
         """
         Execute a single build step in a subprocess.
 
         Args:
             step: The BuildStep to execute
+            pkg: Optional specific package to target
 
         Returns:
             int: Process return code
         """
-        self.engine.log(f"Starting step: {step.name}", "bold cyan")
+        target_name = f"{step.name} (Package: {pkg})" if pkg else step.name
+        self.engine.log(f"Starting step: {target_name}", "bold cyan")
         step.start_time = time.time()
         self.engine.phase_start_time = step.start_time
         if self.engine.overall_start_time is None:
@@ -47,15 +49,19 @@ class ProcessMonitor:
         self.engine.pkg_start_time = None
         step.packages_completed = []
 
-        self.engine.log(f"Phase {step.phase}: Starting {step.name}...", "cyan")
+        self.engine.log(f"Phase {step.phase}: Starting {target_name}...", "cyan")
 
         try:
             with open(step.log_file, "w") as f:
-                f.write(f"--- GingerOS Step Log: {step.name} ---\n")
+                f.write(f"--- GingerOS Step Log: {target_name} ---\n")
+
+            cmd = step.command
+            if pkg:
+                cmd = f"{cmd} {pkg}"
 
             if self.engine.dry_run:
                 self.engine.log(
-                    f"[DRY-RUN] Would execute: {step.command}", "bold bright_yellow"
+                    f"[DRY-RUN] Would execute: {cmd}", "bold bright_yellow"
                 )
                 return 0
 
@@ -67,7 +73,7 @@ class ProcessMonitor:
 
             # Start the process
             process = subprocess.Popen(
-                step.command,
+                cmd,
                 cwd=self.engine.ginger_root,
                 shell=True,
                 stdout=subprocess.PIPE,

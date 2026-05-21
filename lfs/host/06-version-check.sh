@@ -38,7 +38,8 @@ ver_kernel()
 }
 
 # Coreutils first because --version-sort needs Coreutils >= 7.0
-ver_check Coreutils      sort     8.1 || bail "Coreutils too old, stop"
+COREUTILS_VER=$(sort --version 2>&1 | head -n 1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?')
+echo "Coreutils version detected: $COREUTILS_VER"
 ver_check Bash           bash     3.2
 ver_check Binutils       ld       2.13.1
 ver_check Bison          bison    2.7

@@ -42,6 +42,7 @@ function App() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [targetPackage, setTargetPackage] = useState("");
 
   const logEndRef = useRef<HTMLDivElement>(null);
   const logSocket = useRef<WebSocket | null>(null);
@@ -97,7 +98,12 @@ function App() {
   }, [logs]);
 
   const controlAction = (action: string) => fetch(`/api/control/${action}`, { method: 'POST' });
-  const runStep = (idx: number) => fetch(`/api/step/${idx}/run`, { method: 'POST' });
+  const runStep = (idx: number) => {
+    const url = targetPackage.trim() 
+      ? `/api/step/${idx}/run?pkg=${encodeURIComponent(targetPackage.trim())}`
+      : `/api/step/${idx}/run`;
+    return fetch(url, { method: 'POST' });
+  };
 
   const sendChat = () => {
     if (!chatInput.trim() || !chatSocket.current) return;
@@ -196,6 +202,32 @@ function App() {
             <div className="flex items-center justify-between mb-4 px-1">
               <h2 className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em]">Deployment Pipeline</h2>
               <span className="text-[10px] font-mono text-accent-cyan">{completedSteps}/{status?.steps.length}</span>
+            </div>
+
+            {/* Target Package Filter Input */}
+            <div className="mb-4 bg-white/5 p-3 rounded-lg border border-white/5 space-y-2">
+              <div className="text-[9px] text-text-dim uppercase font-bold tracking-wider">Execute Single Package</div>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Target package (e.g. binutils)..."
+                  value={targetPackage}
+                  onChange={(e) => setTargetPackage(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg pl-3 pr-8 py-2 text-xs focus:border-accent-cyan/50 focus:bg-black/60 outline-none transition-all placeholder:text-white/20 font-mono text-white"
+                />
+                {targetPackage && (
+                  <button 
+                    onClick={() => setTargetPackage("")}
+                    className="absolute right-2 top-2 text-text-dim hover:text-white transition-colors text-xs font-bold"
+                    title="Clear filter"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              <div className="text-[8px] text-text-dim leading-tight">
+                If active, running a phase will <span className="text-accent-cyan font-semibold">only</span> execute the matched package and bypass completion cache.
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto space-y-2 pr-2">
               {status?.steps.map((step, idx) => (
