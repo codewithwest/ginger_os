@@ -124,11 +124,11 @@ chown -R lfs "$LFS/var/lib/ginger"
 # ---------------------------------------------------------------------
 log "INFO" "Mounting project files into $LFS for the lfs user..."
 mkdir -p "$LFS/lfs" "$LFS/scripts" "$LFS/config" "$LFS/sources" "$LFS/ginger_os" "$LFS/var/log/ginger"
-mountpoint -q "$LFS/lfs" || mount --bind "$GINGER_SCRIPTS" "$LFS/lfs"
-mountpoint -q "$LFS/scripts" || mount --bind "$GINGER_SCRIPTS" "$LFS/scripts"
-mountpoint -q "$LFS/config"  || mount --bind "$GINGER_ROOT/config"  "$LFS/config"
-mountpoint -q "$LFS/sources" || mount --bind "$GINGER_SOURCES" "$LFS/sources"
-mountpoint -q "$LFS/ginger_os" || mount --bind "$GINGER_ROOT" "$LFS/ginger_os"
+grep -q "$LFS/lfs " /proc/mounts || mount --bind "$GINGER_SCRIPTS" "$LFS/lfs"
+grep -q "$LFS/scripts " /proc/mounts || mount --bind "$GINGER_SCRIPTS" "$LFS/scripts"
+grep -q "$LFS/config " /proc/mounts || mount --bind "$GINGER_ROOT/config"  "$LFS/config"
+grep -q "$LFS/sources " /proc/mounts || mount --bind "$GINGER_SOURCES" "$LFS/sources"
+grep -q "$LFS/ginger_os " /proc/mounts || mount --bind "$GINGER_ROOT" "$LFS/ginger_os"
 
 # Ensure the lfs user owns the logs and state directories inside LFS
 chown -R lfs:lfs "$LFS/var/log/ginger"

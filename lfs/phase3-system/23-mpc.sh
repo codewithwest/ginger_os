@@ -7,7 +7,7 @@ extract "mpc"
 
 ./configure --prefix=/usr    \
             --disable-static \
-            --docdir=/usr/share/doc/mpc-1.3.1
+            --docdir=/usr/share/doc/mpc-${MPC_VERSION}
 
 make $MAKEFLAGS
 make html

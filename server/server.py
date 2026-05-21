@@ -59,7 +59,7 @@ async def _broadcast_worker():
             # Use run_in_executor to avoid blocking the event loop on the thread-safe queue
             msg = await loop.run_in_executor(None, _log_queue.get)
             await manager.broadcast(msg)
-        except Exception as e:
+        except Exception:
             await asyncio.sleep(0.1)
 
 
@@ -79,7 +79,9 @@ async def get_status():
             "running": engine.is_running,
             "aborted": engine.aborted,
             "current_pkg": engine.current_pkg or "",
-            "executing_step": next((i for i, s in enumerate(engine.steps) if s.status == "running"), None),
+            "executing_step": next(
+                (i for i, s in enumerate(engine.steps) if s.status == "running"), None
+            ),
             "auto_all": getattr(engine, "auto_all", False),
             "steps": [
                 {
@@ -99,13 +101,20 @@ async def get_status():
             "max_cores": os.cpu_count() or 1,
             "cpu_usage": psutil.cpu_percent(interval=None),
             "timers": {
-                "package": round(time.time() - engine.pkg_start_time, 1) if engine.pkg_start_time else 0,
-                "phase": round(time.time() - engine.phase_start_time, 1) if engine.phase_start_time else 0,
-                "overall": round(time.time() - engine.overall_start_time, 1) if engine.overall_start_time else 0,
-            }
+                "package": round(time.time() - engine.pkg_start_time, 1)
+                if engine.pkg_start_time
+                else 0,
+                "phase": round(time.time() - engine.phase_start_time, 1)
+                if engine.phase_start_time
+                else 0,
+                "overall": round(time.time() - engine.overall_start_time, 1)
+                if engine.overall_start_time
+                else 0,
+            },
         }
     except Exception as e:
         import traceback
+
         logging.error(f"STATUS_ERROR: {str(e)}\n{traceback.format_exc()}")
         return {"status": "error", "message": str(e)}
 
@@ -135,7 +144,9 @@ async def run_step(step_idx: int, pkg: str = None):
     step = engine.steps[step_idx]
     if not pkg and engine._should_skip(step):
         return {"status": "ok", "message": f"Step {step.name} already completed"}
-    threading.Thread(target=lambda: engine._execute_step(step, pkg=pkg), daemon=True).start()
+    threading.Thread(
+        target=lambda: engine._execute_step(step, pkg=pkg), daemon=True
+    ).start()
     return {"status": "ok", "step": step.name, "pkg": pkg}
 
 
@@ -146,7 +157,9 @@ async def force_step(step_idx: int, pkg: str = None):
     if step_idx < 0 or step_idx >= len(engine.steps):
         return {"status": "error", "message": "Invalid step index"}
     step = engine.steps[step_idx]
-    threading.Thread(target=lambda: engine._execute_step(step, pkg=pkg), daemon=True).start()
+    threading.Thread(
+        target=lambda: engine._execute_step(step, pkg=pkg), daemon=True
+    ).start()
     return {"status": "ok", "step": step.name, "pkg": pkg}
 
 
@@ -164,11 +177,11 @@ async def reset_step(step_idx: int):
 async def set_cores(count: int):
     if not engine:
         return {"status": "error", "message": "Engine not initialized"}
-    
+
     max_c = os.cpu_count() or 1
     if count < 1 or count > max_c:
         return {"status": "error", "message": f"Invalid core count. Range: 1-{max_c}"}
-    
+
     engine.cores = count
     engine.log(f"SYSTEM_CONFIG :: CPU_CORES set to {count}", "bold cyan")
     return {"status": "ok", "cores": count}
@@ -178,21 +191,23 @@ async def set_cores(count: int):
 async def rebuild_ui():
     if not engine:
         return {"status": "error", "message": "Engine not initialized"}
-    
+
     def run_build():
         engine.log("SYSTEM_MAINTENANCE :: Starting UI rebuild...", "bold cyan")
         try:
             res = subprocess.run(
-                "npm run build", 
-                shell=True, 
+                "npm run build",
+                shell=True,
                 cwd=os.path.join(_GINGER_ROOT, "ui", "web"),
                 capture_output=True,
-                text=True
+                text=True,
             )
             if res.returncode == 0:
                 engine.log("SYSTEM_MAINTENANCE :: UI rebuild complete.", "bold green")
             else:
-                engine.log(f"SYSTEM_ERROR :: UI rebuild failed: {res.stderr}", "bold red")
+                engine.log(
+                    f"SYSTEM_ERROR :: UI rebuild failed: {res.stderr}", "bold red"
+                )
         except Exception as e:
             engine.log(f"SYSTEM_ERROR :: UI rebuild exception: {str(e)}", "bold red")
 
@@ -206,10 +221,12 @@ async def control_build(action: str):
         return {"status": "error", "message": "Engine not initialized"}
     if action == "auto":
         engine.auto_all = True
+
         def run_all():
             for step in engine.steps:
                 if getattr(engine, "auto_all", False) and not engine._should_skip(step):
                     engine._execute_step(step)
+
         threading.Thread(target=run_all, daemon=True).start()
     elif action == "abort":
         engine.abort()
@@ -230,11 +247,14 @@ async def full_teardown():
         try:
             import datetime
             import tarfile
+
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             export_dir = os.path.join(_GINGER_ROOT, "exported_logs")
             os.makedirs(export_dir, exist_ok=True)
-            archive_path = os.path.join(export_dir, f"llm_training_logs_{timestamp}.tar.gz")
-            
+            archive_path = os.path.join(
+                export_dir, f"llm_training_logs_{timestamp}.tar.gz"
+            )
+
             logs_dir = os.path.join(_GINGER_ROOT, "logs")
             if os.path.exists(logs_dir):
                 with tarfile.open(archive_path, "w:gz") as tar:
@@ -279,7 +299,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             await asyncio.sleep(5)
             await websocket.send_text(json.dumps({"ping": True}))
-    except (WebSocketDisconnect, Exception):
+    except WebSocketDisconnect, Exception:
         manager.disconnect(websocket)
 
 
@@ -306,8 +326,7 @@ async def chat_websocket_endpoint(websocket: WebSocket):
                 continue
 
             await websocket.send_text(
-                json.dumps(
-                    {"status": "thinking", "msg": "Searching knowledge base..."})
+                json.dumps({"status": "thinking", "msg": "Searching knowledge base..."})
             )
 
             # Run the blocking chatbot answer in a thread to avoid blocking the event loop
@@ -323,7 +342,7 @@ async def chat_websocket_endpoint(websocket: WebSocket):
                     }
                 )
             )
-    except (WebSocketDisconnect, Exception):
+    except WebSocketDisconnect, Exception:
         pass
 
 
@@ -332,8 +351,7 @@ async def take_snapshot(label: str = "manual"):
     if not engine:
         return {"status": "error", "message": "Engine not initialized"}
 
-    threading.Thread(target=lambda: engine.take_snapshot(
-        label), daemon=True).start()
+    threading.Thread(target=lambda: engine.take_snapshot(label), daemon=True).start()
     return {"status": "ok", "message": f"Snapshot '{label}' started"}
 
 
@@ -371,9 +389,12 @@ def start_server(engine_instance, host="127.0.0.1", port=8087):
         if os.path.exists(_UI_DIST):
             app.mount("/", StaticFiles(directory=_UI_DIST, html=True), name="static")
         else:
+
             @app.get("/", response_class=HTMLResponse)
             async def get_index():
-                return "<h1>UI dist not found. Please run 'npm run build' in ui/web.</h1>"
+                return (
+                    "<h1>UI dist not found. Please run 'npm run build' in ui/web.</h1>"
+                )
 
         import uvicorn
         import socket
@@ -395,13 +416,12 @@ def start_server(engine_instance, host="127.0.0.1", port=8087):
         asyncio.set_event_loop(loop)
 
         try:
-            config = uvicorn.Config(
-                app, host=host, port=port, log_level="error")
+            config = uvicorn.Config(app, host=host, port=port, log_level="error")
             server = uvicorn.Server(config)
             engine.log(
                 f"NEURAL_LINK: Dashboard active at http://{host}:{port}", "bold green"
             )
-            
+
             # Periodically check if engine was aborted to stop the server
             async def check_abort():
                 while not engine.aborted:
@@ -411,11 +431,9 @@ def start_server(engine_instance, host="127.0.0.1", port=8087):
             loop.create_task(check_abort())
             loop.run_until_complete(server.serve())
         except Exception as e:
-            engine.log(
-                f"SYSTEM_WARNING: Web UI server error: {str(e)}", "yellow")
+            engine.log(f"SYSTEM_WARNING: Web UI server error: {str(e)}", "yellow")
         finally:
             loop.close()
 
     except Exception as e:
-        engine.log(
-            f"SYSTEM_WARNING: Web UI initialization failed: {str(e)}", "yellow")
+        engine.log(f"SYSTEM_WARNING: Web UI initialization failed: {str(e)}", "yellow")

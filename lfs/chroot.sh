@@ -9,27 +9,27 @@ source "$(dirname "$(readlink -f "$0")")/lib/common.sh"
 log "INFO" "Mounting virtual kernel file systems..."
 mkdir -p $LFS/{dev,proc,sys,run}
 
-# Mount with safety checks
+# Mount with safety checks (use grep on /proc/mounts instead of mountpoint command)
 mkdir -p $LFS/etc
 [ -f /etc/resolv.conf ] && rm -f $LFS/etc/resolv.conf && cp -v /etc/resolv.conf $LFS/etc/
-mountpoint -q $LFS/dev || mount -v --bind /dev $LFS/dev
-mountpoint -q $LFS/dev/pts || mount -v --bind /dev/pts $LFS/dev/pts
-mountpoint -q $LFS/proc || mount -vt proc proc $LFS/proc
-mountpoint -q $LFS/sys || mount -vt sysfs sysfs $LFS/sys
-mountpoint -q $LFS/run || mount -vt tmpfs tmpfs $LFS/run
+grep -q "$LFS/dev " /proc/mounts || mount -v --bind /dev $LFS/dev
+grep -q "$LFS/dev/pts " /proc/mounts || mount -v --bind /dev/pts $LFS/dev/pts
+grep -q "$LFS/proc " /proc/mounts || mount -vt proc proc $LFS/proc
+grep -q "$LFS/sys " /proc/mounts || mount -vt sysfs sysfs $LFS/sys
+grep -q "$LFS/run " /proc/mounts || mount -vt tmpfs tmpfs $LFS/run
 
 if [ -h $LFS/dev/shm ]; then
   install -v -d -m 1777 $LFS$(realpath /dev/shm)
 else
-  mountpoint -q $LFS/dev/shm || mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
+  grep -q "$LFS/dev/shm " /proc/mounts || mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
 fi
 
 # Ensure lfs, config, and sources are accessible inside chroot
 log "INFO" "Mounting project lfs, config, and sources into chroot..."
 mkdir -p "$LFS/lfs" "$LFS/config" "$LFS/sources"
-mountpoint -q "$LFS/lfs" || mount --bind "$GINGER_SCRIPTS" "$LFS/lfs"
-mountpoint -q "$LFS/config"  || mount --bind "$GINGER_ROOT/config"  "$LFS/config"
-mountpoint -q "$LFS/sources" || mount --bind "$GINGER_SOURCES" "$LFS/sources"
+grep -q "$LFS/lfs " /proc/mounts || mount --bind "$GINGER_SCRIPTS" "$LFS/lfs"
+grep -q "$LFS/config " /proc/mounts || mount --bind "$GINGER_ROOT/config"  "$LFS/config"
+grep -q "$LFS/sources " /proc/mounts || mount --bind "$GINGER_SOURCES" "$LFS/sources"
 
 log "INFO" "Entering chroot..."
 

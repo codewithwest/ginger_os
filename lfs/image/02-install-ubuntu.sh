@@ -28,7 +28,7 @@ if [ -z "${LFS:-}" ]; then
     exit 1
 fi
 
-if ! mountpoint -q "$LFS"; then
+if ! grep -q "$LFS " /proc/mounts; then
     log "ERROR" "$LFS is not mounted. Run the 'Create QEMU Image' step first."
     exit 1
 fi

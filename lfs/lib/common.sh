@@ -23,7 +23,7 @@ STATUS_DIR="$LFS/var/lib/ginger"
 # Safety: Only try to create this if:
 # 1. We are NOT at the default ${LFS} (meaning we are likely inside chroot)
 # 2. OR the mountpoint actually exists and is writable.
-if [ "$LFS" != "${LFS}" ] || { mountpoint -q "$LFS" && [ -w "$LFS" ]; }; then
+if [ "$LFS" != "${LFS}" ] || { grep -q "$LFS " /proc/mounts && [ -w "$LFS" ]; }; then
     mkdir -p "$STATUS_DIR" 2>/dev/null || true
 fi
 

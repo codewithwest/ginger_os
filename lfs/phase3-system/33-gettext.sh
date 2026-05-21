@@ -7,7 +7,7 @@ extract "gettext"
 
 ./configure --prefix=/usr    \
             --disable-static \
-            --docdir=/usr/share/doc/gettext-0.26
+            --docdir=/usr/share/doc/gettext-${GETTEXT_VERSION}
 
 make $MAKEFLAGS
 make install

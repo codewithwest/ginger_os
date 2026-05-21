@@ -7,12 +7,12 @@ extract "expat"
 
 ./configure --prefix=/usr    \
             --disable-static \
-            --docdir=/usr/share/doc/expat-2.7.1
+            --docdir=/usr/share/doc/expat-${EXPAT_VERSION}
 
 make $MAKEFLAGS
 make install
 
-install -v -m644 doc/*.{html,css} /usr/share/doc/expat-2.7.1
+install -v -m644 doc/*.{html,css} /usr/share/doc/expat-${EXPAT_VERSION}
 
 cleanup
 mark_built "$PKG_NAME"

@@ -8,7 +8,7 @@ extract "bash"
 ./configure --prefix=/usr             \
             --without-bash-malloc     \
             --with-installed-readline \
-            --docdir=/usr/share/doc/bash-5.3
+            --docdir=/usr/share/doc/bash-${BASH_VERSION}
 
 make $MAKEFLAGS
 make install

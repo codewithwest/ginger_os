@@ -10,7 +10,7 @@ extract "sysklogd"
             --runstatedir=/run \
             --without-logger   \
             --disable-static   \
-            --docdir=/usr/share/doc/sysklogd-2.7.2
+            --docdir=/usr/share/doc/sysklogd-${SYSKLOGD_VERSION}
             
 
 make $MAKEFLAGS

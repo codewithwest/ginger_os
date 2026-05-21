@@ -7,7 +7,7 @@ source "/lfs/lib/common.sh"
 log "INFO" "Creating standard directory tree..."
 
 mkdir -pv /{boot,home,mnt,opt,srv}
-mkdir -pv /etc/{opt,sysconfig}
+mkdir -pv /etc/opt
 mkdir -pv /lib/firmware
 mkdir -pv /media/{floppy,cdrom}
 mkdir -pv /usr/{local/{bin,include,lib,sbin,src},share/{doc,info,locale,man},src}

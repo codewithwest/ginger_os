@@ -8,7 +8,6 @@ import threading
 import subprocess
 import re
 import signal
-import json
 
 from config.constants import (
     GINGER_ROOT,
@@ -63,7 +62,7 @@ class GingerEngine:
         self.paused_for_package = False
         self.current_process = None
         self.on_log_callbacks = []
-        
+
         # CPU Core Allocation
         try:
             self.cores = os.cpu_count() or 1
@@ -71,8 +70,7 @@ class GingerEngine:
             self.cores = 1
 
         # Regex patterns
-        self.ansi_escape = re.compile(
-            r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
+        self.ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
         self.non_printable = re.compile(r"[^\x20-\x7E\n\t]")
 
         # Initialize managers
@@ -172,8 +170,15 @@ class GingerEngine:
 
         # 2.5. Check LFS state dir ONLY if it is actually mounted (prevents FPs)
         try:
-            if subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True).returncode == 0:
-                lfs_marker = os.path.join(LFS_MOUNT, "var/lib/ginger", f"{step.id}.built")
+            if (
+                subprocess.run(
+                    ["mountpoint", "-q", LFS_MOUNT], capture_output=True
+                ).returncode
+                == 0
+            ):
+                lfs_marker = os.path.join(
+                    LFS_MOUNT, "var/lib/ginger", f"{step.id}.built"
+                )
                 if os.path.exists(lfs_marker):
                     return True
         except:
@@ -198,8 +203,7 @@ class GingerEngine:
         if not os.path.exists(scripts_dir):
             return False
 
-        scripts = sorted([f for f in os.listdir(
-            scripts_dir) if f.endswith(".sh")])
+        scripts = sorted([f for f in os.listdir(scripts_dir) if f.endswith(".sh")])
         if not scripts:
             return False
 
@@ -218,8 +222,7 @@ class GingerEngine:
             # Prioritize the central host marker as the single source of truth
             possible_marker_names = []
             for name in marker_names:
-                possible_marker_names.extend(
-                    [f"{name}.built", f"{name}-temp.built"])
+                possible_marker_names.extend([f"{name}.built", f"{name}-temp.built"])
             if pkg_name:
                 possible_marker_names.extend(
                     [f"{pkg_name}.built", f"{pkg_name}-temp.built"]
@@ -235,7 +238,12 @@ class GingerEngine:
             # Check LFS state dir if not found on host, but only if mounted
             if not found:
                 try:
-                    if subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True).returncode == 0:
+                    if (
+                        subprocess.run(
+                            ["mountpoint", "-q", LFS_MOUNT], capture_output=True
+                        ).returncode
+                        == 0
+                    ):
                         lfs_state_dir = os.path.join(LFS_MOUNT, "var/lib/ginger")
                         if os.path.exists(lfs_state_dir):
                             for m in possible_marker_names:
@@ -276,7 +284,12 @@ class GingerEngine:
                 return True
 
         try:
-            if subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True).returncode == 0:
+            if (
+                subprocess.run(
+                    ["mountpoint", "-q", LFS_MOUNT], capture_output=True
+                ).returncode
+                == 0
+            ):
                 lfs_state_dir = os.path.join(LFS_MOUNT, "var/lib/ginger")
                 if os.path.exists(lfs_state_dir):
                     for marker_name in possible_markers:
@@ -304,13 +317,17 @@ class GingerEngine:
             return []
 
         packages = []
-        for script in sorted([f for f in os.listdir(scripts_dir) if f.endswith('.sh')]):
+        for script in sorted([f for f in os.listdir(scripts_dir) if f.endswith(".sh")]):
             script_path = os.path.join(scripts_dir, script)
-            pkg_name = self._get_script_pkg_name(script_path) or os.path.splitext(script)[0]
-            packages.append({
-                "name": pkg_name,
-                "built": self._is_script_built(script_path),
-            })
+            pkg_name = (
+                self._get_script_pkg_name(script_path) or os.path.splitext(script)[0]
+            )
+            packages.append(
+                {
+                    "name": pkg_name,
+                    "built": self._is_script_built(script_path),
+                }
+            )
         return packages
 
     def _get_script_pkg_name(self, script_path):
@@ -341,8 +358,7 @@ class GingerEngine:
                         f"ERROR: Cannot run {step.name} because {prev_step.name} is not completed.",
                         "bold red",
                     )
-                    self.log(
-                        f"Please complete {prev_step.name} first.", "yellow")
+                    self.log(f"Please complete {prev_step.name} first.", "yellow")
                     step.status = "failed"
                     return
         except ValueError:
@@ -360,7 +376,7 @@ class GingerEngine:
                     )
                     step.status = "failed"
                     return
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             pass  # Non-standard step ID, skip auto-mount check
 
         # Verify chroot for system phases
@@ -383,8 +399,7 @@ class GingerEngine:
                         text=True,
                     )
                     if proc.returncode == 0:
-                        self.log("✅ Chroot recovered successfully.",
-                                 "bold green")
+                        self.log("✅ Chroot recovered successfully.", "bold green")
                     else:
                         self.log(
                             f"❌ Chroot recovery failed: {proc.stderr}", "bold red"
@@ -413,7 +428,10 @@ class GingerEngine:
                 self.log(f"✅ Step completed: {step.name}", "bold green")
             else:
                 step.status = "pending"
-                self.log(f"✅ Package {pkg} built successfully. Step remains pending for remaining packages.", "bold green")
+                self.log(
+                    f"✅ Package {pkg} built successfully. Step remains pending for remaining packages.",
+                    "bold green",
+                )
         else:
             step.status = "failed"
             self.log(f"❌ Step failed: {step.name}", "bold red")
@@ -472,22 +490,21 @@ class GingerEngine:
 
     def rescue_downloads(self):
         """Execute the rescue downloads script."""
-        rescue_script = os.path.join(
-            self.ginger_root, "lfs/host/rescue-downloads.sh")
+        rescue_script = os.path.join(self.ginger_root, "lfs/host/rescue-downloads.sh")
         if not os.path.exists(rescue_script):
-            self.log(
-                f"ERROR: Rescue script not found at {rescue_script}", "bold red")
+            self.log(f"ERROR: Rescue script not found at {rescue_script}", "bold red")
             return
 
         self.log("🚀 INITIATING DOWNLOAD RESCUE SEQUENCE...", "bold cyan")
 
         # We'll use a temporary "pseudo-step" to run this so it shows up in logs
         from ui.web.models import BuildStep
+
         rescue_step = BuildStep(
             "99_rescue_downloads",
             "Rescue Downloads",
             f"bash {rescue_script}",
-            "Maintenance"
+            "Maintenance",
         )
 
         # Run it through the process monitor

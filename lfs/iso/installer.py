@@ -114,7 +114,7 @@ class GingerInstaller:
         else:
             footer.append(" | ", style="dim")
             footer.append("COMPLETE", style=f"bold {THEME_COLOR}")
-            
+
         return Panel(Align.center(footer), border_style=THEME_COLOR, box=box.SIMPLE)
 
     def welcome_screen(self):

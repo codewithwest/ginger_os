@@ -4,7 +4,7 @@ source "/lfs/lib/common.sh"
 PKG_NAME="automake"
 check_built "$PKG_NAME" && exit 0
 extract "automake"
-./configure --prefix=/usr --docdir=/usr/share/doc/automake-1.18.1
+./configure --prefix=/usr --docdir=/usr/share/doc/automake-${AUTOMAKE_VERSION}
 
 make $MAKEFLAGS
 make install

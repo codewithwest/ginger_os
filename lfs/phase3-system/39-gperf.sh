@@ -5,7 +5,7 @@ PKG_NAME="gperf"
 check_built "$PKG_NAME" && exit 0
 extract "gperf"
 
-./configure --prefix=/usr --docdir=/usr/share/doc/gperf-3.3
+./configure --prefix=/usr --docdir=/usr/share/doc/gperf-${GPERF_VERSION}
 make $MAKEFLAGS
 make install
 

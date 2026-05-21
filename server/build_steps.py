@@ -2,7 +2,6 @@
 Build steps definitions and management for GingerOS.
 """
 
-import os
 from server.models import BuildStep
 from config.constants import LFS_MOUNT
 

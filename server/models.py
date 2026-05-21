@@ -30,9 +30,11 @@ class BuildStep:
             return 50  # indeterminate — midpoint until package-level tracking is wired
         return 0
 
+
 # New model for returning a list of packages for a phase
 from pydantic import BaseModel
 from typing import List
+
 
 class PackageList(BaseModel):
     packages: List[str]

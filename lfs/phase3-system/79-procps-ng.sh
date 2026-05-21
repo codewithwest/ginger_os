@@ -7,7 +7,7 @@ extract "procps-ng"
 sed -i '/#include "xalloc.h"/a #include <stdbool.h>' src/watch.c
 
 ./configure --prefix=/usr                           \
-            --docdir=/usr/share/doc/procps-ng-4.0.5 \
+            --docdir=/usr/share/doc/procps-ng-${PROCPS_NG_VERSION} \
             --disable-static                        \
             --disable-kill                          \
             --enable-watch8bit

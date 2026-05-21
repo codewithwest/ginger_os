@@ -17,8 +17,7 @@ class ProcessMonitor:
 
     def __init__(self, engine):
         self.engine = engine
-        self.ansi_escape = re.compile(
-            r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
+        self.ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
         self.non_printable = re.compile(r"[^\x20-\x7E\n\t]")
 
     def execute_step(self, step, pkg: str = None):
@@ -60,9 +59,7 @@ class ProcessMonitor:
                 cmd = f"{cmd} {pkg}"
 
             if self.engine.dry_run:
-                self.engine.log(
-                    f"[DRY-RUN] Would execute: {cmd}", "bold bright_yellow"
-                )
+                self.engine.log(f"[DRY-RUN] Would execute: {cmd}", "bold bright_yellow")
                 return 0
 
             # Prepare environment with core allocation
@@ -232,8 +229,7 @@ class ProcessMonitor:
             self.engine.total_pkg_count = int(total)
 
             if pkg_name_part:
-                self.engine.current_pkg = pkg_name_part.replace(
-                    "(Skipped)", "").strip()
+                self.engine.current_pkg = pkg_name_part.replace("(Skipped)", "").strip()
                 if "(Skipped)" not in pkg_name_part and not self.engine.pkg_start_time:
                     self.engine.pkg_start_time = time.time()
         except:

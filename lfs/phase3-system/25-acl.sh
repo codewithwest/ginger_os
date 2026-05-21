@@ -7,7 +7,7 @@ extract "acl"
 
 ./configure --prefix=/usr    \
             --disable-static \
-            --docdir=/usr/share/doc/acl-2.3.2
+            --docdir=/usr/share/doc/acl-${ACL_VERSION}
 
 make $MAKEFLAGS
 make install

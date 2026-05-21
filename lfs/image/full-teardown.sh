@@ -19,7 +19,7 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-if ! mountpoint -q "$LFS" 2>/dev/null; then
+if ! grep -q "$LFS " /proc/mounts 2>/dev/null; then
     log "$LFS is not mounted — nothing to do."
     exit 0
 fi
@@ -29,7 +29,7 @@ log "Unmounting virtual kernel filesystems from $LFS..."
 # Unmount in strict reverse dependency order
 safe_umount() {
     local MNT="$1"
-    if mountpoint -q "$MNT" 2>/dev/null; then
+    if grep -q "$MNT " /proc/mounts 2>/dev/null; then
         umount -v "$MNT" && ok "Unmounted $MNT" || err "Failed to unmount $MNT (busy?)"
     fi
 }

@@ -64,7 +64,7 @@ ver_kernel 5.4
 ensure_unix98_pty() {
   local fixed=0
 
-  if ! mountpoint -q /dev/pts; then
+  if ! grep -q "/dev/pts " /proc/mounts; then
     if [ "$(id -u)" -eq 0 ]; then
       mkdir -p /dev/pts
       if mount -t devpts devpts /dev/pts 2>/dev/null; then
@@ -83,23 +83,23 @@ ensure_unix98_pty() {
     fi
   fi
 
-  if [ -c /dev/ptmx ] && mountpoint -q /dev/pts; then
+  if [ -c /dev/ptmx ] && grep -q "/dev/pts " /proc/mounts; then
     return 0
   fi
 
   return $fixed
 }
 
-if ensure_unix98_pty && [ -c /dev/ptmx ] && mountpoint -q /dev/pts
+if ensure_unix98_pty && [ -c /dev/ptmx ] && grep -q "/dev/pts " /proc/mounts
 then
   echo "OK:    Linux Kernel supports UNIX 98 PTY";
 else
-  if [ -c /dev/ptmx ] && mountpoint -q /dev/pts; then
+  if [ -c /dev/ptmx ] && grep -q "/dev/pts " /proc/mounts; then
     echo "OK:    Linux Kernel supports UNIX 98 PTY";
   elif [ -c /dev/ptmx ]; then
     echo "WARN:   Linux Kernel supports UNIX 98 PTY, but /dev/pts is not mounted";
     echo "WARN:   Run 'sudo mount -t devpts devpts /dev/pts' to fix this.";
-  elif mountpoint -q /dev/pts; then
+  elif grep -q "/dev/pts " /proc/mounts; then
     echo "WARN:   /dev/pts is mounted, but /dev/ptmx is missing";
     echo "WARN:   Run 'sudo mknod -m 666 /dev/ptmx c 5 2' to fix this.";
   else

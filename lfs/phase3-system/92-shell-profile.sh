@@ -1,5 +1,5 @@
 #!/bin/bash
-# GingerOS - Bash Shell Startup Files (LFS 12.4 - Section 7.7)
+# GingerOS - Bash Shell Startup Files (LFS 13.0 - Section 7.7)
 source "/lfs/lib/common.sh"
 PKG_NAME="shell-profile"
 check_built "$PKG_NAME" && exit 0

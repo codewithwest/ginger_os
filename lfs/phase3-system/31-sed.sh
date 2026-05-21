@@ -14,8 +14,8 @@ make html
 make install
 make install-html
 
-install -d -m755           /usr/share/doc/sed-4.9
-install -m644 doc/sed.html /usr/share/doc/sed-4.9
+install -d -m755           /usr/share/doc/sed-${SED_VERSION}
+install -m644 doc/sed.html /usr/share/doc/sed-${SED_VERSION}
 
 cleanup
 mark_built "$PKG_NAME"

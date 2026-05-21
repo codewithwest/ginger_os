@@ -6,7 +6,7 @@ check_built "$PKG_NAME" && exit 0
 extract "man-db"
 
 ./configure --prefix=/usr                         \
-            --docdir=/usr/share/doc/man-db-2.13.1 \
+            --docdir=/usr/share/doc/man-db-${MAN_DB_VERSION} \
             --sysconfdir=/etc                     \
             --disable-setuid                      \
             --enable-cache-owner=bin              \

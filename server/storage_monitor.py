@@ -16,12 +16,13 @@ class StorageMonitor:
         self.engine = engine
         self.storage_stats = {
             "host": {"percent": 0, "used_gb": 0, "total_gb": 0},
-            "lfs": {"percent": 0, "used_gb": 0, "total_gb": 0}
+            "lfs": {"percent": 0, "used_gb": 0, "total_gb": 0},
         }
 
     def update_storage(self):
         """Update storage usage percentages."""
         from config.constants import LFS_MOUNT
+
         paths = {"host": "/", "lfs": LFS_MOUNT}
         for key, path in paths.items():
             try:
@@ -33,18 +34,22 @@ class StorageMonitor:
                         percent = (used / total) * 100
                         used_gb = used * st.f_frsize / (1024**3)
                         total_gb = total * st.f_frsize / (1024**3)
-                        
+
                         self.storage_stats[key] = {
                             "percent": percent,
                             "used_gb": used_gb,
-                            "total_gb": total_gb
+                            "total_gb": total_gb,
                         }
 
                         # Emergency cleanup for host disk
                         if key == "host" and percent > 95:
                             self._emergency_cleanup()
                 else:
-                    self.storage_stats[key] = {"percent": 0, "used_gb": 0, "total_gb": 0}
+                    self.storage_stats[key] = {
+                        "percent": 0,
+                        "used_gb": 0,
+                        "total_gb": 0,
+                    }
             except:
                 self.storage_stats[key] = {"percent": 0, "used_gb": 0, "total_gb": 0}
 

@@ -11,7 +11,7 @@ FORCE_UNSAFE_CONFIGURE=1  \
 make $MAKEFLAGS
 make install
 
-make -C doc install-html docdir=/usr/share/doc/tar-1.35
+make -C doc install-html docdir=/usr/share/doc/tar-${TAR_VERSION}
 
 
 cleanup

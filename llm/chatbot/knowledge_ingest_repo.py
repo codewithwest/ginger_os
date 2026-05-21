@@ -2,7 +2,6 @@
 Index every Bash script, Python file and Markdown document in the repository.
 """
 
-import os
 import ast
 from pathlib import Path
 
@@ -63,14 +62,24 @@ def _collect_files(root: Path):
     """Collect source files while skipping hidden and irrelevant directories."""
     patterns = ["**/*.sh", "**/*.py", "**/*.md", "**/*.txt", "**/*.json"]
     files: list[Path] = []
-    
+
     # Directories to skip entirely
-    skip_dirs = {".venv", ".git", ".snapshots", "sources", "logs", "build", "__pycache__", "Library", "PackageCache"}
+    skip_dirs = {
+        ".venv",
+        ".git",
+        ".snapshots",
+        "sources",
+        "logs",
+        "build",
+        "__pycache__",
+        "Library",
+        "PackageCache",
+    }
 
     for pat in patterns:
         for p in root.glob(pat):
             # Skip if any part of the path is in skip_dirs or starts with a dot
-            if any(part in skip_dirs or part.startswith('.') for part in p.parts):
+            if any(part in skip_dirs or part.startswith(".") for part in p.parts):
                 continue
             files.append(p)
     return files

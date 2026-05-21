@@ -20,7 +20,7 @@ apply_patch "expect" "gcc15"
 
 make $MAKEFLAGS
 make install
-ln -svf expect5.45.4/libexpect5.45.4.so /usr/lib
+ln -svf expect${EXPECT_VERSION}/libexpect${EXPECT_VERSION}.so /usr/lib
 
 cleanup
 mark_built "$PKG_NAME"

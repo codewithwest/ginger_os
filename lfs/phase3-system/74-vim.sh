@@ -18,7 +18,7 @@ for L in  /usr/share/man/{,*/}man1/vim.1; do
     ln -sfv vim.1 $(dirname $L)/vi.1
 done
 
-ln -sfv ../vim/vim91/doc /usr/share/doc/vim-9.1.1629
+ln -sfv ../vim/vim91/doc /usr/share/doc/vim-${VIM_VERSION}
 
 cat > /etc/vimrc << "EOF"
 " Begin /etc/vimrc

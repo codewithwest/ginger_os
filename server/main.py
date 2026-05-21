@@ -12,10 +12,10 @@ from server.server import start_server
 if __name__ == "__main__":
     dry_run = "--dry-run" in sys.argv
     port = 8087
-    
+
     print("Initializing GingerOS Backend Engine...")
     engine = GingerEngine(dry_run=dry_run)
-    
+
     print(f"Starting server on port {port}...")
     try:
         start_server(engine, host="127.0.0.1", port=port)

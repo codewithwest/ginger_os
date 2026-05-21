@@ -7,7 +7,7 @@ extract "pkgconf"
 
 ./configure --prefix=/usr    \
             --disable-static \
-            --docdir=/usr/share/doc/pkgconf-2.5.1
+            --docdir=/usr/share/doc/pkgconf-${PKGCONF_VERSION}
 
 make $MAKEFLAGS
 make install

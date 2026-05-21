@@ -22,7 +22,7 @@ extract "util-linux"
             --without-systemd     \
             --without-systemdsystemunitdir        \
             ADJTIME_PATH=/var/lib/hwclock/adjtime \
-            --docdir=/usr/share/doc/util-linux-2.41.1
+            --docdir=/usr/share/doc/util-linux-${UTIL_LINUX_VERSION}
             
 make $MAKEFLAGS
 make install

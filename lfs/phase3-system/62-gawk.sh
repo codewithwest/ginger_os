@@ -10,12 +10,12 @@ sed -i 's/extras//' Makefile.in
 ./configure --prefix=/usr
 make $MAKEFLAGS
 
-rm -f /usr/bin/gawk-5.3.2
+rm -f /usr/bin/gawk-${GAWK_VERSION}
 make install
 
 ln -sfv gawk.1 /usr/share/man/man1/awk.1
 
-install -vDm644 doc/{awkforai.txt,*.{eps,pdf,jpg}} -t /usr/share/doc/gawk-5.3.2
+install -vDm644 doc/{awkforai.txt,*.{eps,pdf,jpg}} -t /usr/share/doc/gawk-${GAWK_VERSION}
 
 
 cleanup

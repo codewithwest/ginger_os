@@ -34,12 +34,12 @@ make install
 
 # 4. Post-Installation
 chown -v -R root:root \
-    /usr/lib/gcc/$(gcc -dumpmachine)/15.2.0/include{,-fixed}
+    /usr/lib/gcc/$(gcc -dumpmachine)/${GCC_VERSION}/include{,-fixed}
 
 # Create required symlinks
 ln -svfr /usr/bin/cpp /usr/lib
 ln -sfv gcc.1 /usr/share/man/man1/cc.1
-ln -sfv ../../libexec/gcc/$(gcc -dumpmachine)/15.2.0/liblto_plugin.so \
+ln -sfv ../../libexec/gcc/$(gcc -dumpmachine)/${GCC_VERSION}/liblto_plugin.so \
         /usr/lib/bfd-plugins/
 
 # 5. Sanity Checks (Crunch Time)

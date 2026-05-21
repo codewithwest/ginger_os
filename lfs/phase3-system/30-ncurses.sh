@@ -9,7 +9,7 @@ extract "ncurses"
 # which causes conflicts with libstdc++ template specializations.
 sed -i 's/typedef unsigned char NCURSES_BOOL/typedef bool NCURSES_BOOL/' include/curses.h.in
 
-# 2. Configure for Wide-Character support (Mandatory for LFS 12.4)
+# 2. Configure for Wide-Character support (Mandatory for LFS 13.0)
 ./configure --prefix=/usr           \
             --mandir=/usr/share/man \
             --with-shared           \

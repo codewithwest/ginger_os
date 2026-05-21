@@ -97,34 +97,6 @@ create_abs_link() {
  
 log_and_show "[STEP 5/6] Absolute symlinks created."
 
-# Create /etc/inittab — LFS Standard (Section 7.6.2)
-if [ ! -f "$MNT/etc/inittab" ]; then
-    log_and_show "[STEP 4/6] Creating /etc/inittab (LFS standard)..."
-    cat > "$MNT/etc/inittab" << 'INITTAB'
-# /etc/inittab — GingerOS LFS configuration
-id:3:initdefault:
-
-si::sysinit:/etc/rc.d/init.d/rc S
-
-l0:0:wait:/etc/rc.d/init.d/rc 0
-l1:S1:wait:/etc/rc.d/init.d/rc 1
-l2:2:wait:/etc/rc.d/init.d/rc 2
-l3:3:wait:/etc/rc.d/init.d/rc 3
-l4:4:wait:/etc/rc.d/init.d/rc 4
-l5:5:wait:/etc/rc.d/init.d/rc 5
-l6:6:wait:/etc/rc.d/init.d/rc 6
-
-ca:12345:ctrlaltdel:/sbin/shutdown -t1 -a -r now
-
-su:S016:once:/sbin/sulogin
-
-1:2345:respawn:/sbin/agetty --noclear tty1 9600
-2:2345:respawn:/sbin/agetty tty2 9600
-3:2345:respawn:/sbin/agetty tty3 9600
-INITTAB
-    log_and_show "[STEP 4/6] /etc/inittab created."
-fi
-
 log_and_show "[STEP 4/6] Installing kernel..."
 mkdir -p "$MNT/boot"
 cp /mnt/iso/boot/vmlinuz "$MNT/boot/vmlinuz-ginger" >&3 2>&3
@@ -177,33 +149,13 @@ HOSTS
 
 # ── Network, Silence & Identity ────────────────────────────────────────────
 log_and_show "[STEP 6/6] Configuring LFS Networking..."
-mkdir -p "$MNT/etc/sysconfig"
+mkdir -p "$MNT/etc/systemd/network"
+cat > "$MNT/etc/systemd/network/20-dhcp.network" << 'EOF'
+[Match]
+Name=en* eth* ens* eno* wlp* wlan*
 
-# Detect interface for config naming (fallback to eth0)
-MAIN_IFACE=$(ls /sys/class/net | grep -v lo | head -n1 || echo "eth0")
-
-# Determine IP settings (QEMU vs Bare Metal)
-IP="192.168.1.2"
-GW="192.168.1.1"
-PREFIX="24"
-BROADCAST="192.168.1.255"
-
-if grep -qi "qemu" /sys/class/dmi/id/sys_vendor 2>/dev/null || grep -qi "qemu" /proc/cpuinfo; then
-    log_and_show "[STEP 6/6] Detected QEMU environment - applying virtual network defaults."
-    IP="10.0.2.15"
-    GW="10.0.2.2"
-    BROADCAST="10.0.2.255"
-fi
-
-# 1. Create LFS-style configuration (Section 7.5.1)
-cat > "$MNT/etc/sysconfig/ifconfig.$MAIN_IFACE" << EOF
-ONBOOT=yes
-IFACE=$MAIN_IFACE
-SERVICE=ipv4-static
-IP=$IP
-GATEWAY=$GW
-PREFIX=$PREFIX
-BROADCAST=$BROADCAST
+[Network]
+DHCP=ipv4
 EOF
 
 # 2. Setup DNS (Section 7.5.2)
@@ -228,12 +180,7 @@ rm -rf "$MNT/lib/x86_64-linux-gnu"
 rm -rf "$MNT/usr/lib/x86_64-linux-gnu"
 if [ ! -L "$MNT/lib64" ]; then rm -rf "$MNT/lib64"; ln -sf lib "$MNT/lib64"; fi
 
-# 3. Ensure standard LFS bootscript paths
-if [ -d "$MNT/etc/rc.d/init.d" ] && [ ! -L "$MNT/etc/init.d" ]; then
-    log_and_show "[STEP 6/6] Linking /etc/init.d to /etc/rc.d/init.d..."
-    rm -rf "$MNT/etc/init.d"
-    ln -sf rc.d/init.d "$MNT/etc/init.d"
-fi
+# 3. Preserve systemd layout; no SysV bootscript linking is required for GingerOS.
 
 # ── Raw Network Test Tool ──────────────────────────────────────────────────
 cat > "$MNT/usr/bin/net-test" << 'TEST'
@@ -256,8 +203,8 @@ chmod +x "$MNT/usr/bin/net-test"
 
 # ── Boot Sequence Finalization ─────────────────────────────────────────────
 log_and_show "[STEP 6/6] Finalizing boot sequence..."
-# We now rely on standard LFS-bootscripts handled by /etc/rc.d/init.d/rc.
-# No manual rcS is needed if the rootfs extraction is complete.
+# We now rely on systemd for init and boot service management.
+# No SysV-style init scripts are required for GingerOS.
 
 # Ensure ldconfig is run on first boot or now
 if command -v chroot >/dev/null 2>&1; then

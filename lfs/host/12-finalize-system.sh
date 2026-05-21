@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 source "${SCRIPT_DIR}/../lib/common.sh"
 
 # Ensure LFS is set and mounted
-if [ -z "${LFS:-}" ] || ! mountpoint -q "$LFS"; then
+if [ -z "${LFS:-}" ] || ! grep -q "$LFS " /proc/mounts; then
     log "ERROR" "LFS is not mounted. Cannot proceed with host-side finalization."
     exit 1
 fi
@@ -72,10 +72,6 @@ log "INFO" "Packaging Extra-Lean root filesystem into $OUTPUT_TAR..."
 # sudo ln -sv usr/lib/lsb "$LFS/lib/lsb"
 # sudo ln -sv ../usr/bin/kmod "$LFS/sbin/kmod"
 
-# 2. Tell every boot script to actually use the functions
-sudo find "$LFS/etc/rc.d/init.d/" -type f -not -name "README" \
-    -exec sed -i '/### END INIT INFO/a \\n. /lib/lsb/init-functions' {} +
-    
 sudo tar --xattrs --acls --one-file-system \
     --warning=no-file-changed \
     --exclude=./proc/* \

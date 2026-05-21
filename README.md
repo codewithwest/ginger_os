@@ -2,7 +2,7 @@
 
 ## 🏗️ Software Architecture (Architect Perspective)
 
-GingerOS is a **Command-First Build System** designed to automate the creation of a Linux distribution based on Linux From Scratch (LFS 12.4). It employs a "Zero-Host-Pollution" architecture, ensuring the host machine remains clean by isolating the entire build process.
+GingerOS is a **Command-First Build System** designed to automate the creation of a Linux distribution based on Linux From Scratch (LFS 13.0). It employs a "Zero-Host-Pollution" architecture, ensuring the host machine remains clean by isolating the entire build process.
 
 ### System Design
 

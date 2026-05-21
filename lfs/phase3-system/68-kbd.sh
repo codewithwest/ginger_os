@@ -16,7 +16,7 @@ sed -i 's/resizecons.8 //' docs/man/man8/Makefile.in
 make $MAKEFLAGS
 make install
 
-cp -R -v docs/doc -T /usr/share/doc/kbd-2.8.0
+cp -R -v docs/doc -T /usr/share/doc/kbd-${KBD_VERSION}
 
 cleanup
 mark_built "$PKG_NAME"

@@ -14,7 +14,7 @@ BUILD_TYPE="${BUILD_TYPE:-image}"
 
 if [ "$BUILD_TYPE" = "native" ]; then
     log "INFO" "Native build detected. Skipping disk image preparation."
-    if mountpoint -q "$LFS"; then
+    if grep -q "$LFS " /proc/mounts; then
         log "INFO" "$LFS is already mounted. Ready."
         exit 0
     else
@@ -59,13 +59,13 @@ fi
 log "INFO" "Mounting to $LFS..."
 [ -d "$LFS" ] || sudo mkdir -p "$LFS"
 
-if mountpoint -q "$LFS"; then
+if grep -q "$LFS " /proc/mounts; then
     log "INFO" "$LFS is already mounted."
 else
     sudo mount "${LOOP_DEV}p1" "$LFS"
 fi
 
-if ! mountpoint -q "$LFS"; then
+if ! grep -q "$LFS " /proc/mounts; then
     log "ERROR" "Failed to mount LFS filesystem at $LFS"
     exit 1
 fi

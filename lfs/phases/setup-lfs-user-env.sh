@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4
+# LFS 13.0
 
 
 cat > ~/.bash_profile << "EOF"

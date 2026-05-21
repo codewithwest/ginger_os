@@ -60,8 +60,7 @@ class SnapshotManager:
         snap_name = f"{timestamp}_{label}.img"
         snap_path = os.path.join(SNAPSHOTS_DIR, snap_name)
 
-        self.engine.log(
-            f"SNAPSHOT: Creating checkpoint '{label}'...", "bold cyan")
+        self.engine.log(f"SNAPSHOT: Creating checkpoint '{label}'...", "bold cyan")
         self.engine.log(f"SNAPSHOT: Destination: {snap_path}", "dim")
 
         try:
@@ -72,8 +71,7 @@ class SnapshotManager:
                 text=True,
             )
             if result.returncode != 0:
-                self.engine.log(
-                    f"SNAPSHOT: ❌ Failed: {result.stderr}", "bold red")
+                self.engine.log(f"SNAPSHOT: ❌ Failed: {result.stderr}", "bold red")
                 return False
 
             size_gb = os.path.getsize(snap_path) / (1024**3)
@@ -87,8 +85,7 @@ class SnapshotManager:
                 shutil.copytree(STATE_DIR, state_snap, dirs_exist_ok=True)
                 self.engine.log("SNAPSHOT: Build state snapshot saved.", "dim")
             else:
-                self.engine.log(
-                    "SNAPSHOT: No build state found to snapshot.", "dim")
+                self.engine.log("SNAPSHOT: No build state found to snapshot.", "dim")
 
             return True
         except Exception as e:
@@ -109,12 +106,10 @@ class SnapshotManager:
         img_path = os.path.join(GINGER_ROOT, IMAGE_NAME)
 
         if not os.path.exists(snap_path):
-            self.engine.log(
-                f"RESTORE: Snapshot '{snap_name}' not found.", "bold red")
+            self.engine.log(f"RESTORE: Snapshot '{snap_name}' not found.", "bold red")
             return False
 
-        self.engine.log(
-            f"RESTORE: Restoring from '{snap_name}'...", "bold yellow")
+        self.engine.log(f"RESTORE: Restoring from '{snap_name}'...", "bold yellow")
 
         # Step 1: Teardown current mounts
         self.engine.log("RESTORE: Unmounting current image...", "cyan")
@@ -162,6 +157,5 @@ class SnapshotManager:
                 step.end_time = None
             return True
         else:
-            self.engine.log(
-                f"RESTORE: ❌ Remount failed: {result.stderr}", "bold red")
+            self.engine.log(f"RESTORE: ❌ Remount failed: {result.stderr}", "bold red")
             return False

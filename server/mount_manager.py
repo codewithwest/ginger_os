@@ -50,8 +50,7 @@ class MountManager:
             return self._attempt_mount_recovery()
 
         except Exception as e:
-            self.engine.log(
-                f"!!! Error during mount check: {str(e)}", "bold red")
+            self.engine.log(f"!!! Error during mount check: {str(e)}", "bold red")
             return False
 
     def _setup_bind_mounts(self):
@@ -60,8 +59,7 @@ class MountManager:
             # Bind mount ginger_os directory
             bind_dir = os.path.join(LFS_MOUNT, "ginger_os")
             if not os.path.exists(bind_dir):
-                subprocess.run(["sudo", "mkdir", "-p", bind_dir],
-                               capture_output=True)
+                subprocess.run(["sudo", "mkdir", "-p", bind_dir], capture_output=True)
 
             if (
                 subprocess.run(
@@ -83,8 +81,7 @@ class MountManager:
             # Mount /proc for phase 1/2 builds
             proc_mount = os.path.join(LFS_MOUNT, "proc")
             if not os.path.exists(proc_mount):
-                subprocess.run(
-                    ["sudo", "mkdir", "-p", proc_mount], capture_output=True)
+                subprocess.run(["sudo", "mkdir", "-p", proc_mount], capture_output=True)
 
             if (
                 subprocess.run(
@@ -99,14 +96,12 @@ class MountManager:
 
             return True
         except Exception as e:
-            self.engine.log(
-                f"Error setting up bind mounts: {str(e)}", "bold red")
+            self.engine.log(f"Error setting up bind mounts: {str(e)}", "bold red")
             return False
 
     def _attempt_mount_recovery(self):
         """Attempt to recover lost mount using prepare-image script."""
-        self.engine.log(
-            f"WARN: LFS partition ({LFS_MOUNT}) is NOT mounted!", "yellow")
+        self.engine.log(f"WARN: LFS partition ({LFS_MOUNT}) is NOT mounted!", "yellow")
         self.engine.log("Attempting automated mount recovery...", "bold cyan")
 
         # Find the prepare step
@@ -131,8 +126,7 @@ class MountManager:
                 timeout=30,
             )
             if proc.returncode == 0:
-                self.engine.log(
-                    "✅ Mount recovered successfully.", "bold green")
+                self.engine.log("✅ Mount recovered successfully.", "bold green")
                 return True
             else:
                 self.engine.log(
@@ -157,8 +151,7 @@ class MountManager:
                 content = f.read()
                 for m in mounts:
                     if m not in content:
-                        self.engine.log(
-                            f"CRITICAL: {m} is NOT mounted!", "bold red")
+                        self.engine.log(f"CRITICAL: {m} is NOT mounted!", "bold red")
                         return False
             return True
         except:
@@ -181,11 +174,9 @@ class MountManager:
                 text=True,
             )
             if proc.returncode == 0:
-                self.engine.log(
-                    "✅ Chroot recovered successfully.", "bold green")
+                self.engine.log("✅ Chroot recovered successfully.", "bold green")
                 return True
             else:
-                self.engine.log(
-                    f"❌ Chroot recovery failed: {proc.stderr}", "bold red")
+                self.engine.log(f"❌ Chroot recovery failed: {proc.stderr}", "bold red")
 
         return False

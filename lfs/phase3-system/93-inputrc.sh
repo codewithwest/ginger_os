@@ -1,5 +1,5 @@
 #!/bin/bash
-# GingerOS - Readline Configuration (LFS 12.4 - Section 7.8)
+# GingerOS - Readline Configuration (LFS 13.0 - Section 7.8)
 source "/lfs/lib/common.sh"
 PKG_NAME="inputrc"
 check_built "$PKG_NAME" && exit 0

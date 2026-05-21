@@ -4,7 +4,7 @@
 # Setup mock environment
 export GINGER_ROOT="/tmp/ginger_test"
 export LFS="/tmp/ginger_lfs"
-export LFS_VERSION="12.4"
+export LFS_VERSION="13.0"
 mkdir -p "$GINGER_ROOT" "$LFS"
 
 # Mock date for stable logging tests

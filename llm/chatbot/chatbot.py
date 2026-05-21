@@ -29,8 +29,7 @@ def _safe_load_chroma(collection_name, client):
     try:
         return Chroma(client=client, collection_name=collection_name)
     except Exception as e:
-        print(
-            f"[chatbot] Error connecting to collection {collection_name}: {e}")
+        print(f"[chatbot] Error connecting to collection {collection_name}: {e}")
 
     # Return a dummy empty index if missing or failed to load
     return Chroma.from_documents(
@@ -51,12 +50,8 @@ repo_vs = _safe_load_chroma(REPO_COLLECTION, _client)
 # ---------------------------------------------------------------------------
 
 # Create retrievers for both collections
-book_retriever = book_vs.as_retriever(
-    search_kwargs={"k": 3}, search_type="similarity"
-)
-repo_retriever = repo_vs.as_retriever(
-    search_kwargs={"k": 3}, search_type="similarity"
-)
+book_retriever = book_vs.as_retriever(search_kwargs={"k": 3}, search_type="similarity")
+repo_retriever = repo_vs.as_retriever(search_kwargs={"k": 3}, search_type="similarity")
 
 # Ensemble retriever to search both book (theoretical) and repo (implementation)
 retriever = EnsembleRetriever(

@@ -12,7 +12,7 @@ log "PROCESS" "Configuring GingerOS internal structure..."
 
 # 1. FSTAB
 log "INFO" "Generating /etc/fstab..."
-# We use /dev/sda1 as a generic fallback. 
+# We use /dev/sda1 as a generic fallback.
 # The installer or host-side finalization will refine this with the real UUID.
 cat > /etc/fstab << EOF
 # /etc/fstab: static file system information.
@@ -29,15 +29,24 @@ EOF
 log "INFO" "Creating GRUB configuration template..."
 mkdir -p /boot/grub
 
+set -- /boot/vmlinuz-*
+if [ "$#" -eq 0 ] || [ "$1" = '/boot/vmlinuz-*' ]; then
+    log "ERROR" "Could not find kernel image in /boot"
+    exit 1
+fi
+KERNEL_FILE=$(basename "$1")
+
 cat > /boot/grub/grub.cfg << GRUB_EOF
 set default=0
 set timeout=5
 
+insmod part_gpt
 insmod part_msdos
 insmod ext2
+set gfxpayload=1024x768x32
 
-menuentry 'GingerOS (LFS 12.4)' {
-    linux /boot/vmlinuz-6.16.1-lfs-12.4 root=/dev/sda1 rw quiet loglevel=3 console=tty0 net.ifnames=0
+menuentry 'GingerOS (LFS 13.0)' {
+    linux /boot/$KERNEL_FILE root=/dev/sda1 rw systemd.show_status=1
 }
 GRUB_EOF
 

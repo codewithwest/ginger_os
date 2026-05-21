@@ -26,8 +26,7 @@ class TelemetryManager:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 shutil.move(MASTER_LOG, f"{MASTER_LOG}.{timestamp}.bak")
                 with open(MASTER_LOG, "w") as f:
-                    f.write(
-                        f"--- GingerOS Master Log Rotated at {timestamp} ---\n")
+                    f.write(f"--- GingerOS Master Log Rotated at {timestamp} ---\n")
 
         all_logs = sorted(
             [
@@ -122,8 +121,7 @@ class TelemetryManager:
 
                 # Execute download
                 subprocess.run(cmd, capture_output=True)
-                self.log(
-                    f"HOST_DOWNLOAD: Succeeded for {filename}", "bold green")
+                self.log(f"HOST_DOWNLOAD: Succeeded for {filename}", "bold green")
             except Exception as e:
                 self.log(f"HOST_DOWNLOAD: Failed: {str(e)}", "bold red")
 

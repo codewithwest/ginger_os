@@ -6,7 +6,7 @@ check_built "$PKG_NAME" && exit 0
 extract "flex"
 
 ./configure --prefix=/usr \
-            --docdir=/usr/share/doc/flex-2.6.4 \
+            --docdir=/usr/share/doc/flex-${FLEX_VERSION} \
             --disable-static
 make $MAKEFLAGS
 make install

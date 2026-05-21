@@ -1,6 +1,6 @@
 # GingerOS - Standard Build Workflow
 
-This document defines the official sequence for building the GingerOS (LFS 12.4) system. The process is now **fully automated and containerized** using a QEMU virtual disk and an interactive Python orchestrator.
+This document defines the official sequence for building the GingerOS (LFS 13.0) system. The process is now **fully automated and containerized** using a QEMU virtual disk and an interactive Python orchestrator.
 
 ## 🚀 How to Build
 

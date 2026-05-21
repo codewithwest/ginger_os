@@ -1,5 +1,5 @@
 #!/bin/bash
-# GingerOS - Valid Login Shells (LFS 12.4 - Section 7.9)
+# GingerOS - Valid Login Shells (LFS 13.0 - Section 7.9)
 source "/lfs/lib/common.sh"
 PKG_NAME="shells"
 check_built "$PKG_NAME" && exit 0

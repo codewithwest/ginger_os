@@ -7,8 +7,6 @@ Running this module as a script will (re)create the index under
 ``knowledge/faiss_lfs_book`` relative to the repository root.
 """
 
-import os
-import time
 from pathlib import Path
 
 from bs4 import BeautifulSoup
@@ -18,7 +16,7 @@ from langchain_chroma import Chroma
 from .llm_config import get_embeddings, CHROMA_HOST, CHROMA_PORT
 
 # Configuration
-HTML_PATH = Path(__file__).parents[1] / "docs" / "Linux From Scratch.12.4-stable.html"
+HTML_PATH = Path(__file__).parents[1] / "docs" / "Linux From Scratch. 13.0-stable.html"
 COLLECTION_NAME = "lfs_book"
 
 
@@ -38,10 +36,7 @@ def ingest():
     client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
 
     try:
-        vectorstore = Chroma(
-            client=client,
-            collection_name=COLLECTION_NAME
-        )
+        vectorstore = Chroma(client=client, collection_name=COLLECTION_NAME)
         print(f"[knowledge_ingest] Connected to Chroma at {CHROMA_HOST}:{CHROMA_PORT}")
     except Exception as e:
         print(f"[knowledge_ingest] Could not connect to Chroma server ({e}).")

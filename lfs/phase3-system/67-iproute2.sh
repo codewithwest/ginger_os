@@ -11,7 +11,7 @@ rm -fv man/man8/arpd.8
 make NETNS_RUN_DIR=/run/netns $MAKEFLAGS
 make SBINDIR=/usr/sbin install
 
-install -vDm644 COPYING README* -t /usr/share/doc/iproute2-6.16.0
+install -vDm644 COPYING README* -t /usr/share/doc/iproute2-${IPROUTE2_VERSION}
 
 cleanup
 mark_built "$PKG_NAME"

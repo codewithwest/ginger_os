@@ -18,7 +18,7 @@ sed -i 's/-Wl,-rpath,[^ ]*//' support/shobj-conf
 make SHLIB_LIBS="-lncursesw" $MAKEFLAGS
 make SHLIB_LIBS="-lncursesw" install
 
-install -v -m644 doc/*.{ps,pdf,html,dvi} /usr/share/doc/readline-8.3
+install -v -m644 doc/*.{ps,pdf,html,dvi} /usr/share/doc/readline-${READLINE_VERSION}
 
 cleanup
 mark_built "$PKG_NAME"

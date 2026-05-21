@@ -1,6 +1,6 @@
 #!/bin/bash
 # LFS 13.0 - 8.77. Udev from Systemd-259.1 (or standalone)
-# LFS SysV uses a specific Udev setup. 
+# Udev is installed from the systemd source tree for the systemd branch.
 source "/lfs/lib/common.sh"
 PKG_NAME="udev"
 check_built "$PKG_NAME" && exit 0
@@ -36,7 +36,7 @@ ninja udevadm systemd-hwdb                                           \
       $udev_helpers
 
 
-# This is a complex manual install for SysV LFS.
+# This is a complex manual install for the systemd-style udev setup.
 # Usually done via a provided script or specific commands.
 # For simplicity, we assume the user has a working udev setup or 
 # we install the core binaries.

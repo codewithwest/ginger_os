@@ -24,11 +24,11 @@ make modules_install || { log "ERROR" "Module installation failed!"; exit 1; }
 log "PROCESS" "Installing Kernel..."
 # Verify bzImage exists and is not empty before copying
 if [ -s arch/x86/boot/bzImage ]; then
-    cp -fv arch/x86/boot/bzImage /boot/vmlinuz-6.16.1-lfs-12.4
-    cp -fv System.map /boot/System.map-6.16.1
-    cp -fv .config /boot/config-6.16.1
-    cp -r Documentation -T /usr/share/doc/linux-6.16.1
-    # Fix ownership as recommended by LFS 12.4
+    cp -fv arch/x86/boot/bzImage /boot/vmlinuz-${LINUX_VERSION}-lfs-13.0
+    cp -fv System.map /boot/System.map-${LINUX_VERSION}
+    cp -fv .config /boot/config-${LINUX_VERSION}
+    cp -r Documentation -T /usr/share/doc/linux-${LINUX_VERSION}
+    # Fix ownership as recommended by LFS 13.0
     chown -R 0:0 .
 else
     log "ERROR" "Kernel image (bzImage) is missing or 0 bytes!"
