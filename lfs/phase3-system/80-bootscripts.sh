@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.80. LFS-Bootscripts-20250827
+# LFS 13.0  - 8.80. LFS-Bootscripts-20250827
 source "/lfs/lib/common.sh"
 PKG_NAME="bootscripts"
 check_built "$PKG_NAME" && exit 0

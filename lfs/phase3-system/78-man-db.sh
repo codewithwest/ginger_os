@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.78. Man-DB-2.14.0
+# LFS 13.0  - 8.78. Man-DB-2.14.0
 source "/lfs/lib/common.sh"
 PKG_NAME="man-db"
 check_built "$PKG_NAME" && exit 0

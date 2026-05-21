@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.31. Sed-4.9
+# LFS 13.0  - 8.31. Sed-4.9
 source "/lfs/lib/common.sh"
 PKG_NAME="sed"
 check_built "$PKG_NAME" && exit 0

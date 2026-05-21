@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.82. E2fsprogs-1.47.2
+# LFS 13.0  - 8.82. E2fsprogs-1.47.2
 source "/lfs/lib/common.sh"
 PKG_NAME="e2fsprogs"
 check_built "$PKG_NAME" && exit 0

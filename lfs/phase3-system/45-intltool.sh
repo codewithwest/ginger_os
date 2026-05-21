@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.45. Intltool-0.51.0
+# LFS 13.0  - 8.45. Intltool-0.51.0
 source "/lfs/lib/common.sh"
 PKG_NAME="intltool"
 check_built "$PKG_NAME" && exit 0

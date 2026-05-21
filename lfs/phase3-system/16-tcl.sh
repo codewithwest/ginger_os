@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.16. Tcl-8.6.16
+# LFS 13.0  - 8.16. Tcl-8.6.16
 source "/lfs/lib/common.sh"
 PKG_NAME="tcl"
 check_built "$PKG_NAME" && exit 0

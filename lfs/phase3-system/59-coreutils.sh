@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.59. Coreutils-9.7
+# LFS 13.0  - 8.59. Coreutils-9.7
 source "/lfs/lib/common.sh"
 PKG_NAME="coreutils"
 check_built "$PKG_NAME" && exit 0

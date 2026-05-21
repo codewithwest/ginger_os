@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.26. Libcap-2.76
+# LFS 13.0  - 8.26. Libcap-2.76
 source "/lfs/lib/common.sh"
 PKG_NAME="libcap"
 check_built "$PKG_NAME" && exit 0

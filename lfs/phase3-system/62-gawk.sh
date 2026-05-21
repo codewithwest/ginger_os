@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.62. Gawk-5.3.1
+# LFS 13.0  - 8.62. Gawk-5.3.1
 source "/lfs/lib/common.sh"
 PKG_NAME="gawk"
 check_built "$PKG_NAME" && exit 0

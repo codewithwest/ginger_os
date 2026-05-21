@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.54. Wheel-0.45.1
+# LFS 13.0  - 8.54. Wheel-0.45.1
 source "/lfs/lib/common.sh"
 PKG_NAME="wheel"
 check_built "$PKG_NAME" && exit 0

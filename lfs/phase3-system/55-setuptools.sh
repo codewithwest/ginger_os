@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.55. Setuptools-75.8.0
+# LFS 13.0  - 8.55. Setuptools-75.8.0
 source "/lfs/lib/common.sh"
 PKG_NAME="setuptools"
 check_built "$PKG_NAME" && exit 0

@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.35. Grep-3.11
+# LFS 13.0  - 8.35. Grep-3.11
 source "/lfs/lib/common.sh"
 PKG_NAME="grep"
 check_built "$PKG_NAME" && exit 0

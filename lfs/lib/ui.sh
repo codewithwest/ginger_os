@@ -155,7 +155,7 @@ ui_draw_full_dashboard() {
         buf+="                |___/         v1.0.0             \e[K\n"
         buf+="${NC}"
     fi
-    buf+="${LASER_GREEN}  🌶️  GingerOS Build System v1.0 - LFS 12.4 🌶️${NC}\e[K\n"
+    buf+="${LASER_GREEN}  🌶️  GingerOS Build System v1.0 - LFS 13.0  🌶️${NC}\e[K\n"
     
     # ========== PROGRESS BAR ==========
     local total_steps=${#UI_STEPS[@]}

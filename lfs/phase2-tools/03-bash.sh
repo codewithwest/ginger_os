@@ -1,5 +1,4 @@
 #!/bin/bash
-# LFS 12.4 - 6.4. Bash-5.3
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="bash-temp"
@@ -17,7 +16,6 @@ log "PROCESS" "Compiling Bash (Temporary Tools)..."
 make $MAKEFLAGS
 make DESTDIR=$LFS install
 
-# LFS 12.4: Create the sh symlink
 ln -sfv bash $LFS/bin/sh
 
 cd ..

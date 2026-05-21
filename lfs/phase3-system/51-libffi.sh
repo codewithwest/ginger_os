@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.51. Libffi-3.5.2
+# LFS 13.0  - 8.51. Libffi-3.5.2
 source "/lfs/lib/common.sh"
 PKG_NAME="libffi"
 check_built "$PKG_NAME" && exit 0

@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 7.8. Bison-3.8.2 (Temporary)
+# LFS 13.0  - 7.8. Bison-3.8.2 (Temporary)
 source "/lfs/lib/common.sh"
 PKG_NAME="bison-bridge"
 check_built "$PKG_NAME" && exit 0

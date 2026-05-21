@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.4. Iana-Etc-20250807
+# LFS 13.0  - 8.4. Iana-Etc-20250807
 source "/lfs/lib/common.sh"
 PKG_NAME="iana-etc"
 check_built "$PKG_NAME" && exit 0

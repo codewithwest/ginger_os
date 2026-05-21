@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - Libisofs-1.5.6
+# LFS 13.0  - Libisofs-1.5.6
 source "/lfs/lib/common.sh"
 PKG_NAME="libisofs"
 

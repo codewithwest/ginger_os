@@ -29,6 +29,11 @@ interface Status {
   };
 }
 
+interface PackageItem {
+  name: string;
+  built: boolean;
+}
+
 interface LogEntry {
   msg: string;
   style: string;
@@ -42,8 +47,10 @@ function App() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
-  const [targetPackage, setTargetPackage] = useState("");
-
+  const [selectedPhaseIdx, setSelectedPhaseIdx] = useState(0);
+  const [packages, setPackages] = useState<PackageItem[]>([]);
+  const [packageError, setPackageError] = useState<string | null>(null);
+  const [packagesFetchedFor, setPackagesFetchedFor] = useState<number | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const logSocket = useRef<WebSocket | null>(null);
   const chatSocket = useRef<WebSocket | null>(null);
@@ -97,13 +104,6 @@ function App() {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  const controlAction = (action: string) => fetch(`/api/control/${action}`, { method: 'POST' });
-  const runStep = (idx: number) => {
-    const url = targetPackage.trim() 
-      ? `/api/step/${idx}/run?pkg=${encodeURIComponent(targetPackage.trim())}`
-      : `/api/step/${idx}/run`;
-    return fetch(url, { method: 'POST' });
-  };
 
   const sendChat = () => {
     if (!chatInput.trim() || !chatSocket.current) return;
@@ -124,6 +124,55 @@ function App() {
 
   const completedSteps = status?.steps?.filter(s => s.status === 'completed').length || 0;
   const totalProgress = status?.steps ? Math.round((completedSteps / status.steps.length) * 100) : 0;
+
+  const controlAction = (action: string) => fetch(`/api/control/${action}`, { method: 'POST' });
+
+  const fetchPackages = async (idx: number) => {
+    if (!status?.steps || idx < 0 || idx >= status.steps.length) {
+      setPackages([]);
+      setPackageError(null);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/step/${idx}/packages`);
+      const data = await res.json();
+      if (data.status === 'ok') {
+        setPackages(data.packages || []);
+        setPackageError(null);
+      } else {
+        setPackages([]);
+        setPackageError(data.message || 'Unable to load package list.');
+      }
+    } catch (e) {
+      setPackages([]);
+      setPackageError('Unable to load package list.');
+    }
+  };
+
+  const runStep = async (idx: number, pkg?: string) => {
+    const query = pkg ? `?pkg=${encodeURIComponent(pkg)}` : '';
+    await fetch(`/api/step/${idx}/run${query}`, { method: 'POST' });
+    if (pkg) fetchPackages(idx);
+  };
+
+  const forceStep = async (idx: number, pkg?: string) => {
+    const query = pkg ? `?pkg=${encodeURIComponent(pkg)}` : '';
+    await fetch(`/api/step/${idx}/force${query}`, { method: 'POST' });
+    if (pkg) fetchPackages(idx);
+  };
+
+  const runPhase = (idx: number) => runStep(idx);
+  const forcePhase = (idx: number) => forceStep(idx);
+  const runPackage = (pkg: string) => runStep(selectedPhaseIdx, pkg);
+  const forcePackage = (pkg: string) => forceStep(selectedPhaseIdx, pkg);
+
+  useEffect(() => {
+    if (status && status.steps && status.steps.length && packagesFetchedFor !== selectedPhaseIdx) {
+      fetchPackages(selectedPhaseIdx);
+      setPackagesFetchedFor(selectedPhaseIdx);
+    }
+  }, [selectedPhaseIdx, status, packagesFetchedFor]);
 
   const updateCoreCount = (count: number) => {
     fetch(`/api/control/cores/${count}`, { method: 'POST' });
@@ -197,46 +246,43 @@ function App() {
       <main className="flex-1 flex overflow-hidden p-4 gap-4">
         
         {/* LEFT: PIPELINE */}
-        <section className="w-80 flex flex-col gap-4">
+        <section className="w-100 flex flex-col gap-2">
           <div className="glass p-4 rounded-xl flex flex-col h-full overflow-hidden">
             <div className="flex items-center justify-between mb-4 px-1">
               <h2 className="text-[10px] font-bold text-text-dim uppercase tracking-[0.2em]">Deployment Pipeline</h2>
               <span className="text-[10px] font-mono text-accent-cyan">{completedSteps}/{status?.steps.length}</span>
             </div>
-
-            {/* Target Package Filter Input */}
-            <div className="mb-4 bg-white/5 p-3 rounded-lg border border-white/5 space-y-2">
-              <div className="text-[9px] text-text-dim uppercase font-bold tracking-wider">Execute Single Package</div>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Target package (e.g. binutils)..."
-                  value={targetPackage}
-                  onChange={(e) => setTargetPackage(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg pl-3 pr-8 py-2 text-xs focus:border-accent-cyan/50 focus:bg-black/60 outline-none transition-all placeholder:text-white/20 font-mono text-white"
-                />
-                {targetPackage && (
-                  <button 
-                    onClick={() => setTargetPackage("")}
-                    className="absolute right-2 top-2 text-text-dim hover:text-white transition-colors text-xs font-bold"
-                    title="Clear filter"
-                  >
-                    ✕
-                  </button>
-                )}
+            <div className="mb-4 p-3 rounded-xl border border-white/5 bg-black/20">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-[10px] text-text-dim uppercase font-bold tracking-[0.2em]">Selected Phase</div>
+                  <div className="text-sm font-semibold mt-1 text-white truncate">
+                    {status?.steps[selectedPhaseIdx]?.name || 'No phase selected'}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => runPhase(selectedPhaseIdx)}
+                    className="px-2 py-2 bg-accent-cyan/10 border border-accent-cyan/30 text-accent-cyan text-[8px] font-bold uppercase tracking-widest rounded hover:bg-accent-cyan/20 transition-all"
+                  >Run Phase</button>
+                  <button
+                    onClick={() => forcePhase(selectedPhaseIdx)}
+                    className="px-2 py-1 bg-accent-green/10 border border-accent-green/30 text-accent-green text-[8px] font-bold uppercase tracking-widest rounded hover:bg-accent-green/20 transition-all"
+                  >Force Phase</button>
+                </div>
               </div>
               <div className="text-[8px] text-text-dim leading-tight">
-                If active, running a phase will <span className="text-accent-cyan font-semibold">only</span> execute the matched package and bypass completion cache.
+                Click a phase to open its package list. If a phase is already completed, use <span className="font-semibold text-accent-green">Force Phase</span> to rerun it.
               </div>
             </div>
             <div className="flex-1 overflow-y-auto space-y-2 pr-2">
               {status?.steps.map((step, idx) => (
-                <button 
+                <button
                   key={step.id}
-                  onClick={() => runStep(idx)}
-                  className={`w-full text-left p-3 rounded-lg border transition-all duration-300 group ${
-                    status.executing_step === idx 
-                      ? 'bg-accent-cyan/10 border-accent-cyan/40 shadow-[0_0_15px_rgba(0,210,255,0.1)]' 
+                  onClick={() => setSelectedPhaseIdx(idx)}
+                  className={`w-full text-left p-3 rounded-lg border transition-all duration-300 text-left ${
+                    selectedPhaseIdx === idx
+                      ? 'bg-accent-cyan/10 border-accent-cyan/40 shadow-[0_0_15px_rgba(0,210,255,0.1)]'
                       : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20'
                   }`}
                 >
@@ -251,6 +297,51 @@ function App() {
                   <div className="text-[9px] text-text-dim uppercase tracking-tighter">{step.phase}</div>
                 </button>
               ))}
+            </div>
+            <div className="mt-4 p-3 rounded-xl border border-white/10 bg-white/5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-[10px] text-text-dim uppercase font-bold tracking-[0.2em]">Packages in This Phase</div>
+                  <div className="text-[11px] text-white mt-1">{packages.length} package{packages.length === 1 ? '' : 's'}</div>
+                </div>
+                <button
+                  onClick={() => fetchPackages(selectedPhaseIdx)}
+                  className="px-2 py-1 bg-black/30 border border-white/10 text-[10px] uppercase tracking-[0.2em] rounded hover:bg-white/10 transition-all"
+                >Refresh</button>
+              </div>
+              {packageError && (
+                <div className="mb-3 rounded-lg bg-accent-red/10 border border-accent-red/20 px-3 py-2 text-[10px] text-accent-red">
+                  {packageError}
+                </div>
+              )}
+              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                {packages.length > 0 ? packages.map(pkg => (
+                  <div key={pkg.name} className="flex flex-col gap-2 p-3 rounded-lg bg-black/40 border border-white/10">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-white truncate">{pkg.name}</div>
+                        <div className="text-[9px] text-text-dim uppercase tracking-[0.2em] mt-1">
+                          {pkg.built ? 'Built' : 'Pending'}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => runPackage(pkg.name)}
+                          className="px-2 py-1 rounded bg-accent-cyan/10 text-accent-cyan text-[10px] uppercase tracking-[0.2em] hover:bg-accent-cyan/20 transition-all"
+                        >{pkg.built ? 'Re-run' : 'Run'}</button>
+                        {pkg.built && (
+                          <button
+                            onClick={() => forcePackage(pkg.name)}
+                            className="px-2 py-1 rounded bg-accent-green/10 text-accent-green text-[10px] uppercase tracking-[0.2em] hover:bg-accent-green/20 transition-all"
+                          >Force</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-[10px] text-text-dim">No package list available for this phase.</div>
+                )}
+              </div>
             </div>
           </div>
         </section>

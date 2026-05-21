@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.11. File-5.46
+# LFS 13.0  - 8.11. File-5.46
 source "/lfs/lib/common.sh"
 PKG_NAME="file-final"
 

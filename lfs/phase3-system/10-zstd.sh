@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.10. Zstd-1.5.7
+# LFS 13.0  - 8.10. Zstd-1.5.7
 source "/lfs/lib/common.sh"
 PKG_NAME="zstd"
 check_built "$PKG_NAME" && exit 0

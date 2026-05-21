@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.20. Binutils-2.45
+# LFS 13.0  - 8.20. Binutils-2.45
 source "/lfs/lib/common.sh"
 PKG_NAME="binutils-final"
 check_built "$PKG_NAME" && exit 0

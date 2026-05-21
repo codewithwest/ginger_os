@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.70. Make-4.4.1
+# LFS 13.0  - 8.70. Make-4.4.1
 source "/lfs/lib/common.sh"
 PKG_NAME="make"
 check_built "$PKG_NAME" && exit 0

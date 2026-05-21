@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.12. Readline-8.3
+# LFS 13.0  - 8.12. Readline-8.3
 source "/lfs/lib/common.sh"
 PKG_NAME="readline"
 check_built "$PKG_NAME" && exit 0

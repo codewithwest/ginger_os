@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - Libburn-1.5.6
+# LFS 13.0  - Libburn-1.5.6
 source "/lfs/lib/common.sh"
 PKG_NAME="libburn"
 

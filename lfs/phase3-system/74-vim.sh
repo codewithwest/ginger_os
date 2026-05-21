@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.74. Vim-9.1.1629
+# LFS 13.0  - 8.74. Vim-9.1.1629
 source "/lfs/lib/common.sh"
 PKG_NAME="vim"
 check_built "$PKG_NAME" && exit 0

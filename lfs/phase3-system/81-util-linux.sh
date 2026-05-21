@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.81. Util-linux-2.41.1
+# LFS 13.0  - 8.81. Util-linux-2.41.1
 source "/lfs/lib/common.sh"
 PKG_NAME="util-linux"
 check_built "$PKG_NAME" && exit 0

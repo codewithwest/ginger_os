@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.61. Diffutils-3.11
+# LFS 13.0  - 8.61. Diffutils-3.11
 source "/lfs/lib/common.sh"
 PKG_NAME="diffutils"
 check_built "$PKG_NAME" && exit 0

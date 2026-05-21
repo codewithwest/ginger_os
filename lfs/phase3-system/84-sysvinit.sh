@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.84. SysVinit-3.14
+# LFS 13.0  - 8.84. SysVinit-3.14
 source "/lfs/lib/common.sh"
 PKG_NAME="sysvinit"
 check_built "$PKG_NAME" && exit 0

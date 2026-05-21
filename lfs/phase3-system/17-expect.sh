@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.17. Expect-5.45.4
+# LFS 13.0  - 8.17. Expect-5.45.4
 source "/lfs/lib/common.sh"
 PKG_NAME="expect"
 check_built "$PKG_NAME" && exit 0

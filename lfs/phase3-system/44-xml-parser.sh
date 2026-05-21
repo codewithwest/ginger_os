@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.44. XML-Parser-2.47
+# LFS 13.0  - 8.44. XML-Parser-2.47
 source "/lfs/lib/common.sh"
 PKG_NAME="xml-parser"
 check_built "$PKG_NAME" && exit 0

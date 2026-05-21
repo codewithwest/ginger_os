@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.52. Python-3.13.7
+# LFS 13.0  - 8.52. Python-3.13.7
 source "/lfs/lib/common.sh"
 PKG_NAME="newPythonPip"
 check_built "$PKG_NAME" && exit 0

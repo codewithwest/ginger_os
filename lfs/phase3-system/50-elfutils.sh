@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.50. Elfutils-0.193
+# LFS 13.0  - 8.50. Elfutils-0.193
 source "/lfs/lib/common.sh"
 PKG_NAME="elfutils"
 check_built "$PKG_NAME" && exit 0

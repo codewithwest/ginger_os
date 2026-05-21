@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.42. Less-679
+# LFS 13.0  - 8.42. Less-679
 source "/lfs/lib/common.sh"
 PKG_NAME="less"
 check_built "$PKG_NAME" && exit 0

@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.7. Bzip2-1.0.8
+# LFS 13.0  - 8.7. Bzip2-1.0.8
 source "/lfs/lib/common.sh"
 PKG_NAME="bzip2"
 check_built "$PKG_NAME" && exit 0

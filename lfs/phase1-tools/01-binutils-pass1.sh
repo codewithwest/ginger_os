@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 5.2. Binutils-2.45 - Pass 1
+# LFS 13.0  - 5.2. Binutils-2.45 - Pass 1
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="binutils-pass1"

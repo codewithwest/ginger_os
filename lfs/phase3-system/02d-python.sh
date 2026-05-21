@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 7.10. Python-3.13.7 (Temporary)
+# LFS 13.0  - 7.10. Python-3.13.7 (Temporary)
 source "/lfs/lib/common.sh"
 PKG_NAME="python-bridge"
 check_built "$PKG_NAME" && exit 0

@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.41. Inetutils-2.6
+# LFS 13.0  - 8.41. Inetutils-2.6
 source "/lfs/lib/common.sh"
 PKG_NAME="inetutils"
 check_built "$PKG_NAME" && exit 0

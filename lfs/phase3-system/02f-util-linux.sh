@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 7.12. Util-linux-2.41.1 (Temporary)
+# LFS 13.0  - 7.12. Util-linux-2.41.1 (Temporary)
 source "/lfs/lib/common.sh"
 PKG_NAME="util-linux-bridge"
 check_built "$PKG_NAME" && exit 0

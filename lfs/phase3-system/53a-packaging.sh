@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.52a. Packaging-3.11.0
+# LFS 13.0  - 8.52a. Packaging-3.11.0
 source "/lfs/lib/common.sh"
 PKG_NAME="packaging"
 check_built "$PKG_NAME" && exit 0

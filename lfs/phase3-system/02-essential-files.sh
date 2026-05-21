@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 7.6. Essential Files and Symlinks
+# LFS 13.0  - 7.6. Essential Files and Symlinks
 # To be run INSIDE chroot.
 
 source "/lfs/lib/common.sh"

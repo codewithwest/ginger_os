@@ -110,6 +110,22 @@ async def get_status():
         return {"status": "error", "message": str(e)}
 
 
+@app.get("/api/step/{step_idx}/packages")
+async def list_step_packages(step_idx: int):
+    if not engine:
+        return {"status": "error", "message": "Engine not initialized"}
+    if step_idx < 0 or step_idx >= len(engine.steps):
+        return {"status": "error", "message": "Invalid step index"}
+
+    step = engine.steps[step_idx]
+    try:
+        packages = engine.list_step_packages(step)
+        return {"status": "ok", "packages": packages}
+    except Exception as e:
+        logging.error(f"PACKAGE_LIST_ERROR: {str(e)}")
+        return {"status": "error", "message": "Unable to load package list"}
+
+
 @app.post("/api/step/{step_idx}/run")
 async def run_step(step_idx: int, pkg: str = None):
     if not engine:

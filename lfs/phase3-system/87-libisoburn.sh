@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - Libisoburn-1.5.6 (xorriso)
+# LFS 13.0  - Libisoburn-1.5.6 (xorriso)
 source "/lfs/lib/common.sh"
 PKG_NAME="libisoburn"
 

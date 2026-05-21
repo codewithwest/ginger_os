@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.72. Tar-1.35
+# LFS 13.0  - 8.72. Tar-1.35
 source "/lfs/lib/common.sh"
 PKG_NAME="tar"
 check_built "$PKG_NAME" && exit 0

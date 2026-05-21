@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.43. Perl-5.41.3
+# LFS 13.0  - 8.43. Perl-5.41.3
 source "/lfs/lib/common.sh"
 PKG_NAME="perl"
 check_built "$PKG_NAME" && exit 0

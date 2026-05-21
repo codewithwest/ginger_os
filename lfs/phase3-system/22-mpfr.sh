@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.22. MPFR-4.2.2
+# LFS 13.0  - 8.22. MPFR-4.2.2
 source "/lfs/lib/common.sh"
 PKG_NAME="mpfr"
 check_built "$PKG_NAME" && exit 0

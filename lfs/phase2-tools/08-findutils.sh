@@ -1,5 +1,4 @@
 #!/bin/bash
-# LFS 12.4 - 6.8. Findutils-4.10.0
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="findutils-temp"

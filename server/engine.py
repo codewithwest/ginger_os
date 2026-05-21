@@ -249,6 +249,70 @@ class GingerEngine:
                 return False
         return True
 
+    def _get_script_marker_names(self, script_path):
+        base_name = os.path.splitext(os.path.basename(script_path))[0]
+        names = [base_name]
+        if "-" in base_name:
+            stripped_name = "-".join(base_name.split("-")[1:])
+            if stripped_name != base_name:
+                names.append(stripped_name)
+
+        pkg_name = self._get_script_pkg_name(script_path)
+        if pkg_name:
+            names.append(pkg_name)
+
+        marker_names = []
+        for name in names:
+            marker_names.extend([f"{name}.built", f"{name}-temp.built"])
+        return marker_names
+
+    def _is_script_built(self, script_path):
+        if not os.path.exists(script_path):
+            return False
+
+        possible_markers = self._get_script_marker_names(script_path)
+        for marker_name in possible_markers:
+            if os.path.exists(os.path.join(STATE_DIR, marker_name)):
+                return True
+
+        try:
+            if subprocess.run(["mountpoint", "-q", LFS_MOUNT], capture_output=True).returncode == 0:
+                lfs_state_dir = os.path.join(LFS_MOUNT, "var/lib/ginger")
+                if os.path.exists(lfs_state_dir):
+                    for marker_name in possible_markers:
+                        if os.path.exists(os.path.join(lfs_state_dir, marker_name)):
+                            return True
+        except:
+            pass
+
+        return False
+
+    def list_step_packages(self, step):
+        directory_map = {
+            "07_phase1_tools": "phase1-tools",
+            "08_phase2_tools": "phase2-tools",
+            "10_phase3_system": "phase3-system",
+            "11_kernel": "phase4-boot",
+        }
+
+        script_dir = directory_map.get(step.id)
+        if not script_dir:
+            return []
+
+        scripts_dir = os.path.join(self.ginger_root, "lfs", script_dir)
+        if not os.path.exists(scripts_dir):
+            return []
+
+        packages = []
+        for script in sorted([f for f in os.listdir(scripts_dir) if f.endswith('.sh')]):
+            script_path = os.path.join(scripts_dir, script)
+            pkg_name = self._get_script_pkg_name(script_path) or os.path.splitext(script)[0]
+            packages.append({
+                "name": pkg_name,
+                "built": self._is_script_built(script_path),
+            })
+        return packages
+
     def _get_script_pkg_name(self, script_path):
         """Peeks into a script to find its PKG_NAME definition."""
         try:

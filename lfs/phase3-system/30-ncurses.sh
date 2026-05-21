@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.30. Ncurses-6.5
+# LFS 13.0  - 8.30. Ncurses-6.5
 source "/lfs/lib/common.sh"
 PKG_NAME="ncurses"
 check_built "$PKG_NAME" && exit 0

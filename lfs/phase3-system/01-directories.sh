@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 7.5. Creating Directories
+# LFS 13.0  - 7.5. Creating Directories
 # To be run INSIDE chroot.
 
 source "/lfs/lib/common.sh"

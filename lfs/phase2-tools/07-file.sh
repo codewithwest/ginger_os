@@ -1,5 +1,4 @@
 #!/bin/bash
-# LFS 12.4 - 6.7. File-5.46
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="file-temp"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.79. Procps-ng-4.0.5
+# LFS 13.0  - 8.79. Procps-ng-4.0.5
 source "/lfs/lib/common.sh"
 PKG_NAME="procps-ng"
 check_built "$PKG_NAME" && exit 0

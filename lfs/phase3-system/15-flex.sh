@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.15. Flex-2.6.4
+# LFS 13.0  - 8.15. Flex-2.6.4
 source "/lfs/lib/common.sh"
 PKG_NAME="flex"
 check_built "$PKG_NAME" && exit 0

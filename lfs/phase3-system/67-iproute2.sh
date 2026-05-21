@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.67. IPRoute2-6.13.0
+# LFS 13.0  - 8.67. IPRoute2-6.13.0
 source "/lfs/lib/common.sh"
 PKG_NAME="iproute2"
 check_built "$PKG_NAME" && exit 0

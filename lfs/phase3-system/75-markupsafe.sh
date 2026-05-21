@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.75. MarkupSafe-3.0.2
+# LFS 13.0  - 8.75. MarkupSafe-3.0.2
 source "/lfs/lib/common.sh"
 PKG_NAME="markupsafe"
 check_built "$PKG_NAME" && exit 0

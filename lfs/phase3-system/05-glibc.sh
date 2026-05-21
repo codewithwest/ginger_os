@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.5. Glibc-2.42
+# LFS 13.0  - 8.5. Glibc-2.42
 source "/lfs/lib/common.sh"
 PKG_NAME="glibc-final"
 check_built "$PKG_NAME" && exit 0

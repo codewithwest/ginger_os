@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.73. Texinfo-7.2
+# LFS 13.0  - 8.73. Texinfo-7.2
 source "/lfs/lib/common.sh"
 PKG_NAME="texinfo"
 check_built "$PKG_NAME" && exit 0

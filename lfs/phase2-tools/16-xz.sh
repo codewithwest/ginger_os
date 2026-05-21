@@ -1,5 +1,4 @@
 #!/bin/bash
-# LFS 12.4 - 6.16. Xz-5.8.1
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="xz-temp"
@@ -11,7 +10,7 @@ extract "xz"
             --host=$LFS_TGT                   \
             --build=$(build-aux/config.guess) \
             --disable-static                  \
-            --docdir=/usr/share/doc/xz-5.8.1
+            --docdir=/usr/share/doc/xz-${XZ_VERSION}
 
 make $MAKEFLAGS
 make DESTDIR=$LFS install

@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.68. Kbd-2.8.0
+# LFS 13.0  - 8.68. Kbd-2.8.0
 source "/lfs/lib/common.sh"
 PKG_NAME="kbd"
 check_built "$PKG_NAME" && exit 0

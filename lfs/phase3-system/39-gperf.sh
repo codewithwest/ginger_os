@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.39. Gperf-3.3
+# LFS 13.0  - 8.39. Gperf-3.3
 source "/lfs/lib/common.sh"
 PKG_NAME="gperf"
 check_built "$PKG_NAME" && exit 0

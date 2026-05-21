@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 7.11. Texinfo-7.2 (Temporary)
+# LFS 13.0  - 7.11. Texinfo-7.2 (Temporary)
 source "/lfs/lib/common.sh"
 PKG_NAME="texinfo-bridge"
 check_built "$PKG_NAME" && exit 0

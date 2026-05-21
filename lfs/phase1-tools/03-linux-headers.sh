@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 5.4. Linux-6.16.1 Headers
+# LFS 13.0  - 5.4. Linux-6.16.1 Headers
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="linux-headers"

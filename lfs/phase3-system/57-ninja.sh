@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.57. Ninja-1.13.1
+# LFS 13.0  - 8.57. Ninja-1.13.1
 source "/lfs/lib/common.sh"
 PKG_NAME="ninja"
 check_built "$PKG_NAME" && exit 0

@@ -29,7 +29,7 @@ _(After Stage 1, all subsequent scripts are executed INSIDE the Ubuntu container
 ### Stage 2: Host Requirements & Sources
 
 3. **03_install_os_base**: Sets up the initial directory structure and the `lfs` user inside the container.
-4. **04_setup_downloads**: Downloads all LFS 12.4 source tarballs into `/sources`.
+4. **04_setup_downloads**: Downloads all LFS 13.0  source tarballs into `/sources`.
 5. **05_host_reqs**: Installs required build dependencies (like `gcc`, `make`, `gawk`) into the Ubuntu container.
 6. **06_version_check**: Verifies the container has the correct versions of all build tools.
 7. **07_update_dir**: Configures required symlinks (`/bin` -> `/usr/bin`, etc.).

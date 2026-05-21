@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.28. Shadow-4.17.3
+# LFS 13.0  - 8.28. Shadow-4.17.3
 source "/lfs/lib/common.sh"
 PKG_NAME="shadow"
 check_built "$PKG_NAME" && exit 0

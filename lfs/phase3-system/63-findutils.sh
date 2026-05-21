@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.63. Findutils-4.10.0
+# LFS 13.0  - 8.63. Findutils-4.10.0
 source "/lfs/lib/common.sh"
 PKG_NAME="findutils"
 check_built "$PKG_NAME" && exit 0

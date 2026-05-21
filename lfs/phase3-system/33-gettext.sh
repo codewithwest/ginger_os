@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.33. Gettext-0.23.1
+# LFS 13.0  - 8.33. Gettext-0.23.1
 source "/lfs/lib/common.sh"
 PKG_NAME="gettext"
 check_built "$PKG_NAME" && exit 0

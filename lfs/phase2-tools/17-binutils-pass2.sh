@@ -1,5 +1,4 @@
 #!/bin/bash
-# LFS 12.4 - 6.17. Binutils-2.45 - Pass 2
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="binutils-pass2"
@@ -9,7 +8,7 @@ extract "binutils"
 
 log "PROCESS" "Configuring Binutils Pass 2..."
 
-# LFS 12.4 specific fix for libtool
+# LFS 13.0  specific fix for libtool
 sed '6031s/$add_dir//' -i ltmain.sh
 
 mkdir -v build

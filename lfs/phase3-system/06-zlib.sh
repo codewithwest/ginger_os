@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.6. Zlib-1.3.1
+# LFS 13.0  - 8.6. Zlib-1.3.1
 source "/lfs/lib/common.sh"
 PKG_NAME="zlib"
 

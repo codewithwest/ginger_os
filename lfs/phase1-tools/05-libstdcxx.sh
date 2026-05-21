@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 5.6. Libstdc++ from GCC-15.2.0
+# LFS 13.0  - 5.6. Libstdc++ from GCC-15.2.0
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="libstdcxx"
@@ -27,6 +27,7 @@ make DESTDIR=$LFS install
 rm -v $LFS/usr/lib/lib{stdc++{,exp,fs},supc++}.la
 
 cd ../..
+
 cleanup
 
 mark_built "$PKG_NAME"

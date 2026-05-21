@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.38. GDBM-1.24
+# LFS 13.0  - 8.38. GDBM-1.24
 source "/lfs/lib/common.sh"
 PKG_NAME="gdbm"
 check_built "$PKG_NAME" && exit 0

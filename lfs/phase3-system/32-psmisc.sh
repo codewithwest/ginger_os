@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.32. Psmisc-23.8
+# LFS 13.0  - 8.32. Psmisc-23.8
 source "/lfs/lib/common.sh"
 PKG_NAME="psmisc"
 check_built "$PKG_NAME" && exit 0

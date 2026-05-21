@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.21. GMP-6.3.0
+# LFS 13.0  - 8.21. GMP-6.3.0
 source "/lfs/lib/common.sh"
 PKG_NAME="gmp"
 check_built "$PKG_NAME" && exit 0

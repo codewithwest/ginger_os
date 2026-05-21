@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.58. Meson-1.8.3
+# LFS 13.0  - 8.58. Meson-1.8.3
 source "/lfs/lib/common.sh"
 PKG_NAME="meson"
 check_built "$PKG_NAME" && exit 0
@@ -15,4 +15,4 @@ install -vDm644 data/shell-completions/zsh/_meson /usr/share/zsh/site-functions/
 cleanup
 mark_built "$PKG_NAME"
 # Note: meson uses setuptools which should be part of python install.
-# If not, it uses a wheel. LFS 12.4 usually expects setuptools.
+# If not, it uses a wheel. LFS 13.0  usually expects setuptools.

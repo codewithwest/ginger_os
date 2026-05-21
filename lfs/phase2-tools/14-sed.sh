@@ -1,5 +1,4 @@
 #!/bin/bash
-# LFS 12.4 - 6.14. Sed-4.9
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="sed-temp"

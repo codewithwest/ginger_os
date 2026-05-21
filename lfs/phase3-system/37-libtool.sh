@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 12.4 - 8.37. Libtool-2.5.4
+# LFS 13.0  - 8.37. Libtool-2.5.4
 source "/lfs/lib/common.sh"
 PKG_NAME="libtool"
 check_built "$PKG_NAME" && exit 0
