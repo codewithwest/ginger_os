@@ -32,9 +32,9 @@ grep -v '^#' wget-list | while read -r url; do
     fi
 
     # ncurses snapshots move frequently — use stable ftp.gnu.org release
-    if [[ "$url" == *"invisible-mirror.net"* ]] || [[ "$url" == *"invisible-island.net"* ]]; then
-        url="https://ftp.gnu.org/gnu/ncurses/ncurses-6.5.tar.gz"
-    fi
+    # if [[ "$url" == *"invisible-mirror.net"* ]] || [[ "$url" == *"invisible-island.net"* ]]; then
+    #     url="https://ftp.gnu.org/gnu/ncurses/ncurses-6.5.tar.gz"
+    # fi
 
     pkg=$(basename "$url")
     

@@ -16,11 +16,13 @@ sed -e 's:#ENCRYPT_METHOD DES:ENCRYPT_METHOD YESCRYPT:' \
     -i etc/login.defs
 
 touch /usr/bin/passwd
+# Disable logind integration when libsystemd is not available in chroot
 ./configure --sysconfdir=/etc   \
             --disable-static    \
             --with-{b,yes}crypt \
             --without-libbsd    \
-            --with-group-name-max-length=32
+            --with-group-name-max-length=32 \
+            --disable-logind
 
 make $MAKEFLAGS
 

@@ -5,6 +5,10 @@ PKG_NAME="gcc-final"
 check_built "$PKG_NAME" && exit 0
 extract "gcc"
 
+# Fix libgomp compatibility for newer host toolchains: const qualifier
+# in affinity-fmt.c is treated as an error under -Werror.
+perl -pi -e "s/char \*q = strchr \(p \+ 1, '\}'\);/const char *q = strchr (p + 1, '}');/" libgomp/affinity-fmt.c
+
 # 1. Prepare GCC
 case $(uname -m) in
   x86_64)

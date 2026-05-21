@@ -7,7 +7,7 @@ extract "ncurses"
 
 # 1. Fix GCC 15 compatibility: Prevent ncurses from redefining 'bool' as 'unsigned char'
 # which causes conflicts with libstdc++ template specializations.
-sed -i 's/typedef unsigned char NCURSES_BOOL/typedef bool NCURSES_BOOL/' include/curses.h.in
+# sed -i 's/typedef unsigned char NCURSES_BOOL/typedef bool NCURSES_BOOL/' include/curses.h.in
 
 # 2. Configure for Wide-Character support (Mandatory for LFS 13.0)
 ./configure --prefix=/usr           \
@@ -17,29 +17,20 @@ sed -i 's/typedef unsigned char NCURSES_BOOL/typedef bool NCURSES_BOOL/' include
             --without-normal        \
             --with-cxx-shared       \
             --enable-pc-files       \
-            --without-cxx-binding   \
             --with-pkg-config-libdir=/usr/lib/pkgconfig
+
 
 # 2. Build & Install
 make $MAKEFLAGS
 
 # Install to a temporary directory first as per LFS book
-mkdir -p dest
+
 make DESTDIR=$PWD/dest install
+sed -e 's/^#if.*XOPEN.*$/#if 1/' \
+    -i dest/usr/include/curses.h
+cp --remove-destination -av dest/* /
 
-# Install the library to the real system manually to ensure correct path
-install -vm755 dest/usr/lib/libncursesw.so.6.5 /usr/lib
-rm -v  dest/usr/lib/libncursesw.so.6.5
 
-# Fix curses.h to always use wide-character ABI
-sed -e 's/^#if.*XOPEN.*$/#if 1/' -i dest/usr/include/curses.h
-
-# Robust Merge: Using tar instead of cp -a to avoid symlink/directory conflicts in Merged-usr
-log "INFO" "Merging Ncurses into system..."
-(cd dest && tar cf - . ) | tar xf - -C /
-
-# 3. Handle Wide-Character Compatibility Symlinks
-# These allow non-wide applications to link to the wide-character versions.
 for lib in ncurses form panel menu ; do
     ln -sfv lib${lib}w.so /usr/lib/lib${lib}.so
     ln -sfv ${lib}w.pc    /usr/lib/pkgconfig/${lib}.pc
@@ -57,6 +48,7 @@ make distclean
             --without-debug  \
             --without-cxx-binding \
             --with-abi-version=5
+            
 make sources libs
 cp -av lib/lib*.so.5* /usr/lib
 
