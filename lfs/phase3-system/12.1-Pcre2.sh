@@ -1,11 +1,10 @@
 #!/bin/bash
-# LFS 13.0 - ${PCRE2_VERSION} - PCRE2 (Placeholder)
-# This script is a stub for the PCRE2 package. Implement actual build steps following LFS guidelines.
-source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
-PKG_NAME="pcre2-${PCRE2_VERSION}"
+# LFS 13.0 - 8.13. Pcre2-10.47
+source "/lfs/lib/common.sh"
+PKG_NAME="pcre2"
 check_built "$PKG_NAME" && exit 0
 extract "pcre2"
-# Configure, make, install steps go here
+
 ./configure --prefix=/usr                       \
             --docdir=/usr/share/doc/pcre2-${PCRE2_VERSION} \
             --enable-unicode                    \
@@ -16,7 +15,6 @@ extract "pcre2"
             --enable-pcre2grep-libbz2           \
             --enable-pcre2test-libreadline      \
             --disable-static
-
 
 make $MAKEFLAGS
 make install

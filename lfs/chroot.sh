@@ -79,34 +79,37 @@ fi
 
 # Execute command or shell
 # Mount tmpfs for fast build directory (Phase 3 compilation in RAM)
+# Unmount first if already present to apply any size changes
 log "INFO" "Mounting tmpfs build directory for faster compilation..."
 mkdir -p "$LFS/sources/build"
-grep -q "$LFS/sources/build " /proc/mounts || mount -t tmpfs -o size=4G,noatime tmpfs "$LFS/sources/build"
+grep -q "$LFS/sources/build " /proc/mounts && umount "$LFS/sources/build"
+mount -t tmpfs -o size=8G,noatime tmpfs "$LFS/sources/build"
 
 # ccache environment for chroot
-CCACHE_CHROOT_ENV="CCACHE_DIR=/ccache CCACHE_COMPRESS=1 CCACHE_MAXSIZE=10G GINGER_BUILD_TMPFS=/sources/build"
-if command -v ccache &>/dev/null; then
-    CCACHE_CHROOT_ENV="$CCACHE_CHROOT_ENV CC='ccache gcc' CXX='ccache g++'"
-fi
+# Note: ccache binary is NOT available inside chroot (only the cache dir is mounted),
+# so we do NOT set CC=ccache gcc here. The Phase 2 gcc-pass2 creates gcc/g++ symlinks.
+CHROOT_ENV_BASE=(
+    HOME=/root
+    TERM="$TERM"
+    PATH=/usr/bin:/usr/sbin
+    CCACHE_DIR=/ccache
+    CCACHE_COMPRESS=1
+    CCACHE_MAXSIZE=10G
+    GINGER_BUILD_TMPFS=/sources/build
+)
 
 if [[ "${1:-}" == "--mount-only" ]]; then
     log "INFO" "Mounts set up. Exiting without entering chroot."
 elif [[ -n "${1:-}" ]]; then
     log "INFO" "Executing command in chroot: $@"
-    chroot "$LFS" /usr/bin/env -i   \
-        HOME=/root                  \
-        TERM="$TERM"                \
-        PATH=/usr/bin:/usr/sbin     \
-        $CCACHE_CHROOT_ENV          \
+    chroot "$LFS" /usr/bin/env -i \
+        "${CHROOT_ENV_BASE[@]}"   \
         /bin/bash "$@"
 else
     log "INFO" "Entering interactive chroot shell..."
-    chroot "$LFS" /usr/bin/env -i   \
-        HOME=/root                  \
-        TERM="$TERM"                \
-        PS1='(ginger-chroot) \u:\w\$ '  \
-        PATH=/usr/bin:/usr/sbin     \
-        $CCACHE_CHROOT_ENV          \
+    chroot "$LFS" /usr/bin/env -i \
+        "${CHROOT_ENV_BASE[@]}"   \
+        PS1='(ginger-chroot) \u:\w\$ ' \
         /bin/bash --login
 fi
 

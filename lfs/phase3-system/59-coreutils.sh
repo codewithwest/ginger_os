@@ -6,10 +6,7 @@ check_built "$PKG_NAME" && exit 0
 extract "coreutils"
 
 # Patch for internationalization
-apply_patch "coreutils" "upstream_fix"
 apply_patch "coreutils" "i18n"
-
-
 
 autoreconf -fv
 automake -af

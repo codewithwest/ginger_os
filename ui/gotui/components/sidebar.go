@@ -70,7 +70,7 @@ func (m SidebarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-	case network.SystemStatusMsg:
+		case network.SystemStatusMsg:
 		var payload StatusPayload
 		if err := json.Unmarshal(msg.Raw, &payload); err == nil {
 			m.status = payload
@@ -81,6 +81,21 @@ func (m SidebarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.initialized = true
 				if payload.ExecutingStep != nil {
 					m.selectedIdx = *payload.ExecutingStep
+				}
+			}
+			// Advance selection to next pending step when current completes
+			if payload.ExecutingStep == nil && !payload.Running {
+				selStatus := ""
+				if m.selectedIdx < len(payload.Steps) {
+					selStatus = payload.Steps[m.selectedIdx].Status
+				}
+				if selStatus == "completed" {
+					for i, s := range payload.Steps {
+						if s.Status != "completed" {
+							m.selectedIdx = i
+							break
+						}
+					}
 				}
 			}
 		}

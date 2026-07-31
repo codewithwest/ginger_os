@@ -30,6 +30,7 @@ cd build
              --disable-multilib       \
              --disable-bootstrap      \
              --disable-fixincludes    \
+             --disable-libstdcxx-pch  \
              --with-system-zlib
 
 # 3. Build & Install

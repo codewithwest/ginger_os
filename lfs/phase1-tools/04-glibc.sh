@@ -1,5 +1,4 @@
 #!/bin/bash
-# LFS 13.0 - 5.5. Glibc-2.43
 source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
 
 PKG_NAME="glibc"

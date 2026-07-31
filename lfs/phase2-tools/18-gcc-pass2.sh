@@ -50,6 +50,9 @@ cd build
 make $MAKEFLAGS
 make DESTDIR=$LFS install
 
+# Create un-prefixed symlinks so configure scripts find gcc/g++ (not just x86_64-lfs-linux-gnu-gcc)
+ln -sfv $LFS_TGT-gcc $LFS/usr/bin/gcc
+ln -sfv $LFS_TGT-g++ $LFS/usr/bin/g++
 ln -sfv gcc $LFS/usr/bin/cc
 
 cd ../..

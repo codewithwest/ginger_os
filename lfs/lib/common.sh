@@ -224,12 +224,12 @@ extract() {
     # 1. Try to find local archive with smart filtering
     # We prefer case-sensitive first, then case-insensitive
     local ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -name "${PKG_PATTERN}*" \
-        ! -name "*-docs-*" ! -name "*-html-*" ! -name "*-man-*" ! -name "*-manpages-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
+        ! -name "*-doc-*" ! -name "*-docs-*" ! -name "*-html-*" ! -name "*-man-*" ! -name "*-manpages-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
     
     if [ -z "$ARCHIVE_NAME" ]; then
         # Fallback to case-insensitive search
         ARCHIVE_NAME=$(find "$GINGER_SOURCES" -maxdepth 1 -type f -iname "${PKG_PATTERN}*" \
-            ! -iname "*-docs-*" ! -iname "*-html-*" ! -iname "*-man-*" ! -iname "*-manpages-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
+            ! -iname "*-doc-*" ! -iname "*-docs-*" ! -iname "*-html-*" ! -iname "*-man-*" ! -iname "*-manpages-*" | grep -E "\.(tar\..*|tgz|zip)$" | head -n 1)
     fi
     
     # If still not found or if the file is basically empty/incomplete

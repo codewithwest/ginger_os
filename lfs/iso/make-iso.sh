@@ -93,10 +93,10 @@ sudo rm -rf "$INITRD_WORK"
 ESSENTIAL_TOOLS=(
     bash sh mount umount mkdir ls cat grep sed awk rm
     parted partprobe mkfs.ext4 tar lsblk blkid wipefs gzip udevadm
-    grub-install tee sleep which clear ps kill tput 
+    grub-install tee sleep which clear ps kill tput
     readlink dirname touch du df
     head tail sort uniq date wc tr cut xargs cp mv ln rm mv
-    python3 chmod chown env find losetup fuser locale reboot poweroff chroot
+    chmod chown env find losetup fuser locale reboot poweroff chroot
     mktemp sync dd false true test install
 )
 
@@ -177,11 +177,9 @@ if [ -f /lib64/ld-linux-x86-64.so.2 ]; then
     cp -L /lib64/ld-linux-x86-64.so.2 "$INITRD_WORK/lib64/"
 fi
 
-# Copy installer payload
-cp "$GINGER_ROOT/lfs/iso/ginger-installer-bin" "$ISO_DIR/installer/installer-bin"
+# Copy Go installer binary (single static binary, no runtime deps)
+cp "$GINGER_ROOT/lfs/iso/ginger-installer" "$ISO_DIR/installer/ginger-installer"
 cp "$GINGER_ROOT/lfs/iso/installer.sh" "$ISO_DIR/installer/"
-cp "$GINGER_ROOT/lfs/iso/installer.py" "$ISO_DIR/installer/"
-cp "$GINGER_ROOT/lfs/lib/ui.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/lfs/lib/disk.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/lfs/lib/bash_config.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/ginger.conf" "$ISO_DIR/installer/" 2>/dev/null || true
@@ -204,26 +202,7 @@ elif [ -d /lib/terminfo ]; then
      cp -r /lib/terminfo "$INITRD_WORK/lib/"
 fi
 
-# Copy Professional Python Environment
-log "INFO" "Bundling Python standard library..."
-PY_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-mkdir -p "$INITRD_WORK/usr/lib/python$PY_VER"
-
-# Copy all top-level .py files
-cp -r /usr/lib/python$PY_VER/*.py "$INITRD_WORK/usr/lib/python$PY_VER/" 2>/dev/null || true
-
-# Copy ALL subdirectories
-cp -r /usr/lib/python$PY_VER/*/ "$INITRD_WORK/usr/lib/python$PY_VER/" 2>/dev/null || true
-
-# Remove massive/unneeded folders to save space
-rm -rf "$INITRD_WORK/usr/lib/python$PY_VER/"{test,tkinter,idlelib,turtledemo,pydoc_data,ensurepip,__pycache__}
-
-# Copy Rich library
-RICH_PATH=$(python3 -c "import rich; import os; print(os.path.dirname(rich.__file__))")
-mkdir -p "$INITRD_WORK/usr/lib/python3/dist-packages"
-cp -r "$RICH_PATH" "$INITRD_WORK/usr/lib/python3/dist-packages/"
-# Ensure python looks in the right place
-export PYTHONPATH="/usr/lib/python3/dist-packages:/usr/lib/python$PY_VER"
+# Go installer binary is statically linked — no Python/runtime bundling needed
 
 
 # Init script
@@ -255,14 +234,13 @@ done
 
 if [ -n "$FOUND_ISO" ]; then
     cd /mnt/iso/installer
-    export PYTHONPATH="/usr/lib/python3/dist-packages:/usr/lib/python$PY_VER"
-    # Launch Professional TUI Installer with fail-safe
-    if ! python3 ./installer.py; then
-        echo "ERROR: Professional TUI failed to start."
+    # Launch Go installer (single static binary, no runtime deps)
+    if ! ./ginger-installer; then
+        echo "ERROR: Go installer failed."
         echo "Dropping to recovery shell..."
         exec /bin/sh
     fi
-    
+
     # Keep init alive after installer finishes
     echo "Installation process has concluded."
     echo "Press [R] to Reboot or [S] for Shell"
