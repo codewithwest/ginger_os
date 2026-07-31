@@ -12,6 +12,8 @@ import (
 	"github.com/codewithwest/ginger_os/ui/gotui/theme"
 )
 
+const scrollbarWidth = 2
+
 type LogsModel struct {
 	viewport viewport.Model
 	logs     []string
@@ -25,7 +27,7 @@ func NewLogsModel() LogsModel {
 	vp.YPosition = 0
 	return LogsModel{
 		viewport: vp,
-		logs:     []string{"Initializing quantum log stream..."},
+		logs:     []string{},
 	}
 }
 
@@ -42,7 +44,7 @@ func (m LogsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.viewport.Width = msg.Width - 4
-		m.viewport.Height = msg.Height - 5 // Space for bannerBox (3) + logBox borders (2)
+		m.viewport.Height = msg.Height - 5
 		m.viewport.SetContent(strings.Join(m.logs, "\n"))
 
 	case network.SystemStatusMsg:
@@ -51,9 +53,22 @@ func (m LogsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = payload
 		}
 
+	case network.ErrorMsg:
+		logLine := lipgloss.NewStyle().
+			Foreground(theme.ActiveTheme.Error).
+			Bold(true).
+			Render(fmt.Sprintf(" ✗ %v", msg.Err))
+		m.logs = append(m.logs, logLine)
+		if len(m.logs) > 1000 {
+			m.logs = m.logs[len(m.logs)-1000:]
+		}
+		m.viewport.SetContent(strings.Join(m.logs, "\n"))
+		if m.viewport.AtBottom() {
+			m.viewport.GotoBottom()
+		}
+
 	case network.LogMsg:
-		// Format the incoming log based on style
-		formattedMsg := msg.Msg
+		var formattedMsg string
 		if msg.Style != "" {
 			style := lipgloss.NewStyle()
 			if strings.Contains(msg.Style, "red") {
@@ -72,34 +87,32 @@ func (m LogsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			formattedMsg = style.Render(msg.Msg)
 		} else {
-			formattedMsg = lipgloss.NewStyle().Foreground(theme.ActiveTheme.Text).Render(msg.Msg)
+			formattedMsg = theme.BaseStyle().Render(msg.Msg)
 		}
 
 		m.logs = append(m.logs, formattedMsg)
 		if len(m.logs) > 1000 {
 			m.logs = m.logs[len(m.logs)-1000:]
 		}
-		
-		m.viewport.SetContent(strings.Join(m.logs, "\n"))
-		m.viewport.GotoBottom()
-		
-		cmds = append(cmds, network.WaitForLog)
-	}
 
-	// Route unhandled messages (like keyboard scrolling) to the viewport,
-	// except up/down/j/k navigation which is reserved for the steps list.
-	var vpCmd tea.Cmd
-	shouldScrollLogs := true
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
-		k := keyMsg.String()
-		if k == "up" || k == "down" || k == "j" || k == "k" {
-			shouldScrollLogs = false
+		m.viewport.SetContent(strings.Join(m.logs, "\n"))
+		if m.viewport.AtBottom() {
+			m.viewport.GotoBottom()
 		}
 	}
 
-	if shouldScrollLogs {
-		m.viewport, vpCmd = m.viewport.Update(msg)
-		cmds = append(cmds, vpCmd)
+	cmds = append(cmds, network.WaitForLog)
+
+	// Don't forward arrow keys to viewport — reserved for sidebar step nav
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up", "down", "k", "j":
+		default:
+			m.viewport, _ = m.viewport.Update(msg)
+		}
+	default:
+		m.viewport, _ = m.viewport.Update(msg)
 	}
 
 	return m, tea.Batch(cmds...)
@@ -110,47 +123,59 @@ func (m LogsModel) View() string {
 		return ""
 	}
 
-	var banner string
-	if m.status.ExecutingStep != nil {
-		activePhase := "N/A"
-		if *m.status.ExecutingStep < len(m.status.Steps) {
-			activePhase = m.status.Steps[*m.status.ExecutingStep].Phase
+	running := m.status.ExecutingStep != nil
+
+	statusDot := lipgloss.NewStyle().Foreground(theme.ActiveTheme.Success).Render("●")
+	statusLabel := "STANDBY"
+	if running {
+		statusDot = lipgloss.NewStyle().Foreground(theme.ActiveTheme.Error).Render("●")
+		statusLabel = "ACTIVE"
+	}
+
+	bannerParts := []string{
+		lipgloss.NewStyle().Foreground(theme.ActiveTheme.TextDim).Render("  LOG FEED"),
+		statusDot,
+		lipgloss.NewStyle().Foreground(theme.ActiveTheme.TextDim).Render(statusLabel),
+	}
+
+	if running && m.status.ExecutingStep != nil && *m.status.ExecutingStep < len(m.status.Steps) {
+		step := m.status.Steps[*m.status.ExecutingStep]
+		pkgStr := m.status.CurrentPkg
+		if pkgStr == "" {
+			pkgStr = "—"
 		}
-		
-		pkgStr := "N/A"
-		if m.status.CurrentPkg != "" {
-			pkgStr = m.status.CurrentPkg
-		}
-		
-		banner = fmt.Sprintf(
-			" 🌀 PHASE: %s [%.1fs] │ 📦 PKG: %s [%.1fs] │ ⏱️ OVERALL: %.1fs ",
-			lipgloss.NewStyle().Foreground(theme.ActiveTheme.Primary).Bold(true).Render(activePhase),
-			m.status.Timers["phase"],
+		bannerParts = append(bannerParts,
+			lipgloss.NewStyle().Foreground(theme.ActiveTheme.Border).Render("│"),
+			lipgloss.NewStyle().Foreground(theme.ActiveTheme.TextDim).Render("PKG"),
 			lipgloss.NewStyle().Foreground(theme.ActiveTheme.Warning).Bold(true).Render(pkgStr),
-			m.status.Timers["package"],
-			m.status.Timers["overall"],
-		)
-	} else {
-		banner = fmt.Sprintf(
-			" 🟢 SYSTEM READY │ ⏱️ OVERALL UPTIME: %.1fs ",
-			m.status.Timers["overall"],
+			lipgloss.NewStyle().Foreground(theme.ActiveTheme.Border).Render("│"),
+			lipgloss.NewStyle().Foreground(theme.ActiveTheme.TextDim).Render("PHASE"),
+			theme.TitleStyle().Render(step.Phase),
 		)
 	}
-	
+
+	banner := lipgloss.NewStyle().Render(strings.Join(bannerParts, " "))
+
 	bannerBox := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(theme.ActiveTheme.Primary).
+		BorderForeground(theme.ActiveTheme.Border).
 		Width(m.width - 2).
+		Padding(0, 1).
 		Render(banner)
 
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(theme.ActiveTheme.Primary).
+		BorderForeground(theme.ActiveTheme.Border).
 		Padding(0, 1).
 		Width(m.width - 2).
-		Height(m.height - 5) // Height subtracts 3 for bannerBox and 2 for borders
+		Height(m.height - 5)
 
-	logBox := box.Render(m.viewport.View())
+	viewportContent := m.viewport.View()
+	if viewportContent == "" {
+		viewportContent = "\n  " + lipgloss.NewStyle().Foreground(theme.ActiveTheme.TextDim).Render("Awaiting output from build pipeline...")
+	}
+
+	logBox := box.Render(viewportContent)
 
 	return lipgloss.JoinVertical(lipgloss.Left, bannerBox, logBox)
 }

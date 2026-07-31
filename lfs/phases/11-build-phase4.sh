@@ -52,7 +52,7 @@ for script in "${SCRIPTS[@]}"; do
     if bash "$script"; then
         touch "$STATE_DIR/${FULL_SCRIPT_NAME}.built"
         echo "Successfully built: ${FILE_PKG_NAME}"
-        find /sources -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+        find /sources -mindepth 1 -maxdepth 1 -type d ! -name "build" -exec rm -rf {} +
     else
         echo "Error: Failed to build ${FILE_PKG_NAME}"
         exit 1

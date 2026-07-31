@@ -31,7 +31,7 @@ sleep 1.2
 # 2. Build and launch our high-performance Go TUI
 print_cyan "🛸 Booting high-density Go HUD..."
 cd "$SCRIPT_DIR/ui/gotui"
-go build -o ginger-hud .
+go build -buildvcs=false -o ginger-hud .
 ./ginger-hud
 
 echo "======================================================================"

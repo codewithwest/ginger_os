@@ -1,6 +1,10 @@
 import unittest
 from unittest.mock import patch
-from lfs_builder_ui.engine import GingerEngine
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from server.engine import GingerEngine
 
 
 class TestGingerEngine(unittest.TestCase):
@@ -33,8 +37,8 @@ class TestGingerEngine(unittest.TestCase):
             pkg_name = self.engine._get_script_pkg_name("dummy_path_no_name.sh")
             self.assertIsNone(pkg_name)
 
-    @patch("lfs_builder_ui.engine.MASTER_LOG", "/tmp/ginger_master.log")
-    @patch("lfs_builder_ui.engine.LOG_DIR", "/tmp")
+    @patch("config.constants.MASTER_LOG", "/tmp/ginger_master.log")
+    @patch("config.constants.LOG_DIR", "/tmp")
     def test_rotate_logs_logic(self):
         with (
             patch("os.path.exists", return_value=True),
@@ -42,8 +46,8 @@ class TestGingerEngine(unittest.TestCase):
             patch("shutil.move") as mock_move,
             patch("builtins.open", unittest.mock.mock_open()),
         ):
-            # Re-call _rotate_logs to trigger rotation
-            self.engine._rotate_logs()
+            # Re-call rotate_logs to trigger rotation
+            self.engine.telemetry.rotate_logs()
 
             # Check if move (backup) was called
             mock_move.assert_called()

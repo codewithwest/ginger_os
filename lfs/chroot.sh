@@ -24,12 +24,16 @@ else
   grep -q "$LFS/dev/shm " /proc/mounts || mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
 fi
 
-# Ensure lfs, config, and sources are accessible inside chroot
-log "INFO" "Mounting project lfs, config, and sources into chroot..."
-mkdir -p "$LFS/lfs" "$LFS/config" "$LFS/sources"
+# Ensure lfs, config, sources, and ccache are accessible inside chroot
+log "INFO" "Mounting project lfs, config, sources, and ccache into chroot..."
+mkdir -p "$LFS/lfs" "$LFS/config" "$LFS/sources" "$LFS/ccache"
 grep -q "$LFS/lfs " /proc/mounts || mount --bind "$GINGER_SCRIPTS" "$LFS/lfs"
 grep -q "$LFS/config " /proc/mounts || mount --bind "$GINGER_ROOT/config"  "$LFS/config"
 grep -q "$LFS/sources " /proc/mounts || mount --bind "$GINGER_SOURCES" "$LFS/sources"
+# Bind-mount ccache directory for compiler cache across rebuilds
+CCACHE_HOST_DIR="${CCACHE_DIR:-${GINGER_ROOT}/.ccache}"
+mkdir -p "$CCACHE_HOST_DIR"
+grep -q "$LFS/ccache " /proc/mounts || mount --bind "$CCACHE_HOST_DIR" "$LFS/ccache"
 
 log "INFO" "Entering chroot..."
 
@@ -74,6 +78,17 @@ if [ -f "$LFS/usr/lib/liblzma.so.5" ] && [ -d "$(dirname "$LZMA_TARGET")" ]; the
 fi
 
 # Execute command or shell
+# Mount tmpfs for fast build directory (Phase 3 compilation in RAM)
+log "INFO" "Mounting tmpfs build directory for faster compilation..."
+mkdir -p "$LFS/sources/build"
+grep -q "$LFS/sources/build " /proc/mounts || mount -t tmpfs -o size=4G,noatime tmpfs "$LFS/sources/build"
+
+# ccache environment for chroot
+CCACHE_CHROOT_ENV="CCACHE_DIR=/ccache CCACHE_COMPRESS=1 CCACHE_MAXSIZE=10G GINGER_BUILD_TMPFS=/sources/build"
+if command -v ccache &>/dev/null; then
+    CCACHE_CHROOT_ENV="$CCACHE_CHROOT_ENV CC='ccache gcc' CXX='ccache g++'"
+fi
+
 if [[ "${1:-}" == "--mount-only" ]]; then
     log "INFO" "Mounts set up. Exiting without entering chroot."
 elif [[ -n "${1:-}" ]]; then
@@ -82,6 +97,7 @@ elif [[ -n "${1:-}" ]]; then
         HOME=/root                  \
         TERM="$TERM"                \
         PATH=/usr/bin:/usr/sbin     \
+        $CCACHE_CHROOT_ENV          \
         /bin/bash "$@"
 else
     log "INFO" "Entering interactive chroot shell..."
@@ -90,6 +106,7 @@ else
         TERM="$TERM"                \
         PS1='(ginger-chroot) \u:\w\$ '  \
         PATH=/usr/bin:/usr/sbin     \
+        $CCACHE_CHROOT_ENV          \
         /bin/bash --login
 fi
 

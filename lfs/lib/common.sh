@@ -42,6 +42,25 @@ log() {
     echo -e "${COLOR}[$(date +'%Y-%m-%d %H:%M:%S')] [$TYPE] $MSG\033[0m"
 }
 
+# Per-package MAKEFLAGS auto-tuning
+# Heavy packages benefit from all cores; light ones don't
+auto_tune_makeflags() {
+    local PKG="$1"
+    local CORES_TOTAL=$(nproc 2>/dev/null || echo 4)
+    case "$PKG" in
+        gcc*|glibc*|kernel*|llvm*|openssl*|rust*|qt*|webkit*|firefox*|llvm*)
+            MAKEFLAGS="-j${CORES_TOTAL}"
+            ;;
+        patch|sed|m4|bison|flex|gperf|markupsafe|jinja2|flit*|wheel*|packaging*|setuptools*)
+            MAKEFLAGS="-j2"
+            ;;
+        *)
+            MAKEFLAGS="-j$(( CORES_TOTAL > 4 ? CORES_TOTAL / 2 : CORES_TOTAL ))"
+            ;;
+    esac
+    export MAKEFLAGS
+}
+
 # Validate critical environment
 # Inside chroot, LFS is often set to "" (empty string) to represent root.
 if [ -z "${LFS+x}" ]; then
@@ -200,6 +219,7 @@ apply_patch() {
 
 extract() {
     local PKG_PATTERN=$1
+    auto_tune_makeflags "$PKG_PATTERN"
     
     # 1. Try to find local archive with smart filtering
     # We prefer case-sensitive first, then case-insensitive
@@ -237,8 +257,8 @@ extract() {
     DIR_NAME=${DIR_NAME/-src/}
 
     log "PROCESS" "Extracting $ARCHIVE_NAME..."
-    # Build inside LFS sources to avoid permission issues on the host
-    local BUILD_BASE="$LFS/sources"
+    # Use tmpfs build dir when available (faster compilation), fall back to LFS sources
+    local BUILD_BASE="${GINGER_BUILD_TMPFS:-$LFS/sources}"
     mkdir -p "$BUILD_BASE"
     cd "$BUILD_BASE"
     

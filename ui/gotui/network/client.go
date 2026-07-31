@@ -1,10 +1,12 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -28,63 +30,62 @@ type ChatMsg struct {
 
 type SystemStatusMsg struct {
 	Status string `json:"status"`
-	// Additional fields like cpu, steps, etc. can be unmarshaled here
-	Raw json.RawMessage
+	Raw    json.RawMessage
 }
 
-// SubscribeToLogs connects to the logs websocket and returns a tea.Cmd that
-// waits for the next message.
-func SubscribeToLogs() tea.Cmd {
-	return func() tea.Msg {
-		conn, _, err := websocket.DefaultDialer.Dial(wsBaseURL+"/ws/logs", nil)
-		if err != nil {
-			time.Sleep(2 * time.Second)
-			return ErrorMsg{err}
-		}
-		defer conn.Close()
-
-		// Read loop for a single message to fit into tea.Cmd pattern
-		// But usually websockets are better handled via a continuous goroutine 
-		// that sends to a channel, and a tea.Cmd that reads from the channel.
-		
-		// For simplicity in a pure Cmd architecture, we return a function that returns a sub-Cmd
-		_, msg, err := conn.ReadMessage()
-		if err != nil {
-			return ErrorMsg{err}
-		}
-
-		var logData LogMsg
-		if err := json.Unmarshal(msg, &logData); err != nil {
-			return ErrorMsg{err}
-		}
-		
-		// Note: To keep the connection open, this approach requires passing the conn around.
-		// A better architecture is a global channel.
-		return logData
-	}
+type ConnectionStatusMsg struct {
+	Connected bool
 }
 
-// We define a global channel for logs
-var LogChannel = make(chan LogMsg, 100)
+type LogChannelFullMsg struct{}
+
+var (
+	LogChannel    = make(chan LogMsg, 100)
+	wsCtx, wsCancel = context.WithCancel(context.Background())
+)
+
+func StopLogListener() {
+	wsCancel()
+}
 
 func StartLogListener() {
 	go func() {
 		for {
+			select {
+			case <-wsCtx.Done():
+				return
+			default:
+			}
+
 			conn, _, err := websocket.DefaultDialer.Dial(wsBaseURL+"/ws/logs", nil)
 			if err != nil {
-				time.Sleep(2 * time.Second)
+				select {
+				case <-wsCtx.Done():
+					return
+				case <-time.After(2 * time.Second):
+				}
 				continue
 			}
 
 			for {
+				select {
+				case <-wsCtx.Done():
+					conn.Close()
+					return
+				default:
+				}
+
 				_, msg, err := conn.ReadMessage()
 				if err != nil {
-					break // Connection lost, retry
+					break
 				}
 
 				var logData LogMsg
 				if err := json.Unmarshal(msg, &logData); err == nil {
-					LogChannel <- logData
+					select {
+					case LogChannel <- logData:
+					default:
+					}
 				}
 			}
 			conn.Close()
@@ -92,24 +93,27 @@ func StartLogListener() {
 	}()
 }
 
-// WaitForLog is a Cmd that reads the next message from the channel
 func WaitForLog() tea.Msg {
-	return <-LogChannel
+	select {
+	case msg := <-LogChannel:
+		return msg
+	case <-time.After(100 * time.Millisecond):
+		return nil
+	}
 }
 
-// FetchStatus retrieves the /api/status endpoint
 func FetchStatus() tea.Cmd {
 	return func() tea.Msg {
 		client := http.Client{Timeout: 5 * time.Second}
 		resp, err := client.Get(baseURL + "/api/status")
 		if err != nil {
-			return ErrorMsg{err}
+			return ErrorMsg{Err: err}
 		}
 		defer resp.Body.Close()
 
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return ErrorMsg{err}
+			return ErrorMsg{Err: err}
 		}
 
 		var status SystemStatusMsg
@@ -126,58 +130,103 @@ func (e ErrorMsg) Error() string {
 	return fmt.Sprintf("network error: %v", e.Err)
 }
 
-// RunStep triggers a step execution
+type ActionSuccessMsg struct {
+	Action string
+}
+
+type ConfigMsg struct {
+	Config map[string]string
+}
+
+func FetchConfig() tea.Cmd {
+	return func() tea.Msg {
+		client := http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Get(baseURL + "/api/config")
+		if err != nil {
+			return ErrorMsg{Err: err}
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return ErrorMsg{Err: err}
+		}
+
+		var result struct {
+			Status string            `json:"status"`
+			Config map[string]string `json:"config"`
+		}
+		if err := json.Unmarshal(body, &result); err != nil {
+			return ErrorMsg{Err: err}
+		}
+		if result.Status != "ok" {
+			return ErrorMsg{Err: fmt.Errorf("config fetch failed: %s", string(body))}
+		}
+		return ConfigMsg{Config: result.Config}
+	}
+}
+
+func SetConfig(key, value string) tea.Cmd {
+	return func() tea.Msg {
+		payload, _ := json.Marshal(map[string]string{"key": key, "value": value})
+		client := http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Post(baseURL+"/api/config/update", "application/json", strings.NewReader(string(payload)))
+		if err != nil {
+			return ErrorMsg{Err: err}
+		}
+		defer resp.Body.Close()
+		return ActionSuccessMsg{Action: fmt.Sprintf("config_%s", key)}
+	}
+}
+
 func RunStep(idx int) tea.Cmd {
 	return func() tea.Msg {
 		client := http.Client{Timeout: 5 * time.Second}
 		url := fmt.Sprintf("%s/api/step/%d/run", baseURL, idx)
 		resp, err := client.Post(url, "application/json", nil)
 		if err != nil {
-			return ErrorMsg{err}
+			return ErrorMsg{Err: err}
 		}
 		defer resp.Body.Close()
-		return nil
+		return ActionSuccessMsg{Action: fmt.Sprintf("run_step_%d", idx)}
 	}
 }
 
-// ForceStep forces a step execution
 func ForceStep(idx int) tea.Cmd {
 	return func() tea.Msg {
 		client := http.Client{Timeout: 5 * time.Second}
 		url := fmt.Sprintf("%s/api/step/%d/force", baseURL, idx)
 		resp, err := client.Post(url, "application/json", nil)
 		if err != nil {
-			return ErrorMsg{err}
+			return ErrorMsg{Err: err}
 		}
 		defer resp.Body.Close()
-		return nil
+		return ActionSuccessMsg{Action: fmt.Sprintf("force_step_%d", idx)}
 	}
 }
 
-// ControlAction triggers auto, abort, resume actions
 func ControlAction(action string) tea.Cmd {
 	return func() tea.Msg {
 		client := http.Client{Timeout: 5 * time.Second}
 		url := fmt.Sprintf("%s/api/control/%s", baseURL, action)
 		resp, err := client.Post(url, "application/json", nil)
 		if err != nil {
-			return ErrorMsg{err}
+			return ErrorMsg{Err: err}
 		}
 		defer resp.Body.Close()
-		return nil
+		return ActionSuccessMsg{Action: fmt.Sprintf("control_%s", action)}
 	}
 }
 
-// TakeSnapshot creates a snapshot
 func TakeSnapshot(label string) tea.Cmd {
 	return func() tea.Msg {
 		client := http.Client{Timeout: 5 * time.Second}
 		url := fmt.Sprintf("%s/api/snapshots/take?label=%s", baseURL, label)
 		resp, err := client.Post(url, "application/json", nil)
 		if err != nil {
-			return ErrorMsg{err}
+			return ErrorMsg{Err: err}
 		}
 		defer resp.Body.Close()
-		return nil
+		return ActionSuccessMsg{Action: fmt.Sprintf("snapshot_%s", label)}
 	}
 }

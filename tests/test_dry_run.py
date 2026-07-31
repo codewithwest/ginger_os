@@ -5,7 +5,7 @@ import sys
 
 # Add to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from lfs_builder_ui import GingerEngine
+from server.engine import GingerEngine
 
 
 class TestDryRun(unittest.TestCase):

@@ -21,6 +21,7 @@ case $(uname -m) in
 esac
 
 log "PROCESS" "Configuring GCC Pass 1..."
+
 mkdir -v build
 cd build
 

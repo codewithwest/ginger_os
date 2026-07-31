@@ -50,4 +50,7 @@ exec runuser -u lfs -- env -i \
   GINGER_SOURCES="$GINGER_ROOT/sources" \
   GINGER_LOGS="$GINGER_ROOT/logs" \
   GINGER_SCRIPTS="$GINGER_ROOT/lfs" \
+  CCACHE_DIR="$GINGER_ROOT/.ccache" \
+  CCACHE_COMPRESS=1 \
+  CCACHE_MAXSIZE=10G \
   /bin/bash "$ABS_SCRIPT" "$@"

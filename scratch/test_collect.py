@@ -24,7 +24,7 @@ def _collect_files(root: Path):
     return files
 
 
-root = Path("/home/jonas/Documents/west/ginger_os")
+root = Path(__file__).resolve().parent.parent
 files = _collect_files(root)
 print(f"Total files: {len(files)}")
 for f in files[:20]:

@@ -21,14 +21,14 @@
 - [x] **Build Failsafes**: Automated Mount & Chroot Recovery
   - Automatically re-mounts /mnt/lfs if lost during build
   - Automatically restores chroot virtual filesystems if missing for phase 3/4
-  - Files: `lfs_builder_ui/engine.py`, `lfs/image/prepare-image.sh`
+  - Files: `server/engine.py`, `lfs/image/prepare-image.sh`
 
 - [x] **Deprecated Test Operator**: Replace `-a` with `&&` in phase scripts
   - Files: `lfs/phases/build-phase1.sh`, `build-phase2.sh`
 
 - [x] **Chroot Verification**: Add mount verification before Phase 3
   - Add `_verify_chroot_ready()` method to engine.py
-  - File: `lfs_builder_ui/engine.py`
+  - File: `server/engine.py`
 
 ---
 
@@ -41,12 +41,12 @@
 
 - [x] **Issue #8**: Fix terminal resource conflict in keyboard listener
   - Use `select()` with timeout instead of blocking read
-  - File: `lfs_builder_ui/engine.py` (Lines 75-99)
+  - File: `server/engine.py` (Lines 75-99)
   - _Note: Superseded by new TUI architecture in ginger_os.py_
 
 - [x] **Issue #11**: Add subprocess timeout mechanism
   - Prevent hangs on stuck build steps
-  - File: `lfs_builder_ui/engine.py` (Lines 316-326)
+  - File: `server/engine.py` (Lines 316-326)
 
 - [x] **Documentation**: Update README.md
   - Document new directory structure
@@ -70,15 +70,15 @@
   - Fix all warnings/errors
 
 - [x] **Documentation**: Add docstrings to Python engine methods
-  - File: `lfs_builder_ui/engine.py`
+  - File: `server/engine.py`
 
 - [x] **Issue #9**: Make `GINGER_PKG:` marker more unique
   - Change to `__GINGER_PKG_MARKER__:` to avoid false positives
-  - Files: `lfs/phases/*.sh`, `lfs_builder_ui/engine.py`
+  - Files: `lfs/phases/*.sh`, `server/engine.py`
 
 - [x] **Issue #10**: Fix storage update timing logic
   - Replace probabilistic timing with explicit counter
-  - File: `lfs_builder_ui/engine.py` (Line 338)
+  - File: `server/engine.py` (Line 338)
 
 ---
 

@@ -57,8 +57,15 @@ export PATH="$LFS/tools/bin:/usr/bin:/usr/sbin:/usr/local/bin"
 
 # Parallel build settings - cap at 12 to keep system responsive
 CORES=$(nproc 2>/dev/null || echo 4)
-if [ "$CORES" -gt 12 ]; then CORES=12; fi
+if [ "$CORES" -gt 12 ]; then CORES=10; fi
 export MAKEFLAGS="-j${CORES}"
+
+# ccache - compiler cache for faster rebuilds
+# NOTE: CC/CXX are NOT exported globally here — they interfere with cross-compiler
+# builds in Phases 1-2. ccache is injected only inside chroot.sh for Phase 3+.
+export CCACHE_DIR="${CCACHE_DIR:-${GINGER_ROOT}/.ccache}"
+export CCACHE_COMPRESS=1
+export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-10G}"
 
 # Workspace directories
 # Use sed to ensure GINGER_ROOT is normalized (no double slashes or trailing slashes)

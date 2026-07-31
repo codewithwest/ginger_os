@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 source "${SCRIPT_DIR}/../lib/common.sh"
 
 IMAGE_NAME="${IMAGE_NAME:-ginger_os.img}"
-IMAGE_SIZE="${IMAGE_SIZE:-12G}"
+IMAGE_SIZE="${IMAGE_SIZE:-32G}"
 IMAGE_PATH="${GINGER_ROOT}/${IMAGE_NAME}"
 BUILD_TYPE="${BUILD_TYPE:-image}"
 

@@ -51,7 +51,7 @@ for script in "${SCRIPTS[@]}"; do
     if bash "$script"; then
         touch "$STATE_DIR/${FILE_PKG_NAME}-temp.built"
         echo "Successfully built: ${FILE_PKG_NAME}"
-        find ${LFS}/sources -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+        find ${LFS}/sources -mindepth 1 -maxdepth 1 -type d ! -name "build" -exec rm -rf {} +
     else
         echo "Error: Failed to build ${FILE_PKG_NAME}"
         exit 1

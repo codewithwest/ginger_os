@@ -1,6 +1,9 @@
-def main():
-    print("Hello from ginger-os!")
+import sys
+import os
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from server.main import main
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

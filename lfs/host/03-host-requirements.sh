@@ -72,7 +72,7 @@ wait_for_apt_lock
 apt-get install -y -qq \
     libncurses5-dev libtool autoconf automake patch wget curl \
     xz-utils bzip2 file bc flex zlib1g-dev xorriso grub-pc-bin \
-    grub-efi-amd64-bin mtools >> "$UI_LOG_FILE" 2>&1 || { echo "ERROR: Failed to install LFS dependencies"; exit 1; }
+    grub-efi-amd64-bin mtools ccache >> "$UI_LOG_FILE" 2>&1 || { echo "ERROR: Failed to install LFS dependencies"; exit 1; }
 
 # ============================================================================
 # STEP 4: CREATE LFS USER

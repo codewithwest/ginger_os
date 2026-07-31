@@ -6,60 +6,43 @@ import signal
 import time
 import threading
 
-# Add to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from lfs_builder_ui import GingerEngine
+from server.engine import GingerEngine
 
 
 class TestPackageStepping(unittest.TestCase):
     def setUp(self):
-        self.engine = GingerEngine()
+        patcher = patch("builtins.open", unittest.mock.mock_open())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.engine = GingerEngine(dry_run=True)
         self.engine.package_stepping = True
 
-    @patch("select.select")
     @patch("os.kill")
-    @patch("subprocess.Popen")
-    @patch("builtins.open", new_callable=unittest.mock.mock_open)
-    def test_package_pause_signal(self, mock_open, mock_popen, mock_kill, mock_select):
-        # Mock process
-        mock_proc = MagicMock()
-        mock_proc.pid = 1234
+    def test_package_pause_and_resume_signals(self, mock_kill):
+        self.engine.current_process = MagicMock()
+        self.engine.current_process.pid = 1234
 
-        # Mock select to return the process stdout as ready
-        mock_select.return_value = ([mock_proc.stdout], [], [])
+        def do_pause():
+            self.engine.process_monitor._handle_package_stepping("test-pkg")
 
-        mock_proc.stdout.readline.side_effect = [
-            "__GINGER_PKG_MARKER__: test-pkg\n",
-            "",
-        ]
-        mock_proc.poll.return_value = 0
-        mock_proc.returncode = 0
-        mock_popen.return_value = mock_proc
-
-        step = self.engine.steps[0]
-
-        # We need to run this in a thread because _execute_step will block
-        def run_step():
-            self.engine._execute_step(step)
-
-        t = threading.Thread(target=run_step)
+        t = threading.Thread(target=do_pause)
         t.start()
 
-        # Give it a moment to hit the pause
-        time.sleep(0.5)
+        time.sleep(0.3)
 
-        # Verify SIGSTOP was sent
         mock_kill.assert_any_call(1234, signal.SIGSTOP)
         self.assertTrue(self.engine.paused_for_package)
 
-        # Resume
+        self.engine.current_pkg = "test-pkg"
         self.engine.resume_package()
 
-        # Verify SIGCONT was sent
+        time.sleep(0.3)
+
         mock_kill.assert_any_call(1234, signal.SIGCONT)
+        self.assertFalse(self.engine.paused_for_package)
 
         t.join(timeout=2)
-        self.assertFalse(self.engine.paused_for_package)
 
 
 if __name__ == "__main__":

@@ -130,6 +130,9 @@ grep -q "$LFS/config " /proc/mounts || mount --bind "$GINGER_ROOT/config"  "$LFS
 grep -q "$LFS/sources " /proc/mounts || mount --bind "$GINGER_SOURCES" "$LFS/sources"
 grep -q "$LFS/ginger_os " /proc/mounts || mount --bind "$GINGER_ROOT" "$LFS/ginger_os"
 
+# Ensure ccache directory exists on host
+mkdir -p "$GINGER_ROOT/.ccache"
+
 # Ensure the lfs user owns the logs and state directories inside LFS
 chown -R lfs:lfs "$LFS/var/log/ginger"
 chown -R lfs:lfs "$LFS/var/lib/ginger"

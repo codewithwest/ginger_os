@@ -7,10 +7,11 @@ import logging
 import psutil
 import time
 import subprocess
-from typing import List
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from typing import List, Optional
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from llm.chatbot import chatbot
 
 logging.getLogger("uvicorn.error").setLevel(logging.ERROR)
@@ -185,6 +186,30 @@ async def set_cores(count: int):
     engine.cores = count
     engine.log(f"SYSTEM_CONFIG :: CPU_CORES set to {count}", "bold cyan")
     return {"status": "ok", "cores": count}
+
+
+@app.get("/api/config")
+async def get_config():
+    try:
+        from config.constants import CONFIG
+        return {"status": "ok", "config": CONFIG}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+class ConfigUpdate(BaseModel):
+    key: str
+    value: str
+
+
+@app.post("/api/config/update")
+async def update_config_endpoint(body: ConfigUpdate):
+    try:
+        from config.constants import update_config, CONFIG
+        update_config(body.key, body.value)
+        return {"status": "ok", "config": CONFIG}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 @app.post("/api/control/rebuild_ui")
