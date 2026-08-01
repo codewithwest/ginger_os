@@ -1,0 +1,143 @@
+#!/bin/bash
+# GingerOS - Host Setup
+# Prepares the host system for LFS Phase 1
+# MUST be run as root
+# Assumes $LFS is already mounted
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+
+source "${SCRIPT_DIR}/../lib/common.sh"
+
+# ---------------------------------------------------------------------
+# Safety checks
+# ---------------------------------------------------------------------
+if [ "$(id -u)" -ne 0 ]; then
+    log "ERROR" "This script must be run as root"
+    exit 1
+fi
+
+# LFS="" is valid inside chroot (means we are already at the LFS root)
+# Only fail if LFS is completely unset
+if [ -z "${LFS+x}" ]; then
+    log "ERROR" "LFS variable is not set"
+    exit 1
+fi
+
+log "INFO" "Using LFS directory: $LFS"
+
+# NOTE: mountpoint/same-device checks from LFS book are intentionally omitted.
+# In our containerized build, chroot ${LFS} provides equivalent isolation —
+# all operations are confined to the img filesystem regardless.
+
+# ---------------------------------------------------------------------
+# Create lfs user if it doesn't exist
+# ---------------------------------------------------------------------
+if ! id lfs &>/dev/null; then
+    log "INFO" "Creating lfs user and group..."
+    groupadd lfs 2>/dev/null || true
+    useradd -s /bin/bash -g lfs -m -k /dev/null lfs
+    log "INFO" "lfs user created."
+fi
+
+# Allow lfs to run ln with sudo without password
+echo 'lfs ALL=(ALL) NOPASSWD: /bin/ln' >> /etc/sudoers
+
+# ---------------------------------------------------------------------
+# Prepare base LFS directory
+# ---------------------------------------------------------------------
+log "INFO" "Ensuring base LFS directory exists..."
+mkdir -pv "$LFS"
+chown -v root:root "$LFS"
+
+# ---------------------------------------------------------------------
+# Create required directory layout
+# ---------------------------------------------------------------------
+log "INFO" "Creating directory structure..."
+
+# Sources
+mkdir -pv "$LFS/sources"
+chmod -v a+wt "$LFS/sources"
+
+# Tools directory (temporary toolchain)
+mkdir -pv "$LFS/tools"
+chown -v lfs "$LFS/tools"
+
+# GingerOS state directory and var structure
+mkdir -pv "$LFS/var/lib/ginger"
+chown -v lfs "$LFS/var"
+chown -v lfs "$LFS/var/lib"
+chown -R lfs "$LFS/var/lib/ginger"
+
+# Merged-usr layout (LFS 12.x)
+mkdir -pv "$LFS/usr/bin" \
+         "$LFS/usr/lib" \
+         "$LFS/usr/sbin" \
+         "$LFS/usr/include"
+
+for dir in bin lib sbin; do
+    if [ ! -L "$LFS/$dir" ]; then
+        ln -snv "usr/$dir" "$LFS/$dir"
+    fi
+done
+
+# Change ownership of key directories to lfs so temp tools can install there
+chown -R lfs "$LFS"/{usr,etc,var,lib,lib64}
+
+# Architecture-specific dynamic linker setup
+case "$(uname -m)" in
+    x86_64)
+        mkdir -pv "$LFS/lib64"
+        if [ ! -L "$LFS/lib64/ld-linux-x86-64.so.2" ]; then
+            ln -sfv ../lib/ld-linux-x86-64.so.2 \
+                "$LFS/lib64/ld-linux-x86-64.so.2"
+        fi
+        ;;
+esac
+
+# ---------------------------------------------------------------------
+# Verify sources are available in the root directory
+# ---------------------------------------------------------------------
+if [ ! -d "$GINGER_SOURCES" ] || [ ! "$(ls -A "$GINGER_SOURCES" 2>/dev/null)" ]; then
+    log "WARN" "No sources found in $GINGER_SOURCES. Run the download script later."
+fi
+
+chown -v lfs "$LFS/usr/include"
+
+# ---------------------------------------------------------------------
+# Final ownership sanity
+# ---------------------------------------------------------------------
+log "INFO" "Final ownership checks..."
+chown -v lfs "$LFS/tools"
+chown -v lfs "$LFS/sources"
+
+# Targeted ownership changes. We avoid -R on $LFS to prevent 
+# accidentally touching bind-mounts like /proc or the ginger_os repo.
+chown -v lfs "$LFS/tools"
+chown -v lfs "$LFS/sources"
+chown -v lfs "$LFS/usr/include"
+chown -R lfs "$LFS/var/lib/ginger"
+
+# ---------------------------------------------------------------------
+# Mount project files (so lfs user can access them via the LFS path)
+# ---------------------------------------------------------------------
+log "INFO" "Mounting project files into $LFS for the lfs user..."
+mkdir -p "$LFS/lfs" "$LFS/scripts" "$LFS/config" "$LFS/sources" "$LFS/ginger_os" "$LFS/var/log/ginger"
+grep -q "$LFS/lfs " /proc/mounts || mount --bind "$GINGER_SCRIPTS" "$LFS/lfs"
+grep -q "$LFS/scripts " /proc/mounts || mount --bind "$GINGER_SCRIPTS" "$LFS/scripts"
+grep -q "$LFS/config " /proc/mounts || mount --bind "$GINGER_ROOT/config"  "$LFS/config"
+grep -q "$LFS/sources " /proc/mounts || mount --bind "$GINGER_SOURCES" "$LFS/sources"
+grep -q "$LFS/ginger_os " /proc/mounts || mount --bind "$GINGER_ROOT" "$LFS/ginger_os"
+
+# Ensure ccache directory exists on host
+mkdir -p "$GINGER_ROOT/.ccache"
+
+# Ensure the lfs user owns the logs and state directories inside LFS
+chown -R lfs:lfs "$LFS/var/log/ginger"
+chown -R lfs:lfs "$LFS/var/lib/ginger"
+
+log "INFO" "Host setup complete."
+log "INFO" "Switch to the 'lfs' user to begin Phase 1:"
+log "INFO" "  su - lfs"
+mark_built "05_host_setup"

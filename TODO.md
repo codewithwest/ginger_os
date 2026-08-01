@@ -1,129 +1,57 @@
 # GingerOS TODO List
-## From Audit Report - 2026-02-13
+
+**Status**: v1.0.0-stable released — see
+[docs/releases/v1.0.0-stable.md](docs/releases/v1.0.0-stable.md).
 
 ---
 
-## 🔴 CRITICAL (Must Fix Before Merge)
+## ✅ Complete for v1.0.0-stable
 
-- [x] **Issue #5**: Fix race condition in `scripts/lib/ui.sh` ui_monitor startup (Line 300-304)
-  - Replace `pgrep` check with atomic PID file creation
-  - File: `scripts/lib/ui.sh`
+### Build engine
+- [x] 13-step orchestrated LFS 13.0 (systemd) build with marker-based resume
+- [x] Selective single-package builds (API + dashboard)
+- [x] Automated mount & chroot recovery
+- [x] Snapshot take / restore
+- [x] Parallel Phase 3 builds (experimental, `PARALLEL_PHASE3`)
+- [x] Process-group isolation for safe aborts
+- [x] Subprocess timeout mechanism
+- [x] Dry-run mode, telemetry, storage monitor
 
-- [x] **Issue #2**: Add safety checks to `scripts/lib/common.sh` wildcard removal (Line 145)
-  - Prevent accidental deletion if DIR_NAME is empty/malformed
-  - File: `scripts/lib/common.sh`
+### Installer / ISO
+- [x] Go installer as a single static binary (no Python/runtime deps)
+- [x] 5-step install: Partition → Extract → Hardware Sync → User Setup → Bootloader
+- [x] Root UUID rewritten into `/etc/fstab` (fixes first-boot
+      `systemd-remount-fs` failure)
+- [x] `purge-rootfs.py` contamination filter with `KEEP_EXACT` for LFS dbus units
+- [x] Rootfs + kernel caching (`FORCE_REBUILD=1` to bypass)
 
-- [x] **Issue #4**: Fix error handler to call cleanup (Line 202-206)
-  - Ensure build directories are cleaned up on error
-  - File: `scripts/lib/common.sh`
-
-- [x] **Build Failsafes**: Automated Mount & Chroot Recovery
-  - Automatically re-mounts /mnt/lfs if lost during build
-  - Automatically restores chroot virtual filesystems if missing for phase 3/4
-  - Files: `lfs_builder_ui/engine.py`, `scripts/image/prepare-image.sh`
-
-- [x] **Deprecated Test Operator**: Replace `-a` with `&&` in phase scripts
-  - Files: `scripts/phases/build-phase1.sh`, `build-phase2.sh`
-
-- [x] **Chroot Verification**: Add mount verification before Phase 3
-  - Add `_verify_chroot_ready()` method to engine.py
-  - File: `lfs_builder_ui/engine.py`
-
----
-
-## 🟠 HIGH PRIORITY (Should Fix)
-
-- [x] **Testing**: Add basic test suite
-  - [x] Unit tests for Python engine (skip logic, phase completion)
-  - [x] Integration tests for bash scripts (extract, cleanup)
-  - [x] Shellcheck integration
-
-- [x] **Issue #8**: Fix terminal resource conflict in keyboard listener
-  - Use `select()` with timeout instead of blocking read
-  - File: `lfs_builder_ui/engine.py` (Lines 75-99)
-  - *Note: Superseded by new TUI architecture in ginger_os.py*
-
-- [x] **Issue #11**: Add subprocess timeout mechanism
-  - Prevent hangs on stuck build steps
-  - File: `lfs_builder_ui/engine.py` (Lines 316-326)
-
-- [x] **Documentation**: Update README.md
-  - Document new directory structure
-  - Add Python requirements (Rich library)
-  - Update build instructions
-
-- [x] **Issue #12**: Add input validation to `run-as-lfs.sh`
-  - Validate script path before execution
-  - File: `scripts/host/run-as-lfs.sh`
+### Stability fixes
+- [x] LFS systemd users/groups in `/etc/passwd` + `/etc/group`
+      (networkd / logind / journald start correctly)
+- [x] `-D libdir=/usr/lib` for kmod / udev / systemd / dbus meson builds
+      (LFS libs loadable; dbus gains systemd support)
+- [x] Relative merged-`/usr` symlinks in the installer (no host-escape on remove)
+- [x] Serial console (`console=ttyS0`) in the installed GRUB config
+- [x] Phase 1/2 marker restore helper (`lfs/restore-phase-markers.sh`) for the
+      fresh-disk marker wipe
 
 ---
 
-## 🟡 MEDIUM PRIORITY (Nice to Have)
+## 🔜 Future work (post-v1.0.0)
 
-- [x] **Issue #6**: Replace `source` with safe parsing in `ui_load_state`
-  - Prevent arbitrary code execution from corrupted state files
-  - File: `scripts/lib/ui.sh` (Line 102)
-
-- [x] **CI/CD**: Add shellcheck to pipeline
-  - Run on all `.sh` files
-  - Fix all warnings/errors
-
-- [x] **Documentation**: Add docstrings to Python engine methods
-  - File: `lfs_builder_ui/engine.py`
-
-- [x] **Issue #9**: Make `GINGER_PKG:` marker more unique
-  - Change to `__GINGER_PKG_MARKER__:` to avoid false positives
-  - Files: `scripts/phases/*.sh`, `lfs_builder_ui/engine.py`
-
-- [x] **Issue #10**: Fix storage update timing logic
-  - Replace probabilistic timing with explicit counter
-  - File: `lfs_builder_ui/engine.py` (Line 338)
+- [ ] CI: fix shellcheck `scandir` (currently `./scripts`, which does not exist)
+- [ ] CI: install `pydantic`/`fastapi` deps for Python engine tests
+- [ ] UEFI (Secure Boot) installer support
+- [ ] ZFS/btrfs filesystem options in the installer
+- [ ] Package cache/mirror selection during install
+- [ ] End-to-end install+verify test script in CI
 
 ---
 
-## 🟢 LOW PRIORITY (Future Enhancements)
+## 📝 Historical notes
 
-- [x] Add configuration file support (avoid hardcoded paths)
-- [x] Implement build telemetry (time per package, failure rates)
-- [x] Add `--dry-run` mode to preview build plan
-- [/] Add web-based UI option for remote builds (Architecture drafted)
+- **Issue #1–#16**: audit items from 2026-02-13 — all resolved before v1.0.0.
+- The Python installer proposal (`docs/installer_proposal.md`) was superseded
+  by the Go installer.
 
----
-
-## 🔧 REFACTORING
-
-- [x] **Marker System**: Revert to master's simpler marker approach
-  - [x] Remove dual marker system (host + LFS)
-  - [x] Use single source of truth
-  - [x] Simplify skip logic in phase orchestrators
-
-- [x] **Interactive Mode**: Add step-by-step build execution
-  - [x] Allow running individual phases/packages
-  - [x] Pause between steps for validation
-  - [x] Manual marker management
-
----
-
-## 📝 NOTES
-
-### Issue Reference Guide
-- **Issue #1**: Unsafe variable expansion in common.sh (Line 113) - Already quoted
-- **Issue #2**: Dangerous wildcard removal (Line 145) - CRITICAL
-- **Issue #3**: Path normalization edge case (Line 149) - Minor
-- **Issue #4**: Error handler doesn't cleanup (Line 202-206) - CRITICAL
-- **Issue #5**: Race condition in UI monitor (Line 300-304) - CRITICAL
-- **Issue #6**: Unsafe state file sourcing (Line 102) - MEDIUM
-- **Issue #8**: Terminal resource conflict (Lines 75-99) - HIGH
-- **Issue #9**: Subprocess output parsing fragility (Lines 327-356) - MEDIUM
-- **Issue #10**: Storage update timing (Line 338) - MEDIUM
-- **Issue #11**: No subprocess timeout (Lines 316-326) - HIGH
-- **Issue #12**: Unvalidated script execution (Line 15) - HIGH
-- **Issue #13**: Sudo without password timeout - MEDIUM
-- **Issue #14**: Unvalidated GINGER_ROOT - MEDIUM
-- **Issue #15**: Shell=True in subprocess - DOCUMENTED (currently safe)
-- **Issue #16**: Unbounded log accumulation - ACCEPTABLE (50MB rotation)
-
----
-
-**Last Updated**: 2026-02-13  
-**Source**: audit_report.md
+**Last Updated**: 2026-08-01

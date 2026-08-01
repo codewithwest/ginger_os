@@ -1,0 +1,14 @@
+#!/bin/bash
+# LFS 13.0  - 8.10. Zstd-1.5.7
+source "/lfs/lib/common.sh"
+PKG_NAME="zstd"
+check_built "$PKG_NAME" && exit 0
+extract "zstd"
+
+make $MAKEFLAGS
+make PREFIX=/usr install
+
+rm -v /usr/lib/libzstd.a
+
+cleanup
+mark_built "$PKG_NAME"

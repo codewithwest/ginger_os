@@ -1,16 +1,16 @@
-# GingerOS - VM Configuration & Setup Guide
+# GingerOS — VM Configuration & Host Setup
 
-This guide explains how to set up the host environment and execute the automated GingerOS build process.
+This guide covers the host machine that builds GingerOS and the VMs used to
+install/test it.
 
-## 1. Creating the Build VM (The Host)
-Before building GingerOS, you need a safe sandbox. Use these settings to create your Ubuntu VM:
+## 1. Build host (Ubuntu VM)
 
-### Using QEMU (Command Line)
+Recommended: Ubuntu 24.04 64-bit, 16 GB RAM, 12 vCPUs, 60 GB disk (dynamic).
+
+### Using QEMU
+
 ```bash
-# 1. Create a 50GB virtual disk for the Ubuntu Host
 qemu-img create -f qcow2 ubuntu_host.qcow2 50G
-
-# 2. Launch the installer (Replace with your Ubuntu ISO path)
 qemu-system-x86_64 \
     -enable-kvm -m 16G -smp 12 \
     -drive file=ubuntu_host.qcow2,format=qcow2 \
@@ -19,68 +19,75 @@ qemu-system-x86_64 \
 ```
 
 ### Using VirtualBox / VMware
+
 - **OS**: Ubuntu 24.04 64-bit
-- **RAM**: 16 GB (Minimum 4096 MB)
-- **CPU**: 4 Cores
-- **Disk**: 60 GB (Dynamically allocated)
+- **RAM**: 16 GB (minimum 4 GB)
+- **CPU**: 4 cores
+- **Disk**: 60 GB (dynamically allocated)
 
----
-
-## 2. Infrastructure Setup (Inside the Ubuntu VM)
-Once Ubuntu is installed, run these commands to prepare the host:
+## 2. Host prerequisites
 
 ```bash
-# 1. Install prerequisites
 sudo apt update
-sudo apt install -y qemu-system-x86 qemu-utils libvirt-daemon-system
+sudo apt install -y qemu-system-x86 qemu-utils debootstrap grub-pc-bin
+sudo apt install -y python3 python3-venv golang nodejs npm
+```
 
-# 2. Clone the repository to /opt (for standard permissions)
+Python dependencies (from the repository root, after cloning):
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt   # or: uv sync
+```
+
+## 3. Clone & permissions
+
+```bash
 sudo git clone https://github.com/codewithwest/ginger_os.git /opt/ginger_os
 cd /opt/ginger_os
-
-# 3. Fix permissions for the build users
-# sudo chown -R $USER:lfs /opt/ginger_os
-sudo chown ginger:777 -R /opt/ginger_os
-sudo chmod -R 775 /opt/ginger_os
+sudo chown -R "$USER:lfs" /opt/ginger_os
+chmod -R 775 /opt/ginger_os
 git config --global --add safe.directory /opt/ginger_os
 ```
 
----
-
-## 3. The Automated Build Workflow
-GingerOS uses a single master script to manage the entire process.
+## 4. Build the system
 
 ```bash
-# Start the full automated build
-sudo ./ginger_os.sh
+./run.sh                      # orchestrator (HUD + web UI on :8087)
 ```
 
-### What `ginger_os.sh` handles:
-1.  **Safety Checks**: Validates host tool versions.
-2.  **Resource Prep**: Downloads sources (parallel) and prepares the 20GB disk image.
-3.  **Cross-Toolchain**: Builds the initial compiler as the `lfs` user.
-4.  **Native System**: Enters chroot and builds the full Linux system.
-5.  **Finalization**: Compiles the Kernel, installs GRUB, and packages the image.
+Run all 13 steps, or step through manually. See
+[docs/WORKFLOW.md](WORKFLOW.md) for the step reference.
 
----
+## 5. Build the installer ISO
 
-## 4. Recovery & Maintenance
-
-### How to Resume:
-If the build fails (e.g., due to a compilation error), simply fix the issue and **run the script again**. It will automatically skip all successfully built packages.
-
-### Safe Exit (Reboot/Shutdown):
-If you need to stop the VM or reboot the host, ALWAYS run:
 ```bash
-sudo ./scripts/teardown.sh
+./make-iso.sh                 # → gingeos-installer.iso
 ```
-*This safely unmounts all virtual filesystems and detaches the loopback device.*
 
-### Testing the Result:
-To test your new GingerOS image in QEMU:
+## 6. Test the ISO installer
+
 ```bash
-qemu-system-x86_64 -enable-kvm -m 2G -drive file=ginger_os.img,format=raw
+./test-installer.sh           # boots ISO; installs to test-target.qcow2
+./test-boot.sh                # boots the installed test-target.qcow2
 ```
 
----
-*Refer to README.md for project architecture and design philosophy.*
+`test-installer.sh` forwards host port `2222` to guest SSH (`:22`) for remote
+access after boot.
+
+## 7. Boot the raw build image directly
+
+```bash
+./qemu-run.sh                 # boots ginger_os.img
+```
+
+## Recovery
+
+- If a build fails, fix the issue and press **ENTER** to resume (markers skip
+  completed work).
+- If the disk image needs a clean reset, re-run step 01, then restore the
+  phase 1/2 markers if the toolchain already exists:
+  `sudo bash lfs/restore-phase-markers.sh`.
+- Always run step 13 (Teardown) before deleting/moving `ginger_os.img`.
+
+_Refer to [README.md](../README.md) for architecture and design philosophy._

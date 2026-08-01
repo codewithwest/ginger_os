@@ -1,66 +1,79 @@
-# GingerOS Build System - Quick Start
+# GingerOS — Operations Guide
 
-## Launch
-```bash
-python3 ginger_os.py
-```
+GingerOS ships two control surfaces for the build engine and a standalone ISO
+installer.
 
-## What Happens
-
-The build system starts **paused** and shows:
-- 🌶️ Your GingerOS logo
-- Build roadmap (all steps)
-- Keyboard controls
-- Welcome message: "Press SPACE or ENTER to start the build..."
-
-## Keyboard Controls
-
-### Start/Control Build
-- **SPACE** or **ENTER** - Start build (when paused) or Resume (when paused)
-- **N** - Skip to next step
-- **S** - Skip current step  
-- **L** - List all steps in logs
-- **?** - Show help
-- **Q** - Quit
-
-### On Error
-- **R** - Restart phase
-- **P** - Restart package
-- **Ctrl+C** - Abort
-
-## Workflow
-
-1. **Launch**: `python3 ginger_os.py`
-2. **Review**: Look at the roadmap, see what steps exist
-3. **Start**: Press **SPACE** or **ENTER** to begin
-4. **Control**: Use keyboard shortcuts as needed
-5. **Monitor**: Watch live logs and progress
-
-## Features
-
-✅ Starts paused - you control when it runs
-✅ Your logo and Rich UI preserved
-✅ Live progress bars and logs
-✅ Keyboard shortcuts always available
-✅ Smart step skipping
-✅ Error recovery
-
-## CLI Options (Still Available)
+## Launching the build engine
 
 ```bash
-# List steps without starting UI
-python3 ginger_os.py --list
-
-# Run specific step only
-python3 ginger_os.py --step 5
-
-# Force run (ignore markers)
-python3 ginger_os.py --step 5 --force
-
-# Show markers
-python3 ginger_os.py --markers
+./run.sh
 ```
 
----
+`run.sh` starts the FastAPI backend (`server/main.py`, default port `8087`)
+and then builds/launches the Go HUD terminal client (`ui/gotui`). The backend
+logs to `backend.log`.
 
-**That's it! One command, full control.**
+Web dashboard (React, served by the backend): <http://127.0.0.1:8087>
+
+## Go HUD (terminal)
+
+| Key | Action |
+|-----|--------|
+| **TAB** | Switch workspace (Logs / Chat / Debug) |
+| **ALT+TAB** | Reverse workspace switch |
+| **↑ / ↓** | Scroll |
+| **ENTER** | Run / resume selected step |
+| **F** | Force-run step (ignore markers) |
+| **P** | Toggle parallel Phase 3 builds |
+| **A** | Toggle auto-run |
+| **X** | Abort current process group |
+| **CTRL+S** | Take a snapshot |
+| **Q** | Quit (confirm with ENTER) |
+
+## Web dashboard
+
+- **Step pipeline**: select a step to run, force, or reset it.
+- **Package list**: per-step package status and selective builds
+  (`POST /api/step/{idx}/packages`, `/api/step/{idx}/run?pkg=...`).
+- **Auto Protocol**: automatic transition between steps.
+- **Core Allocation**: live CPU cores for `make -jN`.
+- **Neural Stream**: live log stream over WebSocket.
+- **Temporal Diagnostics**: package / phase / total build timers.
+- **Snapshots**: take / restore build snapshots.
+
+## ISO installer
+
+Build the ISO and test it:
+
+```bash
+./make-iso.sh                 # FORCE_REBUILD=1 to bypass the rootfs cache
+./test-installer.sh           # boot ISO in QEMU (test-target.qcow2)
+./test-boot.sh                # boot the installed test disk
+```
+
+The Go installer (`lfs/iso/installer/main.go`) is a single static binary. It
+formats the target, extracts the purged rootfs, fixes `/etc/fstab` with the
+real root UUID, creates the user account, and installs GRUB. The ISO boots
+to the installer directly (no interactive menu needed on serial console).
+
+## Verification
+
+After installing, boot with `./test-boot.sh` and log in as the user created
+during install (`root` password is set at install time):
+
+```bash
+systemctl is-system-running
+systemctl is-active systemd-networkd systemd-logind dbus
+ip addr show eth0
+```
+
+## Recovery
+
+- **Abort**: press **X** (kills the whole process group).
+- **Resume**: press **ENTER** on the failed step; markers skip completed work.
+- **Force**: press **F** on any step.
+- **Fresh disk**: re-running step 01 clears build markers — restore phase
+  1/2 markers with `sudo bash lfs/restore-phase-markers.sh` if the toolchain
+  is already built.
+- **Snapshot rollback**: `POST /api/snapshots/restore/{snap_name}` or the
+  dashboard snapshot panel.

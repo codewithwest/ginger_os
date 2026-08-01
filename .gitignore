@@ -6,4 +6,21 @@ vmlinuz-*
 
 **/*.pyc
 **/venv
+logs/*
+.build_state
+wget-log*
+md5sums
+**/*wget-list
+sources
+gingeros-installer.iso*
+.snapshots
 
+vite
+node_modules
+dist
+build
+*.log
+*.bak
+*.tmp
+*.swp
+.DS_Store
