@@ -1,3 +1,13 @@
+> **STATUS: SUPERSEDED (v1.0.0-stable)**
+> This proposal was **not adopted as written**. Instead of Python, the installer
+> was implemented as a **single statically linked Go binary**
+> (`lfs/iso/installer/main.go` → `lfs/iso/ginger-installer`), which avoids any
+> Python/runtime dependency on the ISO and on the target during installation.
+> The architecture goals below (robust error handling, hardware-aware
+> partitioning, native UI) were carried over into the Go implementation. See
+> [releases/v1.0.0-stable.md](releases/v1.0.0-stable.md) and the README for the
+> current installer design. This document is kept for historical reference.
+
 # Proposal: GingerOS Python-Based Professional Installer
 
 ## 🎯 Executive Summary
@@ -35,3 +45,19 @@ Since GingerOS already uses Python for the build engine (`engine.py`), we can sh
 ## 📅 Path Forward
 1.  Verify the current bash installer using `test-iso.sh`.
 2.  Once GingerOS v1.2.4 (stable) is reached, begin prototyping the Python Installer for the v1.5.0 "Professional" release.
+
+---
+
+## ✅ Resolution (v1.0.0-stable)
+
+Delivered as a Go installer instead:
+
+- **Single static binary** (`ginger-installer`) — no Python, `rich`, or runtime
+  deps on the ISO or target.
+- **5 steps**: Partitioning → Extract Filesystem → Hardware Sync → User Setup →
+  Bootloader.
+- **Hardware Sync** writes the target's real root UUID into `/etc/fstab`
+  (fixing a first-boot `systemd-remount-fs` failure), installs the kernel, and
+  creates merged-`/usr` symlinks.
+- The bash `installer.sh` remains in the ISO only as a mount-presence marker;
+  the Go binary does the actual installation.

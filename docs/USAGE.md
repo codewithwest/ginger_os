@@ -1,46 +1,79 @@
-# GingerOS Deployment Operations Guide
+# GingerOS — Operations Guide
 
-GingerOS provides two high-fidelity interfaces for managing your LFS build: the **TUI Console** (for local ops) and the **Neural Command Matrix** (for high-density telemetry).
+GingerOS ships two control surfaces for the build engine and a standalone ISO
+installer.
 
-## Launching the Engine
+## Launching the build engine
 
-Execute the primary orchestrator from the root directory:
 ```bash
-python3 ginger_os.py
+./run.sh
 ```
-Upon launch, the Web Dashboard will automatically initialize at `http://localhost:8000`.
 
-## Interface Controls
+`run.sh` starts the FastAPI backend (`server/main.py`, default port `8087`)
+and then builds/launches the Go HUD terminal client (`ui/gotui`). The backend
+logs to `backend.log`.
 
-### 1. Neural Command Matrix (Web UI)
-The dashboard provides a "Glassmorphism" control center for the build:
-- **Auto Protocol**: Toggle this to allow the engine to automatically transition between build steps.
-- **Kill Module**: Instantly aborts all active build processes using **Process Group Isolation**.
-- **Core Allocation**: Use the slider in the telemetry panel to dynamically set the number of CPU cores used for compilation (`make -jN`).
-- **Neural Stream**: A live, high-performance log view of all system output.
-- **Temporal Diagnostics**: Live-updating clocks for **Package**, **Phase**, and **Total** build duration.
-- **Rebuild UI**: Trigger a fresh production build of the dashboard itself.
+Web dashboard (React, served by the backend): <http://127.0.0.1:8087>
 
-### 2. TUI Console (Terminal)
-Standard keyboard shortcuts remain active:
-- **SPACE / ENTER**: Start or Resume the build.
-- **A**: Toggle Auto-mode.
-- **S**: Skip current step.
-- **F**: Force-run the selected step (ignores markers).
-- **Q**: Clean shutdown of all processes and exit.
+## Go HUD (terminal)
 
-## Workflow & Optimization
+| Key | Action |
+|-----|--------|
+| **TAB** | Switch workspace (Logs / Chat / Debug) |
+| **ALT+TAB** | Reverse workspace switch |
+| **↑ / ↓** | Scroll |
+| **ENTER** | Run / resume selected step |
+| **F** | Force-run step (ignore markers) |
+| **P** | Toggle parallel Phase 3 builds |
+| **A** | Toggle auto-run |
+| **X** | Abort current process group |
+| **CTRL+S** | Take a snapshot |
+| **Q** | Quit (confirm with ENTER) |
 
-1. **Initialization**: Review the **Deployment Pipeline** list to see which steps are completed (green) or pending.
-2. **Resource Tuning**: Adjust the **Core Allocation** slider based on your host system's current load (monitored in the header).
-3. **Execution**: Trigger the build via the "Auto Protocol" toggle or by selecting a specific step from the pipeline list.
-4. **Monitoring**: Track progress through the **Deployment Sync** meter and the **LFS Mount Capacity** telemetry.
-5. **Completion**: Once the pipeline is 100% synchronized, run `./qemu-run.sh` to boot into your new OS.
+## Web dashboard
 
-## System Recovery
+- **Step pipeline**: select a step to run, force, or reset it.
+- **Package list**: per-step package status and selective builds
+  (`POST /api/step/{idx}/packages`, `/api/step/{idx}/run?pkg=...`).
+- **Auto Protocol**: automatic transition between steps.
+- **Core Allocation**: live CPU cores for `make -jN`.
+- **Neural Stream**: live log stream over WebSocket.
+- **Temporal Diagnostics**: package / phase / total build timers.
+- **Snapshots**: take / restore build snapshots.
 
-If a step fails:
-1. Review the **Neural Stream** for the exact error (look for red "SYSTEM_ERROR" markers).
-2. The engine will pause automatically.
-3. Fix the underlying issue (e.g., download a missing source).
-4. Press **ENTER** or toggle **Auto Protocol** to resume from the exact failure point.
+## ISO installer
+
+Build the ISO and test it:
+
+```bash
+./make-iso.sh                 # FORCE_REBUILD=1 to bypass the rootfs cache
+./test-installer.sh           # boot ISO in QEMU (test-target.qcow2)
+./test-boot.sh                # boot the installed test disk
+```
+
+The Go installer (`lfs/iso/installer/main.go`) is a single static binary. It
+formats the target, extracts the purged rootfs, fixes `/etc/fstab` with the
+real root UUID, creates the user account, and installs GRUB. The ISO boots
+to the installer directly (no interactive menu needed on serial console).
+
+## Verification
+
+After installing, boot with `./test-boot.sh` and log in as the user created
+during install (`root` password is set at install time):
+
+```bash
+systemctl is-system-running
+systemctl is-active systemd-networkd systemd-logind dbus
+ip addr show eth0
+```
+
+## Recovery
+
+- **Abort**: press **X** (kills the whole process group).
+- **Resume**: press **ENTER** on the failed step; markers skip completed work.
+- **Force**: press **F** on any step.
+- **Fresh disk**: re-running step 01 clears build markers — restore phase
+  1/2 markers with `sudo bash lfs/restore-phase-markers.sh` if the toolchain
+  is already built.
+- **Snapshot rollback**: `POST /api/snapshots/restore/{snap_name}` or the
+  dashboard snapshot panel.

@@ -25,7 +25,8 @@ meson setup ..                  \
       -D dev-kvm-mode=0660      \
       -D link-udev-shared=false \
       -D logind=false           \
-      -D vconsole=false
+      -D vconsole=false         \
+      -D libdir=/usr/lib
       
 export udev_helpers=$(grep "'name' :" ../src/udev/meson.build | \
                       awk '{print $3}' | tr -d ",'" | grep -v 'udevadm')

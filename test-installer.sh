@@ -20,6 +20,9 @@ fi
 # Clear any existing locks
 pkill qemu-system-x86 2>/dev/null || true
 
+# Fresh debug artifacts from the previous run
+rm -f "$GINGER_ROOT/installer-serial.log" "$GINGER_ROOT/qemu-monitor.sock"
+
 echo "--- Launching GingerOS Installer ---"
 qemu-system-x86_64 \
     -enable-kvm \
@@ -30,5 +33,7 @@ qemu-system-x86_64 \
     -boot d \
     -vga std \
     -display gtk,zoom-to-fit=on \
+    -serial file:"$GINGER_ROOT/installer-serial.log" \
+    -monitor unix:"$GINGER_ROOT/qemu-monitor.sock",server=on,wait=off \
     -netdev user,id=net0,hostfwd=tcp::2222-:22 \
     -device e1000,netdev=net0

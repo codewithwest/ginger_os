@@ -1,49 +1,65 @@
-# GingerOS Neural Command Matrix Architecture
+# GingerOS — Web Dashboard Architecture
 
-The **Neural Command Matrix** is the high-fidelity web-based orchestration layer for GingerOS. It provides real-time monitoring, resource management, and remote control over the LFS build pipeline.
+The **Neural Command Matrix** web dashboard provides real-time monitoring,
+resource management, and remote control over the GingerOS build pipeline.
 
-## Technical Stack
+## Technical stack
 
-- **Backend**: FastAPI (Python 3)
-- **Real-time Communication**: 
-  - **WebSockets**: Asynchronous log streaming via a thread-safe broadcast worker.
-  - **REST API**: Polling-based telemetry for system state and storage.
-- **Frontend**: React 19 + Vite + Tailwind CSS v4
-- **Styling**: High-Tech Glassmorphism Design System
+- **Backend**: FastAPI (Python 3) — `server/server.py`, launched by
+  `server/main.py` on port `8087`.
+- **Real-time communication**:
+  - **WebSockets**: asynchronous log streaming (`/ws/logs`).
+  - **REST API**: step control, telemetry, config, snapshots.
+- **Frontend**: React + Vite + Tailwind CSS (in `ui/web`, built to
+  `ui/web/dist` and served statically by the backend).
 - **Monitoring**: `psutil` for real-time host telemetry.
-- **Concurrency**: `uvicorn` ASGI server running in a dedicated background thread.
+- **Concurrency**: `uvicorn` ASGI server in a dedicated background thread.
 
-## Core API & Integration
+## Engine–server bridge
 
-### Engine-Server Bridge
-The `GingerEngine` communicates with the FastAPI server through a thread-safe `queue`.
-- Logs are intercepted via `on_log_callbacks` and pushed to the `_log_queue`.
-- A dedicated `_broadcast_worker` drains this queue and pushes messages to all connected WebSocket clients.
+The `GingerEngine` (`server/engine.py`) pushes log events to a thread-safe
+queue via `on_log_callbacks`; a broadcast worker drains the queue and streams
+messages to all connected WebSocket clients.
 
-### API Endpoints
-- `GET /api/status`: Granular telemetry (CPU, Storage, Steps, Timers).
-- `POST /api/control/auto`: Toggles the "Auto Protocol" for the build.
-- `POST /api/control/abort`: Triggers a **Process Group Termination** (`SIGTERM` to the PGID).
-- `POST /api/control/cores/{count}`: Dynamically updates CPU core allocation for build steps.
-- `POST /api/control/rebuild_ui`: Remotely triggers `npm run build` to update the dashboard.
-- `WS /ws/logs`: Live log stream ("Neural Stream").
+## API endpoints
 
-## Process Management & Safety
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/status` | Granular telemetry (CPU, storage, steps, timers) |
+| GET | `/api/step/{idx}/packages` | Package list + built status for a step |
+| POST | `/api/step/{idx}/run` | Run a step (`?pkg=` for single package) |
+| POST | `/api/step/{idx}/force` | Force-run a step |
+| POST | `/api/step/{idx}/reset` | Clear a step marker |
+| POST | `/api/control/cores/{count}` | Update CPU cores for `make -jN` |
+| GET | `/api/config` | Read `ginger.conf` |
+| POST | `/api/config/update` | Update configuration |
+| POST | `/api/control/rebuild_ui` | Rebuild the dashboard (`npm run build`) |
+| POST | `/api/control/{action}` | auto / abort / pause / resume |
+| POST | `/api/teardown` | Full teardown (logs archive + unmount) |
+| GET | `/api/snapshots` | List snapshots |
+| POST | `/api/snapshots/take` | Take a snapshot |
+| POST | `/api/snapshots/restore/{name}` | Restore a snapshot |
+| WS | `/ws/logs` | Live "Neural Stream" log feed |
+| GET | `/` | Static dashboard (`ui/web/dist`) |
 
-To prevent orphaned processes during build abortions or TUI exits, GingerOS employs a **Process Group Isolation** strategy:
-1. Every build step is executed as the leader of a new process group.
-2. `engine.abort()` sends signals to the entire PGID, cleaning up sub-processes like `tail`, `wget`, or `make` children.
-3. The TUI's `on_unmount` hook ensures a mandatory cleanup sequence on application exit.
+## Process management & safety
 
-## Design System
+Every build step runs as the leader of a new process group. `engine.abort()`
+signals the entire PGID (`SIGTERM`), cleaning up `make`/`wget`/`tar`
+subprocesses. The server binds to `127.0.0.1` by default.
 
-The UI implements a "Glassmorphism" aesthetic defined in `ui/web/src/index.css`:
-- **Backdrop Blur**: `backdrop-blur-xl` for all primary panels.
-- **Dynamic Gradients**: Progressive color shifts for status indicators and telemetry bars.
-- **Typography**: Inter (Sans) for UI/Controls; JetBrains Mono for system data.
-- **Atmospheric Effects**: Scanline overlays and glow-cyan accents for a "Command Center" feel.
+## Design system
 
-## Security
+The dashboard uses a "glassmorphism" aesthetic defined in
+`ui/web/src/index.css`:
 
-- **Host Binding**: Server binds to `127.0.0.1` by default.
-- **Isolation**: Build scripts run in a restricted `chroot` or as the `lfs` user, while the UI only triggers predefined orchestrator actions.
+- **Backdrop blur** (`backdrop-blur-xl`) on primary panels.
+- **Dynamic gradients** for status indicators and telemetry bars.
+- **Typography**: Inter for UI controls, JetBrains Mono for system data.
+- **Atmospheric effects**: scanline overlays and cyan glow accents.
+
+## Terminal HUD
+
+The Go HUD (`ui/gotui`) is the companion terminal client, compiled by
+`./run.sh` (`go build -o ginger-hud`). See
+[docs/USAGE.md](USAGE.md) for its keybindings.

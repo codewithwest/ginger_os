@@ -37,6 +37,13 @@ CACHED_KERNEL="$GINGER_ROOT/vmlinuz-ginger-cached"
 if [ -f "$LFS_ROOTFS" ] && [ -f "$CACHED_KERNEL" ] && [ -z "${FORCE_REBUILD:-}" ]; then
     echo "[INFO] Using cached LFS rootfs: $(ls -lh "$LFS_ROOTFS" | awk '{print $5}')"
     echo "[INFO] Using cached kernel: $CACHED_KERNEL"
+    # Purge Ubuntu/build-tree contamination if the cache predates the purge step
+    # (subshell with pipefail off: tar gets SIGPIPE once grep -q matches -> exit 141)
+    if ( set +o pipefail; tar -tzf "$LFS_ROOTFS" 2>/dev/null | grep -qm1 -E '^\./(sources|usr/lib/x86_64-linux-gnu)(/|$)' ); then
+        echo "[INFO] Cached rootfs contains Ubuntu/build contamination; purging..."
+        python3 "$SCRIPT_DIR/purge-rootfs.py" "$LFS_ROOTFS" "$LFS_ROOTFS" \
+            || echo "[WARN] purge failed; shipping raw rootfs"
+    fi
     cp "$LFS_ROOTFS" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
     cp "$CACHED_KERNEL" "$ISO_DIR/boot/vmlinuz"
 else
@@ -77,7 +84,30 @@ else
         --exclude="./dev/*" \
         --exclude="./run/*" \
         --exclude="./tmp/*" \
+        --exclude="./sources" \
+        --exclude="./lfs" \
+        --exclude="./ginger_os" \
+        --exclude="./scripts" \
+        --exclude="./logs" \
+        --exclude="./ccache" \
+        --exclude="./tools" \
+        --exclude="./usr/lib/x86_64-linux-gnu" \
+        --exclude="./lib/x86_64-linux-gnu" \
+        --exclude="./etc/apt" \
+        --exclude="./etc/dpkg" \
+        --exclude="./etc/pam.d" \
+        --exclude="./etc/init.d" \
+        --exclude="./etc/rc?.d" \
+        --exclude="./etc/init" \
+        --exclude="./var/lib/apt" \
+        --exclude="./var/lib/dpkg" \
+        --exclude="./var/cache/apt" \
+        --exclude="./var/log/ginger_build" \
+        --exclude="./usr/lib/python3.12" \
         -C "$LFS_MOUNT" .
+    echo "[INFO] Stripping Ubuntu/build-tree remnants (mtime filter + os-release)..."
+    python3 "$SCRIPT_DIR/purge-rootfs.py" "$LFS_ROOTFS" "$LFS_ROOTFS" \
+        || echo "[WARN] purge failed; shipping raw rootfs"
     echo "[INFO] LFS rootfs tarball size: $(ls -lh "$LFS_ROOTFS" | awk '{print $5}')"
     cp "$LFS_ROOTFS" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
 
@@ -121,8 +151,8 @@ copy_exe() {
     # Copy the binary
     cp "$binary_path" "$dest/bin/"
     
-    # Copy its libraries
-    ldd "$binary_path" | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' "$dest/lib/x86_64-linux-gnu/" 2>/dev/null || true
+    # Copy its libraries (dereference: plain cp would copy a dangling symlink)
+    ldd "$binary_path" | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -vL '{}' "$dest/lib/x86_64-linux-gnu/" 2>/dev/null || true
     # Also copy the loader if present
     ldd "$binary_path" | grep "/lib64/" | awk '{print $1}' | xargs -I '{}' cp -v '{}' "$dest/lib64/" 2>/dev/null || true
 }
@@ -166,7 +196,7 @@ for file in "$INITRD_WORK/bin/"*; do
             if [ ! -d "$dest" ]; then
                 mkdir -p "$dest"
             fi
-            cp -nL "$lib" "$dest/" 2>/dev/null || true
+            cp -fL "$lib" "$dest/" 2>/dev/null || true
         done
     fi
 done
@@ -216,45 +246,57 @@ mount -t proc proc /proc || true
 mount -t sysfs sysfs /sys || true
 mount -t devtmpfs devtmpfs /dev || true
 
-mkdir -p /mnt/iso
+# PID 1 must never exit: a dying init panics the kernel. Everything below
+# loops forever; failures drop to a recovery shell and then retry.
+while true; do
+    mkdir -p /mnt/iso
 
-# Find ISO
-for dev in /dev/sr0 /dev/vda /dev/sda /dev/sdb /dev/sdc; do
-    if [ -b "$dev" ]; then
-        if mount -o ro "$dev" /mnt/iso 2>/dev/null; then
-            if [ -f /mnt/iso/installer/installer.sh ]; then
-                FOUND_ISO="$dev"
-                echo "Found GingerOS ISO on $dev"
-                break
+    FOUND_ISO=
+    if [ -f /mnt/iso/installer/installer.sh ]; then
+        FOUND_ISO="mounted"
+    else
+        # Find ISO
+        for dev in /dev/sr0 /dev/vda /dev/sda /dev/sdb /dev/sdc; do
+            if [ -b "$dev" ]; then
+                if mount -o ro "$dev" /mnt/iso 2>/dev/null; then
+                    if [ -f /mnt/iso/installer/installer.sh ]; then
+                        FOUND_ISO="$dev"
+                        echo "Found GingerOS ISO on $dev"
+                        break
+                    fi
+                    umount /mnt/iso 2>/dev/null
+                fi
             fi
-            umount /mnt/iso 2>/dev/null
+        done
+    fi
+
+    if [ -n "$FOUND_ISO" ]; then
+        cd /mnt/iso/installer
+        # Launch Go installer (single static binary, no runtime deps)
+        if ./ginger-installer; then
+            echo "Installation process has concluded."
+            echo "Press [R] to Reboot or [S] for Shell"
+            while true; do
+                read -r ACTION || { sleep 1; continue; }
+                case "$ACTION" in
+                    [Rr]*) /bin/reboot -f ;;
+                    [Ss]*) /bin/sh ;;
+                    *)     echo "Press [R] to Reboot or [S] for Shell" ;;
+                esac
+            done
+        else
+            rc=$?
+            echo "ERROR: Go installer failed (exit $rc)."
+            echo "Debug log: /tmp/ginger-install.log"
+            echo "Starting recovery shell. Type 'exit' to retry the installer."
+            /bin/sh || true
         fi
+    else
+        echo "ERROR: GingerOS ISO not found."
+        echo "Starting recovery shell. Type 'exit' to retry."
+        /bin/sh || true
     fi
 done
-
-if [ -n "$FOUND_ISO" ]; then
-    cd /mnt/iso/installer
-    # Launch Go installer (single static binary, no runtime deps)
-    if ! ./ginger-installer; then
-        echo "ERROR: Go installer failed."
-        echo "Dropping to recovery shell..."
-        exec /bin/sh
-    fi
-
-    # Keep init alive after installer finishes
-    echo "Installation process has concluded."
-    echo "Press [R] to Reboot or [S] for Shell"
-    while true; do
-        read -n 1 -r ACTION
-        case "$ACTION" in
-            [Rr]*) /bin/reboot -f ;;
-            [Ss]*) /bin/sh ;;
-        esac
-    done
-else
-    echo "ERROR: GingerOS ISO not found."
-    exec /bin/sh
-fi
 EOF
 chmod +x "$INITRD_WORK/init"
 
@@ -265,7 +307,7 @@ set default=0
 set timeout=5
 
 menuentry "Install GingerOS" {
-    linux /boot/vmlinuz root=/dev/ram0 rw console=tty0 loglevel=3 quiet
+    linux /boot/vmlinuz root=/dev/ram0 rw console=ttyS0 console=tty0 loglevel=7
     initrd /boot/initrd.img
 }
 EOF

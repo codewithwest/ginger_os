@@ -527,30 +527,6 @@ class GingerEngine:
         """Restore a snapshot."""
         return self.snapshot_manager.restore_snapshot(snap_name)
 
-    def rescue_downloads(self):
-        """Execute the rescue downloads script."""
-        rescue_script = os.path.join(
-            self.ginger_root, "lfs/host/rescue-downloads.sh")
-        if not os.path.exists(rescue_script):
-            self.log(
-                f"ERROR: Rescue script not found at {rescue_script}", "bold red")
-            return
-
-        self.log("🚀 INITIATING DOWNLOAD RESCUE SEQUENCE...", "bold cyan")
-
-        # We'll use a temporary "pseudo-step" to run this so it shows up in logs
-        from server.models import BuildStep
-
-        rescue_step = BuildStep(
-            "99_rescue_downloads",
-            "Rescue Downloads",
-            f"bash {rescue_script}",
-            "Maintenance",
-        )
-
-        # Run it through the process monitor
-        self.execute_step(rescue_step)
-
     def _download_missing_source(self, url):
         """Download a missing source file."""
         self.telemetry.download_missing_source(url)

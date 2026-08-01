@@ -1,139 +1,73 @@
-# GingerOS Interactive Build Mode - Quick Start Guide
+# GingerOS — Interactive Build Mode
 
-## Overview
-The interactive build mode allows you to run GingerOS build steps one at a time, validate markers, and control execution with keyboard commands.
+The Go HUD provides step-by-step execution of the GingerOS build with marker
+awareness, package selection, and snapshots.
 
-## Usage
+## Launching
 
-### List All Steps
 ```bash
-python3 ginger_os.py --list
-# or
-python3 ginger_os.py -l
-```
-Shows all 15 build steps with their current status (✓ Complete or ○ Pending)
-
-### Show Marker Status
-```bash
-python3 ginger_os.py --markers
-# or
-python3 ginger_os.py -m
-```
-Displays which steps have completion markers
-
-### Run a Specific Step
-```bash
-# Run step 5 (Download Sources)
-python3 ginger_os.py --step 5
-# or
-python3 ginger_os.py -s 5
-
-# Force run even if marker exists
-python3 ginger_os.py --step 5 --force
-# or
-python3 ginger_os.py -s 5 -f
+./run.sh
 ```
 
-### Interactive Mode (Recommended)
-```bash
-python3 ginger_os.py --interactive
-# or
-python3 ginger_os.py -i
-```
+This starts the backend engine (`server/main.py` on port `8087`) and the Go
+HUD terminal client. The web dashboard is also available at
+<http://127.0.0.1:8087>.
 
-## Interactive Mode Controls
-
-When in interactive mode, you'll see each step with these options:
+## Controls
 
 | Key | Action |
 |-----|--------|
-| **ENTER** | Run current step (respects markers) |
-| **f** | Force run (ignore markers) |
-| **s** | Skip current step |
-| **j** | Jump to specific step number |
-| **l** | List all steps |
-| **q** | Quit interactive mode |
+| **ENTER** | Run the selected step (respects markers) |
+| **F** | Force-run (ignore markers) |
+| **P** | Toggle parallel Phase 3 builds |
+| **A** | Toggle auto-run all steps |
+| **X** | Abort the current process group |
+| **CTRL+S** | Take a build snapshot |
+| **TAB** / **ALT+TAB** | Switch between Logs / Chat / Debug workspaces |
+| **↑ / ↓** | Scroll the log view |
+| **Q** | Quit (press again to confirm) |
 
-## Example Workflow
-
-### 1. Check What's Been Done
-```bash
-python3 ginger_os.py --markers
-```
-
-### 2. Start Interactive Mode
-```bash
-python3 ginger_os.py --interactive
-```
-
-### 3. Navigate Through Steps
-- Press **ENTER** to run steps that haven't been completed
-- Press **s** to skip steps you don't want to run
-- Press **j** then enter a number to jump to a specific step
-- Press **f** to force re-run a step that's already complete
-
-### 4. Run Individual Steps
-```bash
-# Run just the download step
-python3 ginger_os.py --step 5
-
-# Run phase 1 toolchain
-python3 ginger_os.py --step 9
-
-# Force re-run host setup
-python3 ginger_os.py --step 6 --force
-```
-
-## Build Steps Reference
+## Build steps
 
 | # | Step ID | Name | Phase |
 |---|---------|------|-------|
-| 1 | 01_fix_repo | Fix Repo Ownership | Preparation |
-| 2 | 02_host_reqs | Host Requirements | Preparation |
-| 3 | 03_version_check | Version Check | Preparation |
-| 4 | 04_prepare_image | Prepare Image | Preparation |
-| 5 | 05_download_sources | Download Sources | Preparation |
-| 6 | 07_host_setup | Host Setup | Preparation |
-| 7 | 08_update_dir | Update Directories | Preparation |
-| 8 | 09_setup_lfs_env | Setup LFS Environment | Host Tools |
-| 9 | 10_phase1_toolchain | Toolchain Build | Phase 1 Toolchain |
-| 10 | 11_phase2_toolchain | Cross Tools Build | Phase 2 Cross Tools |
-| 11 | 12_chroot_mounts | Mount Chroot | Phase 3 System |
-| 12 | 13_phase3_system | System Build | Phase 3 System |
-| 13 | 14_kernel | Kernel Build | Kernel & Boot |
-| 14 | 15_grub | Grub Setup | Kernel & Boot |
-| 15 | 16_teardown | Teardown | Kernel & Boot |
+| 01 | 01_create_qemu_img | Create QEMU Image | Preparation |
+| 02 | 02_install_ubuntu | Install Ubuntu Base | Preparation |
+| 03 | 03_host_requirements | Host Requirements | Host Setup |
+| 04 | 04_setup_downloads | Download Sources | Host Setup |
+| 05 | 05_host_setup | Host Environment | Host Setup |
+| 06 | 06_version_check | Version Check | Host Setup |
+| 07 | 07_phase1_tools | Phase 1 Tools | Phase 1 Tools |
+| 08 | 08_phase2_tools | Phase 2 Tools | Phase 2 Tools |
+| 09 | 09_chroot_mounts | Mount Chroot | Phase 3 System |
+| 10 | 10_phase3_system | System Build | Phase 3 System |
+| 11 | 11_kernel | Kernel Build | Kernel & Boot |
+| 12 | 12_finalize | Finalize System | Kernel & Boot |
+| 13 | 13_teardown | Teardown | Kernel & Boot |
 
-## Tips
+## Selective package builds
 
-### Validate Before Proceeding
-After each step completes, you can:
-1. Check the logs in `logs/` directory
-2. Verify markers in `/mnt/lfs/var/lib/ginger/`
-3. Inspect the build output
+From the web dashboard, open a step's package list and run a single package
+(`POST /api/step/{idx}/run?pkg=<name>`). Single-package builds bypass the
+phase-completion gate, so you can rebuild individual packages (e.g. after a
+script fix) without touching the rest.
 
-### Resume After Failure
-If a step fails:
-1. Fix the issue
-2. Use `--force` to re-run the failed step
-3. Or jump to the failed step in interactive mode and press **f**
+## Resume after failure
 
-### Clear Markers
-To re-run a step, you can either:
-- Use `--force` flag
-- Manually delete the marker file:
-  ```bash
-  sudo rm /mnt/lfs/var/lib/ginger/<step-name>.built
-  sudo rm .build_state/<step-id>.built
-  ```
+1. Fix the underlying issue.
+2. Press **ENTER** on the failed step. Completed packages are skipped via
+   markers in `.build_state/` and `/var/lib/ginger/`.
+3. To force a full re-run of a step, press **F**.
 
-## Automated Build (Original Behavior)
-To run the full automated build with the fancy UI:
+## Clear a marker
+
 ```bash
-python3 ginger_os.py
+sudo rm .build_state/<step-id>.built
+sudo rm /mnt/ginger_lfs/var/lib/ginger/<package>.built
 ```
-This will run all steps automatically, showing the Rich UI with progress bars and live logs.
 
----
+## Snapshots
 
-**Pro Tip**: Start with `--list` to see what's been done, then use `--interactive` to step through the remaining work!
+- **CTRL+S** takes a snapshot of the current image state.
+- Restore from the dashboard's snapshot panel or
+  `POST /api/snapshots/restore/{snap_name}`.

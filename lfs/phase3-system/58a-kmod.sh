@@ -11,7 +11,8 @@ cd       build
 
 meson setup --prefix=/usr ..    \
             --buildtype=release \
-            -D manpages=false
+            -D manpages=false   \
+            -D libdir=/usr/lib
 
 ninja
 

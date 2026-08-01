@@ -8,7 +8,8 @@ extract "dbus"
 mkdir build
 cd    build
 
-meson setup --prefix=/usr --buildtype=release --wrap-mode=nofallback ..
+meson setup --prefix=/usr --buildtype=release --wrap-mode=nofallback \
+            -D libdir=/usr/lib ..
 
 ninja
 ninja install

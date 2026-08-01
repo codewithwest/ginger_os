@@ -1,85 +1,110 @@
-# GingerOS - Standard Build Workflow
+# GingerOS — Build & Install Workflow
 
-This document defines the official sequence for building the GingerOS (LFS 13.0) system. The process is now **fully automated and containerized** using a QEMU virtual disk and an interactive Python orchestrator.
+This document defines the official workflow for building GingerOS (LFS 13.0,
+systemd edition) and producing/installing the release ISO.
 
-## 🚀 How to Build
+## Prerequisites
 
-You no longer need to manually switch users or run scripts in sequence. The entire process is managed via the TUI:
+- Ubuntu 24.04 (64-bit) build host, 16 GB+ RAM, ~40 GB free disk
+- `qemu-system-x86 qemu-utils debootstrap grub-mkrescue`
+- Python venv with the project dependencies (see `pyproject.toml` / `.venv`)
+- Go toolchain, Node.js + npm (for the UIs)
 
-```bash
-cd /path/to/ginger_os
-python3 ginger_os.py
-```
-
-Press **`a`** to auto-run all steps, or **`ENTER`** to step through them manually.
-
----
-
-## The 15-Step Architecture
-
-GingerOS uses a "Docker-Exec" style architecture. It installs a clean Ubuntu base into a virtual disk, and then builds the LFS system _inside_ that isolated container, ensuring zero pollution to your actual host system.
-
-### Stage 1: Virtual Environment Preparation (Host Executed)
-
-1. **01_create_qemu_img**: Creates a raw QEMU virtual disk (`ginger_os.img`) and mounts it to `/mnt/lfs`.
-2. **02_install_ubuntu**: Uses `debootstrap` to install a minimal Ubuntu 24.04 base directly into the mounted virtual disk.
-
-_(After Stage 1, all subsequent scripts are executed INSIDE the Ubuntu container using `chroot`)_
-
-### Stage 2: Host Requirements & Sources
-
-3. **03_install_os_base**: Sets up the initial directory structure and the `lfs` user inside the container.
-4. **04_setup_downloads**: Downloads all LFS 13.0  source tarballs into `/sources`.
-5. **05_host_reqs**: Installs required build dependencies (like `gcc`, `make`, `gawk`) into the Ubuntu container.
-6. **06_version_check**: Verifies the container has the correct versions of all build tools.
-7. **07_update_dir**: Configures required symlinks (`/bin` -> `/usr/bin`, etc.).
-
-### Stage 3: The Cross-Toolchain (Phase 1 & 2)
-
-8. **08_setup_lfs_env**: Configures the unprivileged `lfs` user environment.
-9. **09_phase1_toolchain**: Builds the initial cross-compiler (Binutils, GCC, Glibc).
-10. **10_phase2_toolchain**: Builds the remaining cross-compiled tools required for the final system.
-
-### Stage 4: The Final System (Phase 3 & 4)
-
-_At this point, the orchestrator performs a **nested chroot** to enter the pristine LFS system we just built._
-
-11. **11_chroot_mounts**: Mounts virtual kernel filesystems (`/proc`, `/sys`, `/dev`) for the inner LFS environment.
-12. **12_phase3_system**: Compiles the final system packages (Chapter 8).
-13. **13_kernel**: Builds the Linux kernel and installs GRUB.
-14. **14_finalize**: Performs final configuration (fstab, hostname, passwords).
-
-### Stage 5: Teardown & Boot
-
-15. **15_teardown**: Safely unmounts the `ginger_os` bind mounts and the QEMU image.
-
----
-
-## 🏁 Post-Build: Booting Your OS
-
-Once Step 15 completes, the `ginger_os.img` file is a fully independent, bootable Linux operating system!
-
-You can boot it using the provided QEMU script:
+Clone the repository and set up permissions so the `lfs` user and the build
+scripts can read the tree:
 
 ```bash
-./qemu-run.sh
+git clone https://github.com/codewithwest/ginger_os.git /opt/ginger_os
+cd /opt/ginger_os
+sudo chown -R "$USER:lfs" /opt/ginger_os
+chmod -R 775 /opt/ginger_os
+git config --global --add safe.directory /opt/ginger_os
 ```
 
-## 🛠 Recovery & Troubleshooting
+## Stage 1 — Build the LFS system (orchestrator)
 
-### 1. Resuming After Failure
-
-The orchestrator tracks progress using marker files (saved in `.build_state/` and `/var/lib/ginger/`).
-If a step fails (e.g., due to a network timeout during download), you can simply fix the issue and press **ENTER** to resume. The system will intelligently skip packages that have already compiled successfully.
-
-### 2. Retrying a Specific Step
-
-If you need to force a rebuild of a specific phase, highlight it in the TUI and press **`f`** (Force Run), or press **`d`** to delete its completion marker.
-
-### 3. Safety Teardown
-
-If you ever need to abort the build and unmount the virtual disk safely from your host, highlight **Step 15 (Teardown)** in the TUI and press **ENTER**, or run:
+Launch the orchestrator (FastAPI backend + Go HUD):
 
 ```bash
-sudo ./lfs/image/teardown.sh
+./run.sh
 ```
+
+The HUD exposes the full 13-step pipeline. Press **`a`** to auto-run all
+steps or **`ENTER`** to step through them. The Web dashboard is available at
+<http://127.0.0.1:8087>.
+
+| # | Step | Description |
+|---|------|-------------|
+| 01 | Create QEMU Image | Creates `ginger_os.img` and mounts it |
+| 02 | Install Ubuntu Base | `debootstrap` Ubuntu 24.04 base into the disk |
+| 03 | Host Requirements | Installs build deps inside the container |
+| 04 | Download Sources | Downloads all LFS 13.0 source tarballs |
+| 05 | Host Environment | Directory layout, `lfs` user, merged-usr setup |
+| 06 | Version Check | Verifies host tool versions |
+| 07 | Phase 1 Tools | Cross toolchain (Binutils, GCC, Glibc pass 1) |
+| 08 | Phase 2 Tools | Remaining cross-compiled temporary tools |
+| 09 | Mount Chroot | Mounts `/proc`, `/sys`, `/dev` for the LFS chroot |
+| 10 | System Build | Compiles the final system packages (LFS ch. 8) |
+| 11 | Kernel Build | Linux 6.18.10 kernel + GRUB |
+| 12 | Finalize System | fstab, hostname, boot config |
+| 13 | Teardown | Unmounts and detaches the loop device |
+
+State markers in `.build_state/` (host) and `/var/lib/ginger/` (image) let the
+orchestrator skip completed packages and resume after failures. Use **`F`** to
+force a step or **`P`** to toggle parallel Phase 3 builds (experimental).
+
+## Stage 2 — Produce the installer ISO
+
+When the build finishes, `ginger_os.img` is a bootable LFS system. To ship it
+as a distributable ISO:
+
+```bash
+./make-iso.sh                # reuse cached rootfs + kernel if present
+FORCE_REBUILD=1 ./make-iso.sh
+```
+
+The ISO build:
+
+1. Mounts `ginger_os.img` and creates `gingeros-lfs-rootfs.tar.gz` (cached).
+2. Runs `lfs/iso/purge-rootfs.py` to strip Ubuntu/build-tree contamination.
+3. Assembles a minimal initrd (essential tools, GRUB modules, terminfo).
+4. Bundles the static Go installer (`lfs/iso/ginger-installer`).
+5. Produces `gingeros-installer.iso` via `grub-mkrescue`.
+
+## Stage 3 — Install from the ISO
+
+Test the installer in QEMU:
+
+```bash
+./test-installer.sh          # boots the ISO against test-target.qcow2
+```
+
+The Go installer runs 5 steps: **Partitioning → Extract Filesystem →
+Hardware Sync → User Setup → Bootloader**. It writes `/etc/fstab` with the
+target's real root UUID, so the installed system boots cleanly.
+
+## Stage 4 — Boot & verify the installed system
+
+```bash
+./test-boot.sh               # boot test-target.qcow2 (installed system)
+./qemu-run.sh                # boot the build disk ginger_os.img directly
+```
+
+On the installed system (`ginger` / password set during install):
+
+```bash
+systemctl is-system-running      # expect "running"
+systemctl is-active systemd-networkd systemd-logind dbus
+ip addr show eth0                # expect DHCP 10.0.2.15/24
+```
+
+## Recovery & troubleshooting
+
+- **Resume after failure**: fix the issue and press **`ENTER`** in the HUD;
+  completed packages are skipped via markers.
+- **Force a step**: highlight it and press **`F`**.
+- **Reset a step marker**: `sudo rm .build_state/<step-id>.built`.
+- **Fresh disk wipe**: re-running step 01 clears all `.build_state` markers —
+  re-run the phases you need after it (see `lfs/restore-phase-markers.sh`).
+- **Chroot mounts lost**: step 09 auto-recovers `/proc`, `/sys`, `/dev`.
+- **ISO contains stale rootfs**: rebuild with `FORCE_REBUILD=1`.

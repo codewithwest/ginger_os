@@ -33,6 +33,7 @@ meson setup ..                \
       -D nobody-group=nogroup \
       -D sysupdate=disabled   \
       -D ukify=disabled       \
+      -D libdir=/usr/lib      \
       -D docdir=/usr/share/doc/systemd-259.1
 
 ninja $MAKEFLAGS
