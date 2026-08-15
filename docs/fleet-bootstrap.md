@@ -10,53 +10,62 @@ and a brain-centric update flow.
 ## 1. Fleet topology
 
 ```
-┌─ INTERNET ───────────────────────────────────────┐
-│   HOSTED K8s CLUSTER (same LAN)                    │
-│   DATA PLANE — managed infrastructure              │
-│   ├── postgres (surveillance_hub + ginger DBs)     │
-│   ├── redis  ├── chroma  ├── qdrant                │
-│   ├── neo4j  └── n8n (+ task-runners)              │
-│   (stateful, backed up, HA)                        │
-└───────────────────────────────┬──────────────────┘
-                                │ local network (same LAN, low latency)
-        ┌───────────────────────┴──────────────────────┐
-┌───────▼───────────────┐                    ┌──────────▼───────────┐
-│ BRAIN machine          │                    │ ROOM NODES (minimal) │
-│ COMPUTE PLANE          │                    │ edge-agent + voice   │
-│ ├── Ollama (systemd)   │   LAN             │ pulls updates from   │
-│ ├── LiteLLM → Ollama   │◄─────────────────►│ brain over LAN       │
-│ ├── api, worker, audio │                    └──────────────────────┘
-│ ├── surveillance, livekit, edge-agent
-│ ├── face/vision agents
-│ └── ginger-update-server (fleet registry)
-└────────────────────────
+┌─ INTERNET ───────────────────────────────────────────────┐
+│  OLLAMA CLOUD (remote inference)                          │
+│  └── brain services point OLLAMA_BASE_URL at the cloud    │
+└──────────────────────────────┬───────────────────────────┘
+                               │ (only the brain needs internet)
+┌────────────── i3 / 8GB ──────────────┐   ┌──────── i5 #1 / 8GB ────────┐
+│  K3s DATA PLANE (single node)        │   │  BRAIN / COMPUTE PLANE      │
+│  ├── postgres (ginger + surveil)     │   │  ├── LiveKit (never moves)  │
+│  ├── redis  ├── chroma  ├── qdrant   │   │  ├── api, worker, audio     │
+│  ├── neo4j  └── n8n (+ runners)      │   │  ├── surveillance            │
+│  └── (cam → its room)                │   │  ├── face/vision agents      │
+└──────────────────────────────────────┘   │  ├── ginger-update-server   │
+                                          │  └── (cam → its room)       │
+                                          └────────────┬───────────────┘
+┌──────────────────────────────────────────────────────┴──────────────────┐
+│ ROOM NODES (minimal; no internet)                        LAN           │
+│  i5 #2 / 8GB (cam → room)    celeron / 4GB (cam → room)                 │
+│  celeron / 2GB (cam → room, edge-agent only)                            │
+│  each: edge-agent + voice node, pulls updates from brain over LAN       │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Rooms (5, each with a dedicated cam laptop)**
+- 3 rooms  — i5 #2, celeron/4GB, celeron/2GB
+- kitchen/sitting room — i5 #1 (brain cam)
+- cinema room — i3 (k3s data-plane cam, edge-agent as a k3s pod)
 
 **Key rules**
 - Only the **brain** needs internet access. Room nodes get everything from the
   brain over LAN.
-- The **data plane** (postgres, redis, chroma, qdrant, neo4j, n8n) lives on a
-  hosted K8s cluster on the **same LAN**, so latency is minimal. The brain
-  connects to it directly over the network.
-- Ollama runs natively on the brain as a systemd service, reachable at
-  `brain:11434` over the LAN route (no tunnel software).
+- The **data plane** (postgres, redis, chroma, qdrant, neo4j, n8n) runs as
+  pods on a **k3s single node** (i3/8GB) on the **same LAN**, so latency is
+  minimal. The brain connects to it directly over the network.
+- **Ollama cloud**: no local model on the brain. The stack already reads
+  `OLLAMA_BASE_URL` (docker-compose.yml) — point it at the cloud endpoint +
+  key. This removes the ~4-5GB Ollama memory cost from the brain entirely.
 - **LiveKit never moves to K8s** — WebRTC UDP (`7880/7881 tcp`,
   `50000-50100 udp`) must stay on the brain for room-node connectivity.
 - A model upgrade happens once on the brain and the whole fleet inherits it.
 
 ## 2. Machine roles & requirements
 
-### Hosted K8s cluster (data plane)
+### k3s single node — data plane (i3 / 8GB)
 
 Runs the **stateful** services so the brain stays stateless and small:
 postgres (`surveillance_hub` + `ginger` DBs), redis, chroma, qdrant, neo4j,
-n8n (+ task-runners). Managed backups, HA, and scaling come from the cluster.
+n8n (+ task-runners). k3s is the lightest way to get managed-style workloads
+on an 8GB laptop.
 
 Requirements:
 - Same LAN as the brain (minimal latency) — a WAN hop to qdrant/neo4j would
-  hurt. If not on LAN, put a private overlay (VPC peering / WireGuard /
-  Tailscale) in front; **never** expose managed postgres/qdrant publicly.
+  hurt.
 - Stateful workloads: StatefulSets + PVCs for qdrant, chroma, neo4j, postgres.
+- Runs a `ginger-edge-agent` pod for the cinema-room camera (its own cam).
+- 8GB budget: postgres ~0.5-1G, qdrant ~1-2G, neo4j ~1-2G, chroma ~0.5G,
+  redis ~0.1G, n8n ~0.5G — fits with room to spare.
 
 ### Brain machine (compute plane)
 
@@ -70,15 +79,18 @@ Container memory caps that drive the floor (from docker-compose.yml):
 - `ginger-api`: **4G** (was OOM-killing at 1G)
 - `ginger-face-agent`: **8G** (insightface + decode, non-negotiable with faces)
 - surveillance / livekit / edge-agent / voice-node / audio / worker: ~5G
-- Ollama model RAM: `gemma3:4b` ≈ 4-5 GB
+- **No local Ollama** — using Ollama cloud (`OLLAMA_BASE_URL` → cloud), which
+  removes the ~4-5GB model cost. On an 8GB brain this is the difference
+  between tight and comfortable.
 
-Moving the data plane to K8s frees ~6-8 GB from the brain (it no longer hosts
-postgres, redis, chroma, qdrant, neo4j, n8n, litellm-proxy, otel, dev-venv).
-The three dominant costs stay local by design: face-agent (8G), Ollama (5G),
-api (4G).
+Moving the data plane to the k3s node frees ~6-8 GB from the brain (it no
+longer hosts postgres, redis, chroma, qdrant, neo4j, n8n, litellm-proxy, otel,
+dev-venv). The two dominant costs stay local by design: face-agent (8G cap,
+rarely peaking) and api (4G cap). 8GB total works because the caps rarely
+fill simultaneously.
 
-GPU is **optional** — it only speeds up larger local models. Tier-5 "cloud"
-models in `config.yaml` are served remotely and do not tax the brain.
+GPU is **optional** — with Ollama cloud it only speeds up any locally-kept
+models. Tier-5 "cloud" models in `config.yaml` are served remotely.
 
 ### Room nodes (minimal)
 
@@ -196,10 +208,15 @@ tarball by `lfs/iso/inject-firstboot.sh` (called from `make-iso.sh`):
 
 - [ ] Port the current docker-compose services into `ginger-pkg` bundles
       (native, no Docker on the target).
-- [ ] Deploy the data plane (postgres, redis, chroma, qdrant, neo4j, n8n) to
-      the hosted K8s cluster as StatefulSets + PVCs; wire brain env URLs to
-      the cluster services over LAN.
-- [ ] Ed25519 keypair generation + key distribution for signed bundles.
+- [ ] Deploy the data plane to **k3s on the i3** (postgres, redis, chroma,
+      qdrant, neo4j, n8n) as StatefulSets + PVCs; wire brain env URLs to the
+      k3s service IPs over LAN.
+- [ ] Point the brain stack at **Ollama cloud**: set `OLLAMA_BASE_URL` +
+      key, keep litellm-proxy as the bridge, verify tier-5 calls.
+- [ ] Five room definitions in the registry: 3 rooms, kitchen/sitting-room,
+      cinema-room; assign ROOM_ID per cam laptop.
+- [ ] edge-agent for the cinema cam as a k3s pod on the i3 (ROOM_ID
+      filter already in main.go).
 - [ ] update-agent polling interval + health reporting protocol.
 - [ ] Room-node bundle: merge edge-agent + voice node into one binary first
       (separate design discussion).
@@ -211,14 +228,16 @@ tarball by `lfs/iso/inject-firstboot.sh` (called from `make-iso.sh`):
 
 | Service            | Target                  | Notes |
 |--------------------|-------------------------|-------|
-| postgres (ginger + surveillance_hub) | K8s data plane | StatefulSet + PVC, backups |
-| redis              | K8s data plane | |
-| chroma             | K8s data plane | holds memory/embeddings |
-| qdrant             | K8s data plane | StatefulSet + PVC |
-| neo4j              | K8s data plane | StatefulSet + PVC |
-| n8n + task-runners | K8s data plane | |
-| litellm-proxy      | brain (or K8s) | thin bridge to Ollama |
-| ginger-api         | brain compute plane | 4G cap |
+| postgres (ginger + surveillance_hub) | k3s data plane (i3) | StatefulSet + PVC, backups |
+| redis              | k3s data plane (i3) | |
+| chroma             | k3s data plane (i3) | holds memory/embeddings |
+| qdrant             | k3s data plane (i3) | StatefulSet + PVC |
+| neo4j              | k3s data plane (i3) | StatefulSet + PVC |
+| n8n + task-runners | k3s data plane (i3) | |
+| edge-agent (cinema cam) | k3s pod (i3) | ROOM_ID=cinema-room |
+| Ollama             | **Ollama cloud** | OLLAMA_BASE_URL → cloud endpoint + key |
+| litellm-proxy      | brain (or K8s) | thin bridge to Ollama cloud |
+| ginger-api         | brain compute plane (i5 #1) | 4G cap |
 | ginger-worker      | brain (stateless) | needs db + redis only |
 | ginger-audio       | brain compute plane | |
 | ginger-surveillance| brain compute plane | |
@@ -227,4 +246,4 @@ tarball by `lfs/iso/inject-firstboot.sh` (called from `make-iso.sh`):
 | ginger-voice-node  | room nodes | |
 | ginger-vision-agent| brain compute plane | |
 | ginger-face-agent  | brain compute plane | 8G cap |
-| Ollama             | brain (systemd) | serves all models |
+| Ollama (client)    | brain | OLLAMA_BASE_URL → Ollama cloud |
