@@ -24,3 +24,5 @@ build
 *.tmp
 *.swp
 .DS_Store
+# Ed25519 signing keypair (private key must never be committed)
+.signing/

@@ -47,6 +47,21 @@ ginger-pkg list                  # installed packages + versions
 ginger-pkg verify NAME [VERSION] # re-check file checksums vs manifest
 ginger-pkg status [NAME]         # per-package health (OK / DEGRADED)
 ginger-pkg rollback NAME         # flip current symlink to previous version
+
+ginger-pkg serve [--addr :8081] [--root /opt/ginger]
+    Brain-side update server. Serves:
+      GET /healthz                  health check
+      GET /v1/packages              all packages + versions (JSON)
+      GET /v1/bundle/<name>/<version>   signed .gingerbundle download
+    Re-streams the signed bundle from the store, so it can serve anything
+    that was installed locally (same verified bytes).
+
+ginger-pkg update --server http://brain:8081 \
+        [--name PKG] [--once] [--interval 60] [--trusted-key FILE]
+    Node-side update agent. Polls the brain, compares the installed version
+    against the latest available, pulls the signed bundle and installs it
+    atomically. --once = single check then exit (systemd timer/one-shot);
+    without it, loops forever (daemon). With no --name, updates all.
 ```
 
 ## Security model
@@ -60,9 +75,23 @@ ginger-pkg rollback NAME         # flip current symlink to previous version
 - Activation is atomic: a temp symlink is renamed over `current/<name>`, so a
   crash never leaves a half-switched version.
 
+## Fleet update flow (working)
+
+```
+Brain (serve)                          Room node (update)
+ginger-pkg serve :8081                 ginger-pkg update --server http://brain:8081
+  /v1/packages   ── available ───────▶    compares vs installed version
+  /v1/bundle/…   ── signed bundle ────▶   verifies trusted key + checksums
+                                          atomic symlink swap + service restart
+```
+
+- Sign bundles on the brain (`bundle create --key signing.key`).
+- Provision `signing.pub` on each node (default trust path
+  `$GINGER_ROOT/keys/signing.pub`).
+- Run `update` on nodes as a systemd unit (one-shot timer or daemon).
+- Rollback on any node: `ginger-pkg rollback <name>`.
+
 ## Future (per docs/fleet-bootstrap.md)
 
 - Dependency resolution from the `deps` manifest field.
-- Repo semantics (the brain's ginger-update-server) — nodes pull signed
-  bundles over LAN.
 - First-boot systemd one-shot in the ISO rootfs to provision /opt/ginger.

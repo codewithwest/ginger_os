@@ -46,6 +46,8 @@ if [ -f "$LFS_ROOTFS" ] && [ -f "$CACHED_KERNEL" ] && [ -z "${FORCE_REBUILD:-}" 
     fi
     cp "$LFS_ROOTFS" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
     cp "$CACHED_KERNEL" "$ISO_DIR/boot/vmlinuz"
+    # Append first-boot provisioning (ginger-pkg + seed bundle + systemd units).
+    "$SCRIPT_DIR/inject-firstboot.sh" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
 else
     # ── Full mount + extract ───────────────────────────────────────────────
     if [ ! -f "$LFS_IMG" ]; then
@@ -110,6 +112,8 @@ else
         || echo "[WARN] purge failed; shipping raw rootfs"
     echo "[INFO] LFS rootfs tarball size: $(ls -lh "$LFS_ROOTFS" | awk '{print $5}')"
     cp "$LFS_ROOTFS" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
+    # Append first-boot provisioning (ginger-pkg + seed bundle + systemd units).
+    "$SCRIPT_DIR/inject-firstboot.sh" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
 
     umount "$LFS_MOUNT"
     losetup -d "$LOOP_DEV"

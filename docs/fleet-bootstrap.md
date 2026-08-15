@@ -173,14 +173,24 @@ Day one has no dependency resolution — install/remove/upgrade/rollback over
 versioned bundles. Later, `deps` in the manifest becomes a real resolver, and
 the update-agent grows repo/A-B semantics without rearchitecting.
 
-## 5. First-boot bootstrap (in the ISO rootfs)
+## 5. First-boot bootstrap (in the ISO rootfs) — implemented
 
-The ISO ships a native, self-contained node bundle inside the rootfs:
-- A systemd **one-shot** unit runs on first boot.
-- It provisions `/opt/ginger`, installs the static update-agent + the room
-  bundle (brain) or the room bundle (nodes), and enables the update service.
+`lfs/iso/firstboot/` ships a self-contained payload merged into the rootfs
+tarball by `lfs/iso/inject-firstboot.sh` (called from `make-iso.sh`):
+
+- `ginger-firstboot.service` (systemd **one-shot**) runs on first boot.
+- `ginger-firstboot.sh` provisions `/opt/ginger`: installs the static
+  `ginger-pkg` binary, the trusted `signing.pub`, the signed seed bundle,
+  writes the brain address + package to `/opt/ginger/update-server`
+  (a systemd EnvironmentFile), and enables `ginger-update.timer`.
+- `ginger-update.{service,timer}` — the node pulls signed bundles from the
+  brain every 30 min (OnBootSec=2min, OnUnitActiveSec=30min).
+- A stamp file (`/opt/ginger/.provisioned`) makes the provisioning one-shot.
 - Works fully offline for the base payload; subsequent versions come from the
   brain's update server.
+- Injector is idempotent: a deterministic payload fingerprint
+  (`<tarball>.firstboot` marker) skips re-merge when nothing changed, so the
+  1.9G rootfs cache is rebuilt only once.
 
 ## 6. Open items (post-v1 bootstrap)
 
@@ -193,8 +203,9 @@ The ISO ships a native, self-contained node bundle inside the rootfs:
 - [ ] update-agent polling interval + health reporting protocol.
 - [ ] Room-node bundle: merge edge-agent + voice node into one binary first
       (separate design discussion).
-- [ ] Backport the first-boot one-shot into the installer rootfs pipeline
-      (make-iso.sh).
+- [ ] Inject the payload into the real `gingeros-lfs-rootfs.tar.gz` cache
+      (run `sudo ./lfs/iso/inject-firstboot.sh gingeros-lfs-rootfs.tar.gz`;
+      done automatically by the next `make-iso.sh` build).
 
 ## 7. Service → target mapping
 

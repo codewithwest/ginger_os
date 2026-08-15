@@ -1,0 +1,10 @@
+[Unit]
+Description=GingerOS update agent (pull from brain)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/ginger/bin/ginger-pkg
+
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/ginger/update-server
+ExecStart=/opt/ginger/bin/ginger-pkg update --server ${UPDATE_SERVER:-http://brain:8081} --name ${UPDATE_PACKAGE:-} --once --trusted-key /opt/ginger/keys/signing.pub
