@@ -25,7 +25,7 @@ function SystemsPanelInner({ storageLfs, storageHost, cores, maxCores, completed
 
   return (
     <section className="w-80 flex flex-col gap-4">
-      <div className="glass p-5 rounded-xl space-y-5">
+      <div className="glass elevation-2 p-5 rounded-2xl space-y-5">
         <h2 className="text-[9px] font-bold text-text-dim uppercase tracking-[0.2em]">Systems</h2>
 
         <div className="space-y-2">
@@ -38,7 +38,7 @@ function SystemsPanelInner({ storageLfs, storageHost, cores, maxCores, completed
           </div>
         </div>
 
-        <div className="p-4 rounded-lg border border-white/5 bg-black/20 space-y-3">
+        <div className="p-4 rounded-xl bg-transparent border border-white/10 space-y-3">
           <div className="flex justify-between items-center">
             <div className="text-[8px] text-text-dim uppercase font-bold tracking-wider">Cores</div>
             <div className="text-xs font-mono text-accent-cyan">{cores} / {maxCores}</div>
@@ -58,7 +58,7 @@ function SystemsPanelInner({ storageLfs, storageHost, cores, maxCores, completed
           </div>
         </div>
 
-        <div className="p-4 rounded-lg border border-white/5 bg-black/20 space-y-3">
+        <div className="p-4 rounded-xl bg-transparent border border-white/10 space-y-3">
           <div className="flex justify-between items-center">
             <div className="text-[8px] text-text-dim uppercase font-bold tracking-wider">Parallel Window</div>
             <div className="text-xs font-mono text-accent-green">{parallelWindow}</div>

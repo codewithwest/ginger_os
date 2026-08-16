@@ -159,7 +159,7 @@ func (m LogsModel) View() string {
 	bannerBox := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(theme.ActiveTheme.Border).
-		Width(m.width - 2).
+		Width(m.width-2).
 		Padding(0, 1).
 		Render(banner)
 

@@ -44,10 +44,12 @@ if [ -f "$LFS_ROOTFS" ] && [ -f "$CACHED_KERNEL" ] && [ -z "${FORCE_REBUILD:-}" 
         python3 "$SCRIPT_DIR/purge-rootfs.py" "$LFS_ROOTFS" "$LFS_ROOTFS" \
             || echo "[WARN] purge failed; shipping raw rootfs"
     fi
+    # Inject provisioning into the CACHE itself so the idempotent marker
+    # sidecar (<tarball>.firstboot) persists across builds and the 1.9G
+    # decompress+recompress pass runs only once.
+    "$SCRIPT_DIR/inject-firstboot.sh" "$LFS_ROOTFS"
     cp "$LFS_ROOTFS" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
     cp "$CACHED_KERNEL" "$ISO_DIR/boot/vmlinuz"
-    # Append first-boot provisioning (ginger-pkg + seed bundle + systemd units).
-    "$SCRIPT_DIR/inject-firstboot.sh" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
 else
     # ── Full mount + extract ───────────────────────────────────────────────
     if [ ! -f "$LFS_IMG" ]; then
@@ -111,9 +113,10 @@ else
     python3 "$SCRIPT_DIR/purge-rootfs.py" "$LFS_ROOTFS" "$LFS_ROOTFS" \
         || echo "[WARN] purge failed; shipping raw rootfs"
     echo "[INFO] LFS rootfs tarball size: $(ls -lh "$LFS_ROOTFS" | awk '{print $5}')"
+    # Inject provisioning into the CACHE itself so the marker persists
+    # across builds; copy the provisioned rootfs to the ISO dir.
+    "$SCRIPT_DIR/inject-firstboot.sh" "$LFS_ROOTFS"
     cp "$LFS_ROOTFS" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
-    # Append first-boot provisioning (ginger-pkg + seed bundle + systemd units).
-    "$SCRIPT_DIR/inject-firstboot.sh" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
 
     umount "$LFS_MOUNT"
     losetup -d "$LOOP_DEV"

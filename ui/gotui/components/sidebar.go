@@ -70,7 +70,7 @@ func (m SidebarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		case network.SystemStatusMsg:
+	case network.SystemStatusMsg:
 		var payload StatusPayload
 		if err := json.Unmarshal(msg.Raw, &payload); err == nil {
 			m.status = payload
@@ -213,16 +213,7 @@ func (m SidebarModel) View() string {
 	}
 
 	// 1. Branding
-	logoASCII := `  ╔═══════════════════════════╗
-  ║       ██████              ║
-  ║      ██    ██             ║
-  ║     ██      ██   █████    ║
-  ║    ██   ▄▄  ██  ██  ██   ║
-  ║    ██  ████ ██  █████    ║
-  ║     ██      ██  ██       ║
-  ║      ██    ██   ██       ║
-  ║       ██████    ██       ║
-  ╚═══════════════════════════╝`
+	logoASCII := "      _                            \n __ _(_)_ _  __ _ ___ _ _   ___ ___\n/ _` | | ' \\/ _` / -_) '_| / _ (_-<\n\\__, |_|_||_\\__, \\___|_|   \\___/__/\n|___/       |___/                  "
 
 	var branding string
 	if m.height >= 35 && m.width >= 50 {

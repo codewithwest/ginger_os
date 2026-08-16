@@ -29,7 +29,7 @@ function NeuralInterfaceInner({ chatHistory, isThinking, onSendChat, connected }
   }, [handleSend]);
 
   return (
-    <div className="glass p-5 rounded-xl flex-1 flex flex-col overflow-hidden">
+    <div className="glass elevation-2 p-5 rounded-2xl flex-1 flex flex-col overflow-hidden">
       <h2 className="text-[9px] font-bold text-text-dim uppercase tracking-[0.2em] mb-4">Neural Chat</h2>
       <div className="flex-1 overflow-y-auto space-y-3 pr-2 mb-4">
         {!connected && (
@@ -47,7 +47,7 @@ function NeuralInterfaceInner({ chatHistory, isThinking, onSendChat, connected }
             className={`p-3 rounded-lg text-xs leading-relaxed animate-slide-in-right ${
               chat.sender === 'user'
                 ? 'bg-accent-cyan/10 border border-accent-cyan/20 ml-4'
-                : 'bg-white/5 border border-white/5 mr-4'
+                : 'bg-transparent border border-white/10 mr-4'
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
@@ -58,7 +58,7 @@ function NeuralInterfaceInner({ chatHistory, isThinking, onSendChat, connected }
           </div>
         ))}
         {isThinking && (
-          <div className="bg-white/5 border border-white/5 p-3 rounded-lg text-[10px] text-text-dim animate-fade-in-up">
+          <div className="bg-transparent border border-white/10 p-3 rounded-lg text-[10px] text-text-dim animate-fade-in-up">
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse" />
               Processing request...

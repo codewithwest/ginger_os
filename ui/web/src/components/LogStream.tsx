@@ -41,8 +41,8 @@ function LogStreamInner({ logs, currentPkg, running }: LogStreamProps) {
 
   return (
     <section className="flex-1 flex flex-col gap-4 overflow-hidden">
-      <div className="glass rounded-xl flex-1 flex flex-col overflow-hidden relative scanline">
-        <div className="px-4 py-2.5 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
+      <div className="glass elevation-2 rounded-2xl flex-1 flex flex-col overflow-hidden relative scanline">
+        <div className="px-4 py-2.5 border-b border-white/5 bg-transparent flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${running ? 'bg-accent-green glow-green' : 'bg-text-dim'}`} />
             <h2 className="text-[9px] font-bold text-text-dim uppercase tracking-[0.2em]">Log Feed</h2>
@@ -51,7 +51,7 @@ function LogStreamInner({ logs, currentPkg, running }: LogStreamProps) {
             {statusText}
           </div>
         </div>
-        <div className="flex-1 bg-black/30 p-5 overflow-y-auto font-mono text-[13px] leading-relaxed selection:bg-accent-cyan/30">
+        <div className="flex-1 bg-transparent p-5 overflow-y-auto font-mono text-[13px] leading-relaxed selection:bg-accent-cyan/30">
           {logs.length === 0 && (
             <div className="text-text-dim text-xs animate-fade-in-up">
               {running ? 'Connecting to build stream...' : 'Awaiting build output...'}

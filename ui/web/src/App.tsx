@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Background3D } from './components/Background3D';
 import { Header } from './components/Header';
 import { PipelineSidebar } from './components/PipelineSidebar';
 import { LogStream } from './components/LogStream';
@@ -144,7 +145,7 @@ function App() {
   const timers = useMemo(() => status?.timers || null, [status]);
 
   return (
-    <div className="flex flex-col h-screen bg-bg-deep text-text-main font-sans selection:bg-accent-cyan/30">
+    <div className="relative flex flex-col h-screen bg-transparent text-text-main font-sans selection:bg-accent-cyan/30">
       <Header
         cpuUsage={status?.cpu_usage || 0}
         maxCores={status?.max_cores || 0}
@@ -154,7 +155,9 @@ function App() {
         onControlAction={controlAction}
       />
 
-      <main className="flex-1 flex overflow-hidden p-4 gap-4">
+      <Background3D />
+      <div className="relative z-10 flex flex-1 flex-col min-h-0">
+        <main className="flex-1 flex overflow-hidden p-4 gap-4">
         <PipelineSidebar
           steps={steps}
           selectedPhaseIdx={selectedPhaseIdx}
@@ -194,7 +197,8 @@ function App() {
             connected={connected}
           />
         </section>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

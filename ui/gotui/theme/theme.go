@@ -93,7 +93,7 @@ func SetTheme(name string) {
 	}
 }
 
-func BaseStyle() lipgloss.Style       { return baseStyle }
-func TitleStyle() lipgloss.Style       { return titleStyle }
-func BorderStyle() lipgloss.Style      { return borderStyle }
-func DimStyle() lipgloss.Style         { return dimStyle }
+func BaseStyle() lipgloss.Style   { return baseStyle }
+func TitleStyle() lipgloss.Style  { return titleStyle }
+func BorderStyle() lipgloss.Style { return borderStyle }
+func DimStyle() lipgloss.Style    { return dimStyle }

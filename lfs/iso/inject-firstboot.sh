@@ -40,7 +40,7 @@ stage_payload() {
 
     # static ginger-pkg
     echo "[inject-firstboot] building static ginger-pkg"
-    ( cd "$GINGER_PKG_DIR" && CGO_ENABLED=0 go build -o "$WORK/root/opt/ginger/bin/ginger-pkg" . )
+    ( cd "$GINGER_PKG_DIR" && CGO_ENABLED=0 go build -buildvcs=false -o "$WORK/root/opt/ginger/bin/ginger-pkg" . )
 
     # signing key (reuse brain's keypair if present)
     KEY_DIR="${GINGER_SIGNING_KEY_DIR:-$ROOT/.signing}"
@@ -86,11 +86,13 @@ payload_hash() {
     cp "$PUB" "$HASH_WORK/pub"
     cp "$WORK/root/opt/ginger/bin/ginger-pkg" "$HASH_WORK/ginger-pkg"
     {
-        echo "PAYLOAD_VERSION=3"
+        echo "PAYLOAD_VERSION=4"
         echo "UPDATE_SERVER=$UPDATE_SERVER"
         echo "UPDATE_PACKAGE=$UPDATE_PACKAGE"
-        # Content hash of the firstboot unit/script tree (path-independent).
-        ( cd "$FIRSTBOOT_DIR/root" && find . -type f -print0 | sort -z | xargs -0 sha256sum )
+        # Content hash of the firstboot unit/script tree (path-independent),
+        # including symlink targets so new links force a re-inject.
+        ( cd "$FIRSTBOOT_DIR/root" && find . ! -type d -print0 | sort -z | xargs -0 -I{} sh -c \
+            'if [ -L "$1" ]; then printf "%s -> %s\n" "$1" "$(readlink "$1")"; else sha256sum "$1"; fi' _ {} )
         ( cd "$HASH_WORK" && sha256sum key pub ginger-pkg )
     } | sha256sum | awk '{print $1}'
 }
@@ -111,10 +113,18 @@ fi
 
 echo "[inject-firstboot] merging payload into $ROOTFS_TARBALL"
 echo "[inject-firstboot] decompressing (first run may take a minute for the 1.9G cache)"
-zcat "$ROOTFS_TARBALL" > "$WORK/rootfs.tar"
+if command -v pigz >/dev/null 2>&1; then
+    pigz -dc "$ROOTFS_TARBALL" > "$WORK/rootfs.tar"
+else
+    zcat "$ROOTFS_TARBALL" > "$WORK/rootfs.tar"
+fi
 tar --append --file "$WORK/rootfs.tar" --directory "$WORK/root" . 2>/dev/null \
     || tar -rf "$WORK/rootfs.tar" -C "$WORK/root" .
-gzip -9 -c "$WORK/rootfs.tar" > "$WORK/rootfs.new.tar.gz"
+if command -v pigz >/dev/null 2>&1; then
+    pigz -9 -c "$WORK/rootfs.tar" > "$WORK/rootfs.new.tar.gz"
+else
+    gzip -9 -c "$WORK/rootfs.tar" > "$WORK/rootfs.new.tar.gz"
+fi
 install -m 0644 "$WORK/rootfs.new.tar.gz" "$ROOTFS_TARBALL"
 echo "$NEW_HASH" > "$MARKER"
 

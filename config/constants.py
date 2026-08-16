@@ -78,6 +78,10 @@ PARALLEL_WINDOW = int(CONFIG.get("PARALLEL_WINDOW", "4"))
 SNAPSHOTS_DIR = os.path.join(GINGER_ROOT, ".snapshots")
 os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
 
+# State dir must exist before the engine runs — markers (.built) and telemetry
+# live here. It is gitignored, so auto-create it (like SNAPSHOTS_DIR above).
+os.makedirs(STATE_DIR, exist_ok=True)
+
 # Steps that auto-snapshot after successful completion (critical recovery points)
 SNAPSHOT_AFTER = {
     "10_phase2_system",

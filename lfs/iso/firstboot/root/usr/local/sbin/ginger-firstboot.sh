@@ -27,6 +27,13 @@ if [ ! -x "$GINGER_ROOT/bin/ginger-pkg" ]; then
     log "ERROR: ginger-pkg binary missing at $GINGER_ROOT/bin/ginger-pkg"
     exit 1
 fi
+
+# 1a. Ensure the ginger-pkg command is on PATH for all users.
+if [ ! -L /usr/local/bin/ginger-pkg ]; then
+    ln -sf /opt/ginger/bin/ginger-pkg /usr/local/bin/ginger-pkg
+    log "linked /usr/local/bin/ginger-pkg -> /opt/ginger/bin/ginger-pkg"
+fi
+
 log "ginger-pkg ready: $("$GINGER_ROOT/bin/ginger-pkg" version 2>/dev/null || echo present)"
 
 # 2. Install the seeded signing public key (trust anchor).

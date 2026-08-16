@@ -40,7 +40,7 @@ type ConnectionStatusMsg struct {
 type LogChannelFullMsg struct{}
 
 var (
-	LogChannel    = make(chan LogMsg, 100)
+	LogChannel      = make(chan LogMsg, 100)
 	wsCtx, wsCancel = context.WithCancel(context.Background())
 )
 

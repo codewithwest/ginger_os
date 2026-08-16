@@ -27,12 +27,13 @@ function HeaderInner({ cpuUsage, maxCores, timers, uptime, connected, onControlA
   };
 
   return (
-    <header className="h-16 glass z-50 flex items-center justify-between px-6 border-b border-white/5">
+    <header className="relative z-20 h-16 glass elevation-2 flex items-center justify-between px-6 border-b border-white/5">
       <div className="flex items-center gap-5">
         <div className="flex items-center gap-3">
           <div className="w-1.5 h-1.5 rounded-full bg-accent-cyan glow-cyan" />
           <h1 className="text-base font-bold tracking-tight text-white">
-            <span className="text-accent-cyan">Ginger</span>OS
+            <span className="text-accent-cyan">ginger</span>{' '}
+            <span className="text-white/90">os</span>
           </h1>
         </div>
         <div className="h-5 w-px bg-white/5" />
@@ -67,9 +68,9 @@ function HeaderInner({ cpuUsage, maxCores, timers, uptime, connected, onControlA
           <div className="text-xs font-mono text-text-main">{formatLongTime(uptime)}</div>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => onControlAction('rebuild_ui')} className="btn-primary hover:!text-white hover:!border-accent-cyan/60 hover:!bg-accent-cyan/[0.15] !py-1.5 !px-3">Rebuild UI</button>
-          <button onClick={() => onControlAction('auto')} className="btn-success hover:!text-white hover:!border-accent-green/60 hover:!bg-accent-green/[0.15] !py-1.5 !px-3">Auto</button>
-          <button onClick={() => onControlAction('abort')} className="btn-danger hover:!text-white hover:!border-accent-red/60 hover:!bg-accent-red/[0.15] !py-1.5 !px-3">Abort</button>
+          <button onClick={() => onControlAction('rebuild_ui')} className="btn-primary ripple hover:!text-white hover:!border-accent-cyan/60 hover:!bg-accent-cyan/[0.15] !py-1.5 !px-3">Rebuild UI</button>
+          <button onClick={() => onControlAction('auto')} className="btn-success ripple hover:!text-white hover:!border-accent-green/60 hover:!bg-accent-green/[0.15] !py-1.5 !px-3">Auto</button>
+          <button onClick={() => onControlAction('abort')} className="btn-danger ripple hover:!text-white hover:!border-accent-red/60 hover:!bg-accent-red/[0.15] !py-1.5 !px-3">Abort</button>
         </div>
       </div>
     </header>

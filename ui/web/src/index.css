@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-deep: #03060a;
-  --color-bg-panel: rgba(13, 17, 23, 0.7);
+  --color-bg-deep: #06080d;
+  --color-bg-panel: #0f141c;
+  --color-surface-1: #161d28;
+  --color-surface-2: #1d2634;
   --color-accent-cyan: #00d2ff;
   --color-accent-blue: #3a7bd5;
   --color-accent-green: #00ff88;
@@ -17,33 +19,138 @@
 
 body {
   font-family: var(--font-sans);
+  background: var(--color-bg-deep);
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 136, 0.5); }
-  50% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.8), 0 0 30px rgba(0, 255, 136, 0.2); }
+/* ============ 3D BACKGROUND ============ */
+.bg-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  perspective: 1200px;
+  background:
+    radial-gradient(1100px 700px at 72% 18%, rgba(0, 210, 255, 0.10), transparent 60%),
+    radial-gradient(900px 650px at 18% 85%, rgba(0, 255, 136, 0.07), transparent 60%),
+    radial-gradient(700px 500px at 50% 50%, rgba(58, 123, 213, 0.06), transparent 65%),
+    var(--color-bg-deep);
 }
 
-@keyframes scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
+.bg-grid {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 220vmax;
+  height: 220vmax;
+  transform: translate(-50%, -50%) rotateX(75deg);
+  background-image:
+    linear-gradient(rgba(0, 210, 255, 0.13) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 210, 255, 0.13) 1px, transparent 1px);
+  background-size: 52px 52px;
+  animation: grid-scroll 26s linear infinite;
+  mask-image: radial-gradient(closest-side, black 30%, transparent 78%);
 }
 
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes grid-scroll {
+  from { background-position: 0 0; }
+  to   { background-position: 0 52px; }
 }
 
-@keyframes slide-in-right {
-  from { opacity: 0; transform: translateX(12px); }
-  to { opacity: 1; transform: translateX(0); }
+.bg-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  animation: orb-drift ease-in-out infinite alternate;
 }
 
+@keyframes orb-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(48px, -36px, 0) scale(1.18); }
+}
+
+.bg-cube {
+  position: absolute;
+  transform-style: preserve-3d;
+  animation: cube-spin linear infinite;
+  opacity: 0.5;
+}
+
+.bg-cube-face {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--cube-color, #00d2ff);
+  background: color-mix(in srgb, var(--cube-color, #00d2ff) 5%, transparent);
+}
+
+@keyframes cube-spin {
+  from { transform: rotateX(-18deg) rotateY(0deg); }
+  to   { transform: rotateX(-18deg) rotateY(360deg); }
+}
+
+.bg-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--cube-color, #00d2ff);
+  opacity: 0;
+  animation: particle-rise linear infinite;
+}
+
+@keyframes particle-rise {
+  0%   { transform: translateY(0); opacity: 0; }
+  12%  { opacity: 0.6; }
+  100% { transform: translateY(-45vh); opacity: 0; }
+}
+
+.bg-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 40%, transparent 40%, rgba(3, 5, 9, 0.55) 100%);
+}
+
+/* ============ MATERIAL SURFACE + ELEVATION ============ */
+@utility elevation-1 {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px 1px rgba(0, 0, 0, 0.18);
+}
+
+@utility elevation-2 {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 6px 2px rgba(0, 0, 0, 0.20);
+}
+
+@utility elevation-3 {
+  box-shadow: 0 4px 8px 3px rgba(0, 0, 0, 0.38), 0 1px 3px 1px rgba(0, 0, 0, 0.28);
+}
+
+@utility ripple {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
+.ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.35) 10%, transparent 12%) center / 160% no-repeat;
+  transform: scale(10);
+  opacity: 0;
+  transition: transform 0.5s, opacity 1s;
+}
+
+.ripple:active::after {
+  transform: scale(0);
+  opacity: 0.4;
+  transition: 0s;
+}
+
+/* ============ LEGACY UTILITIES (kept for compat) ============ */
 @utility glass {
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: transparent;
 }
 
 @utility card-hover {
@@ -91,61 +198,87 @@ body {
 }
 
 @utility input-ghost {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.75rem;
   padding: 0.75rem 1rem;
   font-size: 0.75rem;
   transition: all 0.3s;
   outline: none;
 }
 
+.input-ghost:focus {
+  border-color: rgba(0, 210, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.12);
+}
+
 @utility btn-primary {
   font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-radius: 0.5rem;
+  letter-spacing: 0.12em;
+  border-radius: 9999px;
   padding: 0.5rem 1.25rem;
   cursor: pointer;
   transition: all 0.3s ease-out;
   color: var(--color-accent-cyan);
-  border: 1px solid rgba(0, 210, 255, 0.3);
-  background: rgba(0, 210, 255, 0.05);
+  border: 1px solid rgba(0, 210, 255, 0.35);
+  background: rgba(0, 210, 255, 0.08);
 }
 
 @utility btn-success {
   font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-radius: 0.5rem;
+  letter-spacing: 0.12em;
+  border-radius: 9999px;
   padding: 0.5rem 1.25rem;
   cursor: pointer;
   transition: all 0.3s ease-out;
   color: var(--color-accent-green);
-  border: 1px solid rgba(0, 255, 136, 0.3);
-  background: rgba(0, 255, 136, 0.05);
+  border: 1px solid rgba(0, 255, 136, 0.35);
+  background: rgba(0, 255, 136, 0.08);
 }
 
 @utility btn-danger {
   font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-radius: 0.5rem;
+  letter-spacing: 0.12em;
+  border-radius: 9999px;
   padding: 0.5rem 1.25rem;
   cursor: pointer;
   transition: all 0.3s ease-out;
   color: var(--color-accent-red);
-  border: 1px solid rgba(255, 51, 102, 0.3);
-  background: rgba(255, 51, 102, 0.05);
+  border: 1px solid rgba(255, 51, 102, 0.35);
+  background: rgba(255, 51, 102, 0.08);
+}
+
+.btn-primary:hover, .btn-success:hover, .btn-danger:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
 }
 
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
+
+/* ============ ANIMATIONS ============ */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 136, 0.5); }
+  50%      { box-shadow: 0 0 20px rgba(0, 255, 136, 0.8), 0 0 30px rgba(0, 255, 136, 0.2); }
+}

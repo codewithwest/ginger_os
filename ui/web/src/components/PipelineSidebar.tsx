@@ -42,10 +42,10 @@ const StepButton = memo(({ step, idx, selected, onSelect, onRun, onForce }: {
 
   return (
     <div
-      className={`w-full text-left p-3 rounded-lg border transition-all duration-300 card-hover ${
+      className={`w-full text-left p-3 rounded-xl border transition-all duration-300 card-hover ${
         selected
           ? 'bg-accent-cyan/10 border-accent-cyan/40 shadow-[0_0_20px_rgba(0,210,255,0.12)]'
-          : 'border-white/5 bg-white/[0.02]'
+          : 'border-white/10 bg-transparent'
       }`}
     >
       <button className="w-full text-left" onClick={() => onSelect(idx)}>
@@ -92,7 +92,7 @@ const StepButton = memo(({ step, idx, selected, onSelect, onRun, onForce }: {
 const PackageCard = memo(({ pkg, onRun, onForce }: {
   pkg: PackageItem; onRun: (name: string) => void; onForce: (name: string) => void;
 }) => (
-  <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-black/30 border border-white/5 card-hover">
+  <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-transparent border border-white/10 card-hover">
     <div className="min-w-0 flex-1">
       <div className="text-sm font-semibold text-white truncate">{pkg.name}</div>
       <div className="flex items-center gap-1.5 mt-1">
@@ -122,7 +122,7 @@ function PipelineSidebarInner({
 
   return (
     <section className="w-[28rem] flex flex-col gap-2">
-      <div className="glass p-4 rounded-xl flex flex-col h-full overflow-hidden">
+      <div className="glass elevation-2 p-4 rounded-2xl flex flex-col h-full overflow-hidden">
         <div className="flex items-center justify-between mb-4 px-1">
           <div className="flex items-center gap-2">
             <h2 className="text-[9px] font-bold text-text-dim uppercase tracking-[0.2em]">Pipeline</h2>
@@ -137,7 +137,7 @@ function PipelineSidebarInner({
           </div>
         </div>
 
-        <div className="mb-4 p-3 rounded-xl border border-white/5 bg-black/20 card-hover">
+        <div className="mb-4 p-3 rounded-xl border border-white/5 bg-transparent card-hover">
           <div className="flex items-center justify-between mb-3">
             <div className="min-w-0 flex-1 mr-2">
               <div className="text-[8px] text-text-dim uppercase font-bold tracking-[0.2em]">Active Module</div>
@@ -169,7 +169,7 @@ function PipelineSidebarInner({
           ))}
         </div>
 
-        <div className="mt-4 p-3 rounded-xl border border-white/5 bg-black/20">
+        <div className="mt-4 p-3 rounded-xl border border-white/10 bg-transparent">
           <div className="flex items-center justify-between mb-3">
             <div>
               <div className="text-[8px] text-text-dim uppercase font-bold tracking-[0.2em]">Packages</div>
