@@ -673,6 +673,22 @@ func (inst *installer) runInstall() {
 					return err
 				}
 				dl.logf("tar completed successfully")
+
+				// The live ISO carries telemetry separately from the cached rootfs.
+				// Install it into the target after extraction so stale rootfs caches
+				// cannot silently omit the CLI from newly installed systems.
+				telemetrySource := "/mnt/iso/installer/ginger-telemetry.py"
+				telemetryTarget := filepath.Join(mnt, "usr/bin/ginger-telemetry")
+				if _, statErr := os.Stat(telemetrySource); statErr != nil {
+					return fmt.Errorf("telemetry payload missing from installer ISO: %w", statErr)
+				}
+				if err := os.MkdirAll(filepath.Dir(telemetryTarget), 0755); err != nil {
+					return fmt.Errorf("prepare telemetry install directory: %w", err)
+				}
+				if err := exec.Command("install", "-o", "root", "-g", "root", "-m", "0755", telemetrySource, telemetryTarget).Run(); err != nil {
+					return fmt.Errorf("install ginger-telemetry: %w", err)
+				}
+				dl.logf("installed telemetry CLI at %s", telemetryTarget)
 				return nil
 			case <-time.After(time.Second):
 				sz := dirSize(mnt)
