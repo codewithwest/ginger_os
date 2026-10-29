@@ -16,6 +16,15 @@ if pgrep -af 'qemu-system-x86_64.*test-target.qcow2' >/dev/null; then
     exit 1
 fi
 
+# Check for the -graphic argument
+USE_GRAPHIC=false
+for arg in "$@"; do
+    if [ "$arg" = "-graphic" ] || [ "$arg" = "--graphic" ]; then
+        USE_GRAPHIC=true
+        break
+    fi
+done
+
 echo "--- Booting GingerOS from Hard Disk ---"
 echo "TIP: Select 'Standard Boot (sda1)' from the GRUB menu."
 # Prefer KVM when available; fall back to TCG for nested/ordinary VMs.
@@ -23,25 +32,24 @@ ACCEL_ARGS=(-accel tcg)
 if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
     ACCEL_ARGS=(-enable-kvm)
 fi
-# QEMU_DISPLAY=terminal (or none) disables the virtual display and routes
-# the guest serial console to this terminal. "curses" uses a text VGA console.
-DISPLAY_BACKEND="${QEMU_DISPLAY:-}"
+
+# Set backend based on the -graphic flag or environment fallback
+if [ "$USE_GRAPHIC" = true ]; then
+    DISPLAY_BACKEND="gtk"
+else
+    DISPLAY_BACKEND="${QEMU_DISPLAY:-terminal}"
+fi
+
 SERIAL_ARGS=()
 DISPLAY_ARGS=()
+
 case "$DISPLAY_BACKEND" in
     terminal|none)
-        DISPLAY_ARGS=(-display none)
-        SERIAL_ARGS=(-serial mon:stdio)
+        DISPLAY_ARGS=(-nographic)
+        SERIAL_ARGS=()
         ;;
     gtk|gtk,*|sdl|sdl,*|curses)
         DISPLAY_ARGS=(-display "$DISPLAY_BACKEND")
-        ;;
-    "")
-        if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
-            DISPLAY_ARGS=(-display gtk,zoom-to-fit=on)
-        else
-            DISPLAY_ARGS=(-display curses)
-        fi
         ;;
     *)
         echo "[ERROR] Unsupported QEMU_DISPLAY='$DISPLAY_BACKEND'. Use terminal, none, curses, or gtk." >&2
@@ -64,4 +72,4 @@ qemu-system-x86_64 \
     "${DISPLAY_ARGS[@]}" \
     "${SERIAL_ARGS[@]}" \
     -netdev "user,id=net0,hostfwd=tcp::${SSH_FORWARD_PORT}-:22" \
-    -device e1000,netdev=net0 \
+    -device e1000,netdev=net0
