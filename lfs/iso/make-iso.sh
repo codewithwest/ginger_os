@@ -205,8 +205,20 @@ if [ -f /lib64/ld-linux-x86-64.so.2 ]; then
     cp -L /lib64/ld-linux-x86-64.so.2 "$INITRD_WORK/lib64/"
 fi
 
-# Copy Go installer binary (single static binary, no runtime deps)
-cp "$GINGER_ROOT/lfs/iso/ginger-installer" "$ISO_DIR/installer/ginger-installer"
+# Build the installer from source for every ISO. The checked-in/prebuilt
+# ginger-installer can be stale and silently omit UI changes from main.go.
+# Build a static binary directly into the staging tree so packaging always
+# uses the exact source on this branch without mutating a tracked artifact.
+if ! command -v go >/dev/null 2>&1; then
+    echo "[ERROR] Go 1.24+ is required to build the installer from source."
+    exit 1
+fi
+echo "[INFO] Testing Go installer..."
+(
+    cd "$SCRIPT_DIR/installer"
+    go test ./...
+    CGO_ENABLED=0 go build -trimpath -o "$ISO_DIR/installer/ginger-installer" .
+)
 cp "$GINGER_ROOT/lfs/iso/installer.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/lfs/lib/disk.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/lfs/lib/bash_config.sh" "$ISO_DIR/installer/"
