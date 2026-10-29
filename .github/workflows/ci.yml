@@ -35,3 +35,5 @@ jobs:
         run: export PYTHONPATH=$PYTHONPATH:. && python3 tests/test_engine.py
       - name: Run Bash Library Tests
         run: bash tests/test_lib_common.sh
+      - name: Run Rootfs Validation Tests
+        run: python3 tests/test_rootfs_validation.py
