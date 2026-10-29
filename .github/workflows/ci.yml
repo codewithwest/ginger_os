@@ -37,3 +37,5 @@ jobs:
         run: bash tests/test_lib_common.sh
       - name: Run Rootfs Validation Tests
         run: python3 tests/test_rootfs_validation.py
+      - name: Run Network Config Tests
+        run: python3 tests/test_network_config.py
