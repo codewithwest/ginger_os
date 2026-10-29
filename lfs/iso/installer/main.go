@@ -484,8 +484,16 @@ func (inst *installer) runInstall() {
 	rootPart := inst.targetDev + "1"
 	mnt := "/mnt/ginger"
 
+	firstRender := true
 	render := func(current int, status string) {
-		fmt.Print(clearScreen)
+		// Clear the previous interactive screen only once. Clearing the whole
+		// terminal on every spinner tick causes visible flicker in QEMU consoles.
+		if firstRender {
+			fmt.Print(clearScreen)
+			firstRender = false
+		} else {
+			fmt.Print("\033[H")
+		}
 		printfln(colorCyan+colorBold, "  ╔══════════════════════════════════════════════════╗")
 		printfln(colorCyan+colorBold, "  ║      GingerOS Installer v2.0 — Deploying          ║")
 		printfln(colorCyan+colorBold, "  ╚══════════════════════════════════════════════════╝")
@@ -504,7 +512,9 @@ func (inst *installer) runInstall() {
 		}
 		frame("Deployment Steps", lines)
 		fmt.Println()
-		fmt.Println("  " + status)
+		// Pad the status line so shorter updates erase leftovers from longer
+		// messages without clearing the whole screen.
+		fmt.Println("  " + padTo(status, 100))
 		fmt.Println()
 	}
 
