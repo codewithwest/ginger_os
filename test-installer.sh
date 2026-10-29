@@ -11,6 +11,12 @@ if [ ! -f "$ISO_PATH" ]; then
     exit 1
 fi
 
+# Never kill unrelated QEMU virtual machines. Refuse to reuse a locked disk.
+if pgrep -af 'qemu-system-x86_64.*gingeros-installer.iso' >/dev/null; then
+    echo "[ERROR] A GingerOS QEMU test appears to be running already; stop that VM explicitly first."
+    exit 1
+fi
+
 # Recreate the disposable target disk only when explicitly requested.
 # This erases the prior VM installation; the ISO itself is never modified.
 if [ "${FRESH_DISK:-0}" = "1" ]; then
@@ -19,12 +25,6 @@ fi
 if [ ! -f "$DISK_PATH" ]; then
     echo "[INFO] Creating 20GB test disk..."
     qemu-img create -f qcow2 "$DISK_PATH" 20G
-fi
-
-# Never kill unrelated QEMU virtual machines. Refuse to reuse a locked disk.
-if pgrep -af 'qemu-system-x86_64.*gingeros-installer.iso' >/dev/null; then
-    echo "[ERROR] A GingerOS QEMU test appears to be running already; stop that VM explicitly first."
-    exit 1
 fi
 
 # Fresh debug artifacts from the previous run
