@@ -71,6 +71,18 @@ The ISO build:
 4. Bundles the static Go installer (`lfs/iso/ginger-installer`).
 5. Produces `gingeros-installer.iso` via `grub-mkrescue`.
 
+
+### Important: packaging is not a full LFS rebuild
+
+These commands have different scopes:
+
+- `./make-iso.sh`: packages an existing `ginger_os.img` or reuses the cached `gingeros-lfs-rootfs.tar.gz` and `vmlinuz-ginger-cached`. It does **not** compile the LFS system.
+- `FORCE_REBUILD=1 ./make-iso.sh`: bypasses the ISO packager's rootfs/kernel cache and re-extracts them from the existing `ginger_os.img`. It still does **not** rebuild LFS packages or the kernel.
+- `./run.sh`: launches the build orchestrator. Its state markers can skip completed build steps; use the HUD's force/recovery controls only for the relevant affected steps.
+- A **complete clean build** means recreating the build image and rerunning the LFS phases/package compilation, then producing the ISO and running both QEMU installer and installed-system boot tests. This is the slowest option and should be reserved for baseline/release milestones or when changes invalidate broad build artifacts.
+
+For ordinary changes, prefer the smallest safe incremental rebuild. For changes to ISO assembly or rootfs validation, package from the existing image and run the QEMU installer/boot tests. For changes to phase-3 networking, rebuild the affected system image/package path first, then package and boot-test the new installed system. Do not use a stale cached rootfs to claim that a changed LFS build script was tested.
+
 ## Stage 3 — Install from the ISO
 
 Test the installer in QEMU:
