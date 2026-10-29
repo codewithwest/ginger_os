@@ -32,7 +32,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pydantic fastapi uvicorn psutil rich
       - name: Run Python Engine Tests
-        run: export PYTHONPATH=$PYTHONPATH:. && python3 tests/test_engine.py
+        run: mkdir -p logs && export PYTHONPATH=$PYTHONPATH:. && python3 tests/test_engine.py
       - name: Run Bash Library Tests
         run: bash tests/test_lib_common.sh
       - name: Run Rootfs Validation Tests
