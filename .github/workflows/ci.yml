@@ -18,6 +18,25 @@ jobs:
           scandir: './lfs'
           severity: error  # Fail on errors; warnings are tracked separately during baseline hardening
 
+  installer:
+    name: Go installer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: lfs/iso/installer/go.sum
+      - name: Check Go formatting
+        working-directory: lfs/iso/installer
+        run: test -z "$(gofmt -l main.go)"
+      - name: Test and build installer
+        working-directory: lfs/iso/installer
+        run: |
+          go test ./...
+          CGO_ENABLED=0 go build -trimpath -o /tmp/ginger-installer .
+
   tests:
     name: Tests
     runs-on: ubuntu-latest
