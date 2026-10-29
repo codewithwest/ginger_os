@@ -128,7 +128,7 @@ def validate_rootfs(path):
 
     missing = sorted(REQUIRED_PATHS - members)
     forbidden = sorted(p for p in members if any(
-        p.startswith(prefix) for prefix in FORBIDDEN_PREFIXES
+        (p.startswith(prefix) or p == prefix.rstrip("/")) for prefix in FORBIDDEN_PREFIXES
     ))
     if missing:
         print("ERROR: rootfs is missing required paths: " + ", ".join(missing), file=sys.stderr)
