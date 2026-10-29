@@ -11,7 +11,11 @@ if [ ! -f "$ISO_PATH" ]; then
     exit 1
 fi
 
-# Create test disk if it doesn't exist
+# Recreate the disposable target disk only when explicitly requested.
+# This erases the prior VM installation; the ISO itself is never modified.
+if [ "${FRESH_DISK:-0}" = "1" ]; then
+    rm -f "$DISK_PATH"
+fi
 if [ ! -f "$DISK_PATH" ]; then
     echo "[INFO] Creating 20GB test disk..."
     qemu-img create -f qcow2 "$DISK_PATH" 20G
