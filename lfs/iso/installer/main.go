@@ -32,7 +32,7 @@ func initSerialMirror() {
 	os.Stderr = f
 }
 
-const (
+var (
 	colorReset  = "\033[0m"
 	colorBold   = "\033[1m"
 	colorDim    = "\033[2m"
@@ -42,6 +42,17 @@ const (
 	colorRed    = "\033[31m"
 	clearScreen = "\033[H\033[J"
 )
+
+// Keep the installer readable on serial consoles and in log captures. Honor
+// the standard NO_COLOR convention and avoid ANSI control sequences when stdout
+// is not an interactive terminal.
+func configureTerminal() {
+	if os.Getenv("NO_COLOR") != "" || !term.IsTerminal(int(os.Stdout.Fd())) {
+		colorReset, colorBold, colorDim = "", "", ""
+		colorGreen, colorCyan, colorYellow, colorRed = "", "", "", ""
+		clearScreen = ""
+	}
+}
 
 const logo = `██████╗ ██╗███╗   ██╗ ██████╗ ███████╗██████╗  ██████╗ ███████╗
 ██╔════╝ ██║████╗  ██║██╔════╝ ██╔════╝██╔══██╗██╔═══██╗██╔════╝
@@ -885,6 +896,7 @@ Kernel \r on an \m
 }
 
 func main() {
+	configureTerminal()
 	initSerialMirror()
 
 	inst := &installer{
