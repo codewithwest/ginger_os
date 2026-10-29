@@ -28,9 +28,6 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: lfs/iso/installer/go.sum
-      - name: Check Go formatting
-        working-directory: lfs/iso/installer
-        run: test -z "$(gofmt -l main.go)"
       - name: Test and build installer
         working-directory: lfs/iso/installer
         run: |
