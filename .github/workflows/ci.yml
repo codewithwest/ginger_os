@@ -16,7 +16,7 @@ jobs:
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: './lfs'
-          # severity: error  # Only fail on errors initially to avoid noise from warnings
+          severity: error  # Fail on errors; warnings are tracked separately during baseline hardening
 
   tests:
     name: Tests
