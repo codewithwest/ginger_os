@@ -10,8 +10,11 @@ if [ ! -f "$DISK_PATH" ]; then
     exit 1
 fi
 
-# Clear any existing locks
-pkill qemu-system-x86 2>/dev/null || true
+# Never kill unrelated QEMU virtual machines. Refuse to reuse a locked disk.
+if pgrep -af 'qemu-system-x86_64.*test-target.qcow2' >/dev/null; then
+    echo "[ERROR] A GingerOS QEMU test appears to be running already; stop that VM explicitly first."
+    exit 1
+fi
 
 echo "--- Booting GingerOS from Hard Disk ---"
 echo "TIP: Select 'Standard Boot (sda1)' from the GRUB menu."
