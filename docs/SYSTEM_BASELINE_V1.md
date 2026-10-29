@@ -59,6 +59,13 @@ QEMU does not validate physical Wi-Fi authentication, suspend/resume, laptop hot
 - Baseline idle resource usage is measured rather than assumed.
 - AI/UI failures do not prevent boot, login, networking, or recovery.
 
+
+## Audit risks that must be resolved before declaring the baseline complete
+
+- The current purge script uses a 2026 modification-time cutoff for files in selected /usr directories. That heuristic can remove legitimate upstream files as well as host-distribution contamination. It must be replaced by a tested, explicit policy or supported by a generated manifest before relying on it for release images. The strict archive validator does not by itself prove that no legitimate file was removed.
+- The QEMU acceptance run is a release gate, not something the fast unit-test workflow can substitute for. Unit tests validate archive-check behavior only; they do not build the LFS system, run the installer, or boot the installed disk.
+- Do not interpret successful QEMU networking as proof of physical Wi-Fi, suspend/resume, GPU, audio, or firmware support.
+
 ## Known audit items
 
 - Review lfs/phase3-system/90-network.sh alongside 84-systemd.sh for consistent resolver configuration.
