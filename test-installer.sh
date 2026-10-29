@@ -27,15 +27,30 @@ fi
 rm -f "$GINGER_ROOT/installer-serial.log" "$GINGER_ROOT/qemu-monitor.sock"
 
 echo "--- Launching GingerOS Installer ---"
+# Prefer KVM when available; fall back to TCG for nested/ordinary VMs.
+ACCEL_ARGS=(-accel tcg)
+if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+    ACCEL_ARGS=(-enable-kvm)
+fi
+# Use GTK in a desktop session, or curses from a terminal-only session.
+DISPLAY_BACKEND="${QEMU_DISPLAY:-}"
+if [ -z "$DISPLAY_BACKEND" ]; then
+    if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
+        DISPLAY_BACKEND="gtk,zoom-to-fit=on"
+    else
+        DISPLAY_BACKEND="curses"
+    fi
+fi
+
 qemu-system-x86_64 \
-    -enable-kvm \
+    "${ACCEL_ARGS[@]}" \
     -m 2G \
     -smp 4 \
     -cdrom "$ISO_PATH" \
     -hda "$DISK_PATH" \
     -boot d \
     -vga std \
-    -display gtk,zoom-to-fit=on \
+    -display "$DISPLAY_BACKEND" \
     -serial file:"$GINGER_ROOT/installer-serial.log" \
     -monitor unix:"$GINGER_ROOT/qemu-monitor.sock",server=on,wait=off \
     -netdev user,id=net0,hostfwd=tcp::2222-:22 \
