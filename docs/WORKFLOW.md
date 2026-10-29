@@ -92,7 +92,7 @@ FRESH_DISK=1 ./test-installer.sh  # erase/recreate disposable test-target.qcow2,
 ./test-boot.sh                    # after completing the installer, boot installed system
 ```
 
-The QEMU scripts prefer KVM when available and fall back to TCG when running in a VM without `/dev/kvm`. In a desktop session they use GTK; in a terminal-only session they use curses. Set `QEMU_DISPLAY=gtk,zoom-to-fit=on` to force GTK where a display server is available. `FRESH_DISK=1` erases only the disposable `test-target.qcow2`; do not use it if you need to preserve the existing test installation.
+The QEMU scripts prefer KVM when available and fall back to TCG when running in a VM without `/dev/kvm`. In a desktop session they use GTK; in a terminal-only session they use curses. Set `QEMU_DISPLAY=gtk,zoom-to-fit=on` to force GTK where a display server is available. For a **terminal-only serial boot with no virtual display**, run `QEMU_DISPLAY=terminal ./test-boot.sh`; `QEMU_DISPLAY=none` is an equivalent alias. This routes the guest serial console to the current terminal (the installed GRUB configuration enables `ttyS0`). The installer runner accepts the same setting, though interactive installer input depends on the ISO's serial-console configuration. The host SSH-forwarding port defaults to `2223` to avoid common Docker port conflicts; override it with `SSH_FORWARD_PORT=2224` if needed. `FRESH_DISK=1` erases only the disposable `test-target.qcow2`; do not use it if you need to preserve the existing test installation.
 
 The Go installer runs 5 steps: **Partitioning → Extract Filesystem →
 Hardware Sync → User Setup → Bootloader**. It writes `/etc/fstab` with the
