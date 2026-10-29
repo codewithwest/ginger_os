@@ -286,6 +286,37 @@ func writeFileSync(path string, data []byte, perm os.FileMode) error {
 	return f.Sync()
 }
 
+const resolverStubTarget = "/run/systemd/resolve/stub-resolv.conf"
+
+// ensureResolverSymlink configures the installed system's resolver without
+// following a dangling /run symlink from the live installer environment.
+// /run is recreated at boot, and systemd-resolved provides the stub file then.
+func ensureResolverSymlink(targetRoot string) error {
+	path := filepath.Join(targetRoot, "etc/resolv.conf")
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+
+	info, err := os.Lstat(path)
+	if err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			if target, readErr := os.Readlink(path); readErr == nil && target == resolverStubTarget {
+				return nil
+			}
+		}
+		if err := os.Remove(path); err != nil {
+			return fmt.Errorf("remove existing resolver config %s: %w", path, err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("inspect resolver config %s: %w", path, err)
+	}
+
+	if err := os.Symlink(resolverStubTarget, path); err != nil {
+		return fmt.Errorf("create resolver symlink %s: %w", path, err)
+	}
+	return nil
+}
+
 func pause() {
 	fmt.Print(colorDim + "Press [ENTER] to continue..." + colorReset)
 	readLine()
@@ -781,12 +812,10 @@ DHCP=ipv4
 			return err
 		}
 
-		resolv := `# Begin /etc/resolv.conf
-nameserver 8.8.8.8
-nameserver 8.8.4.4
-# End /etc/resolv.conf
-`
-		if err := writeFileSync(filepath.Join(mnt, "etc/resolv.conf"), []byte(resolv), 0644); err != nil {
+		// Do not write through /etc/resolv.conf: in the target rootfs it is
+		// intentionally a symlink into /run, which does not exist until boot.
+		// Preserve/normalize the symlink instead of hard-coding public DNS.
+		if err := ensureResolverSymlink(mnt); err != nil {
 			return err
 		}
 
