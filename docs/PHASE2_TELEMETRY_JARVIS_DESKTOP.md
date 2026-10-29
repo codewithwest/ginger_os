@@ -2,15 +2,15 @@
 
 ## Status
 
-Proposal and implementation plan. This document does not add a desktop dependency or change the boot path.
+The initial architecture proposal and the first read-only telemetry CLI implementation are on the feature branch. This remains a staged implementation: no graphical stack, always-on telemetry daemon, or AI runtime is installed by this increment.
 
 ## Goal
 
-Make Ginger OS terminal-first by default, with a rich graphical UI that can be started on demand and stopped without stopping telemetry or assistant services. Keep LFS 13.0 as the base, target systems with 2+ CPU cores and 16 GB RAM, and validate every boot-critical change in QEMU.
+Make GingerOS terminal-first by default, with a rich graphical UI that can be started on demand and stopped without stopping telemetry or assistant services. Keep LFS 13.0 as the base, target systems with 2+ CPU cores and 16 GB RAM, and validate every boot-critical change in QEMU.
 
 ## Non-goals for the first increment
 
-- Do not commit Ginger OS to a single UI toolkit, framework, rendering engine, or visual design.
+- Do not commit GingerOS to a single UI toolkit, framework, rendering engine, or visual design.
 - Do not make a browser, compositor, window manager, or local AI model mandatory at boot.
 - Do not replace the existing terminal UI or web dashboard before evaluating what can be reused.
 - Do not introduce a custom package manager or a large desktop environment without a demonstrated need.
@@ -52,7 +52,7 @@ Command names in this document are proposals, not implemented commands.
 
 ## Repository audit (2026-10-29)
 
-The first pass reviewed the current `master` tree and the existing interfaces. This is a source audit, not a build or runtime test.
+This is a source audit, not a full image build or runtime test.
 
 ### Existing components worth reusing
 
@@ -69,24 +69,24 @@ The Go TUI's hard-coded `localhost:8087` endpoints likewise target that build se
 
 ### Desktop dependency findings
 
-The reviewed `lfs/phase3-system` directory has no existing X.Org, Wayland compositor, Mesa, or desktop-session recipe by those names. A display stack would therefore be a new LFS dependency surface and needs an explicit dependency/build-order audit. The first prototype should not add a compositor or X server yet.
+The reviewed `lfs/phase3-system` directory has no existing X.Org, Wayland compositor, Mesa, or desktop-session recipe by those names. A display stack would therefore be a new LFS dependency surface and needs an explicit dependency/build-order audit. This increment does not add a compositor or X server.
 
-### Next implementation increment
+## First implementation: read-only telemetry CLI
 
-Create a UI-neutral **read-only telemetry contract/prototype** before adding display packages or AI runtime dependencies. It should:
+Added on this feature branch:
 
-- expose only non-privileged system facts such as uptime, CPU count/load, memory, filesystem capacity, and network link state;
-- provide stable versioned JSON output and a documented schema;
-- read from standard Linux interfaces and degrade gracefully when a metric is unavailable;
-- avoid build-engine controls, network listeners, background daemons, and new third-party dependencies in the first slice;
-- include deterministic tests using injected fixture data where practical;
-- be runnable manually from the console and leave boot targets unchanged.
+- `lfs/phase3-system/ginger-telemetry.py` — dependency-free collector using standard Python and Linux `/proc`, `/sys`, and filesystem interfaces.
+- `lfs/phase3-system/92-ginger-telemetry.sh` — installs the command as `/usr/bin/ginger-telemetry` during Phase 3.
+- `tests/test_telemetry.py` — unit tests for parsers, missing-data behavior, and JSON output.
+- `docs/TELEMETRY_API_V1.md` — versioned output schema and compatibility/security rules.
 
-After this contract is reviewed, a separate change can decide whether to expose it through a local Unix socket, a restricted HTTP service, or CLI-only access. Do not bind a new service to the network by default.
+Run manually with `ginger-telemetry`; output is one JSON snapshot. The command does not start a daemon, open a port, perform external probes, or make privileged changes. Missing values are represented as JSON `null`; the initial filesystem metric covers the root filesystem only. Network reporting includes interface names and operational state, not IP addresses or packet contents.
+
+The first implementation intentionally does not add a transport API. A later change can evaluate a local Unix socket or restricted HTTP service after permission and lifecycle requirements are specified.
 
 ## Display-stack evaluation
 
-Openbox + X.Org is a candidate for a first prototype, not an architectural requirement. Evaluate it again only after the telemetry contract and build/dependency audit. Compare it with a lightweight Wayland option such as labwc using actual dependency count, build complexity, idle memory, startup latency, graphics compatibility, and recovery behavior.
+Openbox + X.Org is a candidate for a first prototype, not an architectural requirement. Evaluate it only after the telemetry contract and build/dependency audit. Compare it with a lightweight Wayland option such as labwc using actual dependency count, build complexity, idle memory, startup latency, graphics compatibility, and recovery behavior.
 
 No display stack is selected in this phase.
 
@@ -100,7 +100,7 @@ For each meaningful implementation change:
 4. Verify console login, networking/DNS, clean shutdown/reboot, and `systemctl --failed --no-pager`.
 5. Record measurements rather than asserting resource goals without evidence.
 
-Do not claim performance targets are met until measurements are recorded. Do not treat host-side unit tests as a substitute for QEMU install/boot validation.
+The source changes have been committed to the feature branch, but host tests, the LFS image build, ISO build, and QEMU validation still need to run before this increment is considered validated. Do not claim performance targets are met until measurements are recorded.
 
 ## Resource policy
 
