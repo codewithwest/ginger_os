@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -685,8 +686,32 @@ func (inst *installer) runInstall() {
 				if err := os.MkdirAll(filepath.Dir(telemetryTarget), 0755); err != nil {
 					return fmt.Errorf("prepare telemetry install directory: %w", err)
 				}
-				if err := exec.Command("install", "-o", "root", "-g", "root", "-m", "0755", telemetrySource, telemetryTarget).Run(); err != nil {
-					return fmt.Errorf("install ginger-telemetry: %w", err)
+				sourceFile, err := os.Open(telemetrySource)
+				if err != nil {
+					return fmt.Errorf("open telemetry payload %s: %w", telemetrySource, err)
+				}
+				targetFile, err := os.OpenFile(telemetryTarget, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+				if err != nil {
+					sourceFile.Close()
+					return fmt.Errorf("create telemetry target %s: %w", telemetryTarget, err)
+				}
+				_, copyErr := io.Copy(targetFile, sourceFile)
+				sourceCloseErr := sourceFile.Close()
+				targetCloseErr := targetFile.Close()
+				if copyErr != nil {
+					return fmt.Errorf("copy telemetry payload: %w", copyErr)
+				}
+				if sourceCloseErr != nil {
+					return fmt.Errorf("close telemetry payload: %w", sourceCloseErr)
+				}
+				if targetCloseErr != nil {
+					return fmt.Errorf("close telemetry target: %w", targetCloseErr)
+				}
+				if err := os.Chmod(telemetryTarget, 0755); err != nil {
+					return fmt.Errorf("set telemetry permissions: %w", err)
+				}
+				if err := os.Chown(telemetryTarget, 0, 0); err != nil {
+					return fmt.Errorf("set telemetry ownership: %w", err)
 				}
 				dl.logf("installed telemetry CLI at %s", telemetryTarget)
 				return nil
