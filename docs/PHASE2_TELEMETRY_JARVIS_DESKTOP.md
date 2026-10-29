@@ -50,69 +50,55 @@ UI-specific code, styles, components, and assets must remain outside the core te
 
 Command names in this document are proposals, not implemented commands.
 
+## Repository audit (2026-10-29)
+
+The first pass reviewed the current `master` tree and the existing interfaces. This is a source audit, not a build or runtime test.
+
+### Existing components worth reusing
+
+- The Go terminal UI at `ui/gotui` already uses Bubble Tea and Lip Gloss, and talks to the Python FastAPI server over HTTP and WebSocket.
+- `server/server.py` currently exposes `GET /api/status` with build-engine status, CPU usage, storage, cores, and timers, plus build-control endpoints and `/ws/logs`.
+- The React/Vite dashboard at `ui/web` is a separate client, but its current dependencies and design are dashboard-specific. It should remain one optional client, not become the platform API or a design constraint.
+- The base system enables systemd-networkd, systemd-resolved, systemd-timesyncd, and `getty@tty1`. The current system configuration is compatible with a text-console-first approach.
+
+### Important boundary
+
+The existing FastAPI service is the **host-side build orchestrator**: its status schema is coupled to `GingerEngine`, and its documented actions can run/abort build steps, change build configuration, and manipulate snapshots. It is not yet a suitable always-on GingerOS runtime telemetry/assistant daemon. Do not install or repurpose it as a privileged in-OS service.
+
+The Go TUI's hard-coded `localhost:8087` endpoints likewise target that build server. Reuse its interaction patterns where useful, but do not silently redirect it to a new OS API with incompatible semantics.
+
+### Desktop dependency findings
+
+The reviewed `lfs/phase3-system` directory has no existing X.Org, Wayland compositor, Mesa, or desktop-session recipe by those names. A display stack would therefore be a new LFS dependency surface and needs an explicit dependency/build-order audit. The first prototype should not add a compositor or X server yet.
+
+### Next implementation increment
+
+Create a UI-neutral **read-only telemetry contract/prototype** before adding display packages or AI runtime dependencies. It should:
+
+- expose only non-privileged system facts such as uptime, CPU count/load, memory, filesystem capacity, and network link state;
+- provide stable versioned JSON output and a documented schema;
+- read from standard Linux interfaces and degrade gracefully when a metric is unavailable;
+- avoid build-engine controls, network listeners, background daemons, and new third-party dependencies in the first slice;
+- include deterministic tests using injected fixture data where practical;
+- be runnable manually from the console and leave boot targets unchanged.
+
+After this contract is reviewed, a separate change can decide whether to expose it through a local Unix socket, a restricted HTTP service, or CLI-only access. Do not bind a new service to the network by default.
+
 ## Display-stack evaluation
 
-Openbox + X.Org is a candidate for a first prototype, not an architectural requirement. Evaluate it against at least one lightweight Wayland option (for example labwc) using the actual LFS 13.0 dependency graph, input/graphics support, package build cost, session startup, and memory/CPU measurements. Do not select a stack based on screenshots or assumptions alone.
+Openbox + X.Org is a candidate for a first prototype, not an architectural requirement. Evaluate it again only after the telemetry contract and build/dependency audit. Compare it with a lightweight Wayland option such as labwc using actual dependency count, build complexity, idle memory, startup latency, graphics compatibility, and recovery behavior.
 
-The first prototype should be a replaceable session adapter. The launcher and service contracts must not assume X11 or Wayland, so the display stack can change later.
+No display stack is selected in this phase.
 
-## Proposed milestones
+## Validation gates
 
-### A. Repository and dependency audit
+For each meaningful implementation change:
 
-- Inspect the current build phases, package recipes, kernel config, graphics/input support, D-Bus, logind, existing Go TUI, and React/FastAPI UI.
-- Identify existing components that can be reused.
-- Compare candidate display stacks and document required dependencies and licenses.
-- Record a baseline build and runtime footprint before adding packages.
-
-**Acceptance:** architecture decision record with dependency graph, build implications, alternatives, and rollback plan.
-
-### B. Telemetry contract
-
-- Define a versioned, local-only status interface and a JSON schema for CPU, memory, storage, network, and service health.
-- Keep sampling intervals and history bounded and configurable.
-- Restrict sensitive data and avoid collecting command arguments, credentials, or arbitrary user content.
-- Ensure telemetry remains available independently of graphical sessions.
-
-**Acceptance:** unit tests for schema and provider; a terminal client can read status while no graphical session is running.
-
-### C. On-demand display-session prototype
-
-- Implement a launcher/adapter that can start and stop a selected graphical session without coupling to telemetry.
-- Do not enable graphical autologin by default.
-- Preserve the text console and provide actionable logs on failure.
-- Start with a simple test window or existing app rather than building the full Ginger shell immediately.
-
-**Acceptance:** on a fresh QEMU install, start the graphical session from the console, open a test app, exit back to console, and repeat after reboot.
-
-### D. UI client proof of concept
-
-- Build one small visual telemetry view against the public service contract.
-- Keep layout, theme, interaction design, assets, and framework choices replaceable.
-- Do not treat the prototype as the final Ginger design system.
-
-**Acceptance:** visual client displays live status and can be removed/replaced without changing telemetry service code.
-
-### E. Local-first assistant integration
-
-- Expose explicit, permission-checked actions through the same UI-neutral service boundary.
-- Keep local model runtime optional and independently managed.
-- Require confirmation for destructive or privileged actions; do not equate natural-language intent with shell authorization.
-
-**Acceptance:** assistant is unavailable gracefully when stopped or no model is installed; core desktop and telemetry still work.
-
-## QEMU validation gate
-
-For each meaningful increment:
-
-1. Build/package a fresh ISO using the documented repository workflow.
-2. Install to a disposable fresh virtual disk.
-3. Verify text-console login and recovery.
-4. Verify networking and DNS using the existing regression checks.
-5. Verify telemetry works with no graphical session.
-6. Start and stop the graphical session; confirm services continue running and no orphaned session processes remain.
-7. Reboot and repeat.
-8. Record guest CPU/RAM usage, startup time, logs, and test results.
+1. Run focused unit/static checks for the changed component.
+2. Build the relevant LFS recipes from a clean or documented cache state.
+3. Build the ISO and test install/boot in QEMU when the change affects the installed system or boot path.
+4. Verify console login, networking/DNS, clean shutdown/reboot, and `systemctl --failed --no-pager`.
+5. Record measurements rather than asserting resource goals without evidence.
 
 Do not claim performance targets are met until measurements are recorded. Do not treat host-side unit tests as a substitute for QEMU install/boot validation.
 
