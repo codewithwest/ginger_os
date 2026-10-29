@@ -217,7 +217,7 @@ echo "[INFO] Testing Go installer..."
 (
     cd "$SCRIPT_DIR/installer"
     go test ./...
-    CGO_ENABLED=0 go build -trimpath -o "$ISO_DIR/installer/ginger-installer" .
+    CGO_ENABLED=0 go build -buildvcs=false -trimpath -o "$ISO_DIR/installer/ginger-installer" .
 )
 cp "$GINGER_ROOT/lfs/iso/installer.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/lfs/lib/disk.sh" "$ISO_DIR/installer/"
