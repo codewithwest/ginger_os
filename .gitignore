@@ -13,6 +13,7 @@ md5sums
 **/*wget-list
 sources
 gingeros-installer.iso*
+**/gingeros-lfs-rootfs.tar.gz*
 .snapshots
 
 vite
