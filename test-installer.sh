@@ -17,8 +17,11 @@ if [ ! -f "$DISK_PATH" ]; then
     qemu-img create -f qcow2 "$DISK_PATH" 20G
 fi
 
-# Clear any existing locks
-pkill qemu-system-x86 2>/dev/null || true
+# Never kill unrelated QEMU virtual machines. Refuse to reuse a locked disk.
+if pgrep -af 'qemu-system-x86_64.*gingeros-installer.iso' >/dev/null; then
+    echo "[ERROR] A GingerOS QEMU test appears to be running already; stop that VM explicitly first."
+    exit 1
+fi
 
 # Fresh debug artifacts from the previous run
 rm -f "$GINGER_ROOT/installer-serial.log" "$GINGER_ROOT/qemu-monitor.sock"
