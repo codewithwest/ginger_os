@@ -156,8 +156,8 @@ if [ "$PARALLEL_PHASE3" = "true" ]; then
             echo "ERROR: Parallel build failed in window $WINDOW_NUM. Falling back to sequential for this window..."
             idx=0
             for script in "${WINDOW_SCRIPTS[@]}"; do
-                local fname="${WINDOW_NAMES[$idx]}"
-                local full="${WINDOW_FULL[$idx]}"
+                fname="${WINDOW_NAMES[$idx]}"
+                full="${WINDOW_FULL[$idx]}"
                 if [ ! -f "$STATE_DIR/${full}.built" ]; then
                     echo "Retrying: $fname (sequential)"
                     if ! build_one_package "$script" 0 "$fname" "$full"; then

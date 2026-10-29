@@ -32,7 +32,7 @@ func initSerialMirror() {
 	os.Stderr = f
 }
 
-const (
+var (
 	colorReset  = "\033[0m"
 	colorBold   = "\033[1m"
 	colorDim    = "\033[2m"
@@ -42,6 +42,17 @@ const (
 	colorRed    = "\033[31m"
 	clearScreen = "\033[H\033[J"
 )
+
+// Keep the installer readable on serial consoles and in log captures. Honor
+// the standard NO_COLOR convention and avoid ANSI control sequences when stdout
+// is not an interactive terminal.
+func configureTerminal() {
+	if os.Getenv("NO_COLOR") != "" || !term.IsTerminal(int(os.Stdout.Fd())) {
+		colorReset, colorBold, colorDim = "", "", ""
+		colorGreen, colorCyan, colorYellow, colorRed = "", "", "", ""
+		clearScreen = ""
+	}
+}
 
 const logo = `██████╗ ██╗███╗   ██╗ ██████╗ ███████╗██████╗  ██████╗ ███████╗
 ██╔════╝ ██║████╗  ██║██╔════╝ ██╔════╝██╔══██╗██╔═══██╗██╔════╝
@@ -151,7 +162,15 @@ func padTo(s string, n int) string {
 }
 
 func frame(title string, content []string) {
+	// Keep panels readable on small VM consoles while taking advantage of
+	// wider terminals. The installer must remain usable on serial consoles.
 	inner := 44
+	if width, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && width >= 60 {
+		inner = width - 10
+		if inner > 76 {
+			inner = 76
+		}
+	}
 	for _, l := range content {
 		if n := rlen(l); n > inner {
 			inner = n
@@ -267,9 +286,52 @@ func writeFileSync(path string, data []byte, perm os.FileMode) error {
 	return f.Sync()
 }
 
+const resolverStubTarget = "/run/systemd/resolve/stub-resolv.conf"
+
+// ensureResolverSymlink configures the installed system's resolver without
+// following a dangling /run symlink from the live installer environment.
+// /run is recreated at boot, and systemd-resolved provides the stub file then.
+func ensureResolverSymlink(targetRoot string) error {
+	path := filepath.Join(targetRoot, "etc/resolv.conf")
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+
+	info, err := os.Lstat(path)
+	if err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			if target, readErr := os.Readlink(path); readErr == nil && target == resolverStubTarget {
+				return nil
+			}
+		}
+		if err := os.Remove(path); err != nil {
+			return fmt.Errorf("remove existing resolver config %s: %w", path, err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("inspect resolver config %s: %w", path, err)
+	}
+
+	if err := os.Symlink(resolverStubTarget, path); err != nil {
+		return fmt.Errorf("create resolver symlink %s: %w", path, err)
+	}
+	return nil
+}
+
 func pause() {
 	fmt.Print(colorDim + "Press [ENTER] to continue..." + colorReset)
 	readLine()
+}
+
+// sectionHeader gives each interactive screen a consistent product identity
+// without requiring a graphical stack or increasing the ISO footprint.
+func sectionHeader(title, subtitle string) {
+	fmt.Println()
+	printf(colorCyan+colorBold, "  GINGER OS")
+	printf(colorDim, "  ·  Linux From Scratch 13.0")
+	fmt.Println()
+	printfln(colorBold, "  %s", title)
+	printfln(colorDim, "  %s", subtitle)
+	fmt.Println()
 }
 
 func (inst *installer) welcome() {
@@ -280,16 +342,15 @@ func (inst *installer) welcome() {
 		colored = append(colored, "  "+colorCyan+colorBold+l+colorReset)
 	}
 	colored = append(colored, "")
-	frame("GingerOS Installer", colored)
-	fmt.Println()
-	printfln(colorDim, "     GingerOS — Linux From Scratch 13.0 · systemd")
-	fmt.Println()
-	frame("Deployment Steps", []string{
-		"  " + colorDim + "○  1. Partitioning" + colorReset,
-		"  " + colorDim + "○  2. Extract root filesystem" + colorReset,
-		"  " + colorDim + "○  3. Hardware sync" + colorReset,
-		"  " + colorDim + "○  4. User setup" + colorReset,
-		"  " + colorDim + "○  5. Bootloader" + colorReset,
+	frame("Welcome to Ginger OS", colored)
+	sectionHeader("A clean start, made simple", "This installer will prepare a disk and install Ginger OS.")
+	frame("What to expect", []string{
+		"  " + colorGreen + "1" + colorReset + "  Choose the destination disk",
+		"  " + colorGreen + "2" + colorReset + "  Install the base system and configure hardware",
+		"  " + colorGreen + "3" + colorReset + "  Create your account and install the bootloader",
+		"",
+		"  " + colorYellow + "Important:" + colorReset + " the selected disk will be erased.",
+		"  Review the target disk carefully before confirming.",
 	})
 	fmt.Println()
 	pause()
@@ -298,9 +359,10 @@ func (inst *installer) welcome() {
 
 func (inst *installer) diskSelection() {
 	fmt.Print(clearScreen)
-	frame("STEP 1 · Disk Selection", []string{
-		"  " + colorDim + "Select the disk where GingerOS will be installed." + colorReset,
-		"  " + colorDim + "WARNING: all existing data on it will be erased." + colorReset,
+	sectionHeader("Step 1 of 3 · Destination disk", "Choose the drive that will contain your Ginger OS installation.")
+	frame("Before you continue", []string{
+		"  " + colorYellow + "All data on the selected drive will be erased." + colorReset,
+		"  Choose the whole disk (for example, /dev/sda), not a partition.",
 	})
 	fmt.Println()
 
@@ -368,8 +430,10 @@ func (inst *installer) diskSelection() {
 
 func (inst *installer) userSetup() {
 	fmt.Print(clearScreen)
-	frame("STEP 4 · User Setup", []string{
-		"  " + colorDim + "Define the primary system administrator account." + colorReset,
+	sectionHeader("Step 2 of 3 · User account", "Create the account you will use to sign in to Ginger OS.")
+	frame("Account details", []string{
+		"  Your password is used to protect this local account.",
+		"  Password input is hidden while you type.",
 	})
 	fmt.Println()
 
@@ -396,6 +460,7 @@ func (inst *installer) userSetup() {
 
 func (inst *installer) confirm() {
 	fmt.Print(clearScreen)
+	sectionHeader("Step 3 of 3 · Final review", "Check the destination and account before making changes.")
 	frame("Deployment Confirmation", []string{
 		"  " + colorRed + colorBold + "⚠  ALL DATA ON THE TARGET DISK WILL BE DESTROYED  ⚠" + colorReset,
 		"",
@@ -747,12 +812,10 @@ DHCP=ipv4
 			return err
 		}
 
-		resolv := `# Begin /etc/resolv.conf
-nameserver 8.8.8.8
-nameserver 8.8.4.4
-# End /etc/resolv.conf
-`
-		if err := writeFileSync(filepath.Join(mnt, "etc/resolv.conf"), []byte(resolv), 0644); err != nil {
+		// Do not write through /etc/resolv.conf: in the target rootfs it is
+		// intentionally a symlink into /run, which does not exist until boot.
+		// Preserve/normalize the symlink instead of hard-coding public DNS.
+		if err := ensureResolverSymlink(mnt); err != nil {
 			return err
 		}
 
@@ -862,6 +925,7 @@ Kernel \r on an \m
 }
 
 func main() {
+	configureTerminal()
 	initSerialMirror()
 
 	inst := &installer{

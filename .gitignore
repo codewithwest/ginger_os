@@ -24,3 +24,6 @@ build
 *.tmp
 *.swp
 .DS_Store
+ui/web/*
+.signing
+gingeros-lfs-rootfs.tar.gz.firstboot

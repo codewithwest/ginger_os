@@ -101,7 +101,7 @@ CHROOT_ENV_BASE=(
 if [[ "${1:-}" == "--mount-only" ]]; then
     log "INFO" "Mounts set up. Exiting without entering chroot."
 elif [[ -n "${1:-}" ]]; then
-    log "INFO" "Executing command in chroot: $@"
+    log "INFO" "Executing command in chroot: ${*}"
     chroot "$LFS" /usr/bin/env -i \
         "${CHROOT_ENV_BASE[@]}"   \
         /bin/bash "$@"

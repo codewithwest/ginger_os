@@ -10,16 +10,66 @@ if [ ! -f "$DISK_PATH" ]; then
     exit 1
 fi
 
-# Clear any existing locks
-pkill qemu-system-x86 2>/dev/null || true
+# Never kill unrelated QEMU virtual machines. Refuse to reuse a locked disk.
+if pgrep -af 'qemu-system-x86_64.*test-target.qcow2' >/dev/null; then
+    echo "[ERROR] A GingerOS QEMU test appears to be running already; stop that VM explicitly first."
+    exit 1
+fi
+
+# Check for the -graphic argument
+USE_GRAPHIC=false
+for arg in "$@"; do
+    if [ "$arg" = "-graphic" ] || [ "$arg" = "--graphic" ]; then
+        USE_GRAPHIC=true
+        break
+    fi
+done
 
 echo "--- Booting GingerOS from Hard Disk ---"
 echo "TIP: Select 'Standard Boot (sda1)' from the GRUB menu."
+# Prefer KVM when available; fall back to TCG for nested/ordinary VMs.
+ACCEL_ARGS=(-accel tcg)
+if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+    ACCEL_ARGS=(-enable-kvm)
+fi
+
+# Set backend based on the -graphic flag or environment fallback
+if [ "$USE_GRAPHIC" = true ]; then
+    DISPLAY_BACKEND="gtk"
+else
+    DISPLAY_BACKEND="${QEMU_DISPLAY:-terminal}"
+fi
+
+SERIAL_ARGS=()
+DISPLAY_ARGS=()
+
+case "$DISPLAY_BACKEND" in
+    terminal|none)
+        DISPLAY_ARGS=(-nographic)
+        SERIAL_ARGS=()
+        ;;
+    gtk|gtk,*|sdl|sdl,*|curses)
+        DISPLAY_ARGS=(-display "$DISPLAY_BACKEND")
+        ;;
+    *)
+        echo "[ERROR] Unsupported QEMU_DISPLAY='$DISPLAY_BACKEND'. Use terminal, none, curses, or gtk." >&2
+        exit 2
+        ;;
+esac
+
+SSH_FORWARD_PORT="${SSH_FORWARD_PORT:-2223}"
+if ! [[ "$SSH_FORWARD_PORT" =~ ^[0-9]+$ ]] || [ "$SSH_FORWARD_PORT" -lt 1 ] || [ "$SSH_FORWARD_PORT" -gt 65535 ]; then
+    echo "[ERROR] SSH_FORWARD_PORT must be a TCP port from 1 to 65535." >&2
+    exit 2
+fi
+
 qemu-system-x86_64 \
-    -enable-kvm \
+    "${ACCEL_ARGS[@]}" \
     -m 2G \
     -smp 4 \
     -hda "$DISK_PATH" \
     -boot c \
-    -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-    -device e1000,netdev=net0 \
+    "${DISPLAY_ARGS[@]}" \
+    "${SERIAL_ARGS[@]}" \
+    -netdev "user,id=net0,hostfwd=tcp::${SSH_FORWARD_PORT}-:22" \
+    -device e1000,netdev=net0

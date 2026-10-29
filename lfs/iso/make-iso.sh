@@ -37,13 +37,11 @@ CACHED_KERNEL="$GINGER_ROOT/vmlinuz-ginger-cached"
 if [ -f "$LFS_ROOTFS" ] && [ -f "$CACHED_KERNEL" ] && [ -z "${FORCE_REBUILD:-}" ]; then
     echo "[INFO] Using cached LFS rootfs: $(ls -lh "$LFS_ROOTFS" | awk '{print $5}')"
     echo "[INFO] Using cached kernel: $CACHED_KERNEL"
-    # Purge Ubuntu/build-tree contamination if the cache predates the purge step
-    # (subshell with pipefail off: tar gets SIGPIPE once grep -q matches -> exit 141)
-    if ( set +o pipefail; tar -tzf "$LFS_ROOTFS" 2>/dev/null | grep -qm1 -E '^\./(sources|usr/lib/x86_64-linux-gnu)(/|$)' ); then
-        echo "[INFO] Cached rootfs contains Ubuntu/build contamination; purging..."
-        python3 "$SCRIPT_DIR/purge-rootfs.py" "$LFS_ROOTFS" "$LFS_ROOTFS" \
-            || echo "[WARN] purge failed; shipping raw rootfs"
-    fi
+    # Always normalize and validate cached artifacts; never ship a raw cache
+    # after a failed purge or a failed integrity check.
+    echo "[INFO] Normalizing cached rootfs..."
+    python3 "$SCRIPT_DIR/purge-rootfs.py" "$LFS_ROOTFS" "$LFS_ROOTFS"
+    python3 "$SCRIPT_DIR/purge-rootfs.py" --check "$LFS_ROOTFS"
     cp "$LFS_ROOTFS" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
     cp "$CACHED_KERNEL" "$ISO_DIR/boot/vmlinuz"
 else
@@ -106,8 +104,8 @@ else
         --exclude="./usr/lib/python3.12" \
         -C "$LFS_MOUNT" .
     echo "[INFO] Stripping Ubuntu/build-tree remnants (mtime filter + os-release)..."
-    python3 "$SCRIPT_DIR/purge-rootfs.py" "$LFS_ROOTFS" "$LFS_ROOTFS" \
-        || echo "[WARN] purge failed; shipping raw rootfs"
+    python3 "$SCRIPT_DIR/purge-rootfs.py" "$LFS_ROOTFS" "$LFS_ROOTFS"
+    python3 "$SCRIPT_DIR/purge-rootfs.py" --check "$LFS_ROOTFS"
     echo "[INFO] LFS rootfs tarball size: $(ls -lh "$LFS_ROOTFS" | awk '{print $5}')"
     cp "$LFS_ROOTFS" "$ISO_DIR/installer/gingeros-base-rootfs.tar.gz"
 
@@ -207,8 +205,20 @@ if [ -f /lib64/ld-linux-x86-64.so.2 ]; then
     cp -L /lib64/ld-linux-x86-64.so.2 "$INITRD_WORK/lib64/"
 fi
 
-# Copy Go installer binary (single static binary, no runtime deps)
-cp "$GINGER_ROOT/lfs/iso/ginger-installer" "$ISO_DIR/installer/ginger-installer"
+# Build the installer from source for every ISO. The checked-in/prebuilt
+# ginger-installer can be stale and silently omit UI changes from main.go.
+# Build a static binary directly into the staging tree so packaging always
+# uses the exact source on this branch without mutating a tracked artifact.
+if ! command -v go >/dev/null 2>&1; then
+    echo "[ERROR] Go 1.24+ is required to build the installer from source."
+    exit 1
+fi
+echo "[INFO] Testing Go installer..."
+(
+    cd "$SCRIPT_DIR/installer"
+    go test ./...
+    CGO_ENABLED=0 go build -buildvcs=false -trimpath -o "$ISO_DIR/installer/ginger-installer" .
+)
 cp "$GINGER_ROOT/lfs/iso/installer.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/lfs/lib/disk.sh" "$ISO_DIR/installer/"
 cp "$GINGER_ROOT/lfs/lib/bash_config.sh" "$ISO_DIR/installer/"

@@ -96,12 +96,75 @@ def inject_os_release(dst):
     ti.mtime = int(__import__("time").time())
     dst.addfile(ti, io.BytesIO(OS_RELEASE))
 
+REQUIRED_PATHS = {
+    "etc/passwd",
+    "etc/group",
+    "etc/os-release",
+    "usr/bin/bash",
+    "usr/bin/sh",
+    "usr/lib/systemd/systemd",
+    "usr/lib/systemd/system/multi-user.target",
+}
+
+FORBIDDEN_PREFIXES = (
+    "usr/lib/x86_64-linux-gnu/",
+    "lib/x86_64-linux-gnu/",
+    "etc/apt/",
+    "etc/dpkg/",
+    "var/lib/apt/",
+    "var/lib/dpkg/",
+    "sources/",
+    "lfs/",
+    "ginger_os/",
+)
+
+def validate_rootfs(path):
+    try:
+        with tarfile.open(path, "r:gz") as archive:
+            members = {m.name.lstrip("./").rstrip("/") for m in archive.getmembers()}
+    except (OSError, tarfile.TarError) as exc:
+        print(f"ERROR: cannot read rootfs archive {path}: {exc}", file=sys.stderr)
+        return False
+
+    missing = sorted(REQUIRED_PATHS - members)
+    forbidden = sorted(p for p in members if any(
+        (p.startswith(prefix) or p == prefix.rstrip("/")) for prefix in FORBIDDEN_PREFIXES
+    ))
+    if missing:
+        print("ERROR: rootfs is missing required paths: " + ", ".join(missing), file=sys.stderr)
+    if forbidden:
+        print("ERROR: rootfs contains forbidden build/host paths: " + ", ".join(forbidden[:20]), file=sys.stderr)
+    if missing or forbidden:
+        return False
+    print(f"Rootfs validation passed: {path}")
+    return True
+
+def add_resolv_conf_link(dst):
+    """Write the canonical systemd-resolved stub symlink into the rootfs archive."""
+    link = tarfile.TarInfo("etc/resolv.conf")
+    link.type = tarfile.SYMTYPE
+    link.linkname = "/run/systemd/resolve/stub-resolv.conf"
+    link.mode = 0o777
+    link.mtime = int(__import__("time").time())
+    dst.addfile(link)
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--check":
+        raise SystemExit(0 if validate_rootfs(sys.argv[2]) else 1)
     dropped = kept = 0
     droplist = []
+    resolv_conf_written = False
     out = DST + ".tmp" if INPLACE else DST
     with tarfile.open(SRC, "r:gz") as src, tarfile.open(out, "w:gz", compresslevel=1) as dst:
         for m in src:
+            # Normalize even cached/old rootfs images, where network-config may
+            # already be marked built and therefore skip its configuration script.
+            if m.name.lstrip("./").rstrip("/") == "etc/resolv.conf":
+                add_resolv_conf_link(dst)
+                resolv_conf_written = True
+                kept += 1
+                continue
             if drop(m):
                 dropped += 1
                 if len(droplist) < 60:
@@ -115,6 +178,8 @@ def main():
             else:
                 dst.addfile(m)
             kept += 1
+        if not resolv_conf_written:
+            add_resolv_conf_link(dst)
         inject_os_release(dst)
     if INPLACE:
         os.replace(out, DST)

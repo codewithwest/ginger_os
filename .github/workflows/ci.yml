@@ -16,7 +16,23 @@ jobs:
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: './lfs'
-          # severity: error  # Only fail on errors initially to avoid noise from warnings
+          severity: error  # Fail on errors; warnings are tracked separately during baseline hardening
+
+  installer:
+    name: Go installer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: lfs/iso/installer/go.sum
+      - name: Test and build installer
+        working-directory: lfs/iso/installer
+        run: |
+          go test ./...
+          CGO_ENABLED=0 go build -trimpath -o /tmp/ginger-installer .
 
   tests:
     name: Tests
@@ -32,6 +48,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pydantic fastapi uvicorn psutil rich
       - name: Run Python Engine Tests
-        run: export PYTHONPATH=$PYTHONPATH:. && python3 tests/test_engine.py
+        run: mkdir -p logs && export PYTHONPATH=$PYTHONPATH:. && python3 tests/test_engine.py
       - name: Run Bash Library Tests
         run: bash tests/test_lib_common.sh
+      - name: Run Rootfs Validation Tests
+        run: python3 tests/test_rootfs_validation.py
+      - name: Run Network Config Tests
+        run: python3 tests/test_network_config.py

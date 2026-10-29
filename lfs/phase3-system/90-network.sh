@@ -28,12 +28,9 @@ ff02::2   ip6-allrouters
 # End /etc/hosts
 EOF
 
-# Setup DNS resolver
-cat > /etc/resolv.conf << "EOF"
-# Begin /etc/resolv.conf
-nameserver 8.8.8.8
-nameserver 8.8.4.4
-# End /etc/resolv.conf
-EOF
+# Delegate DNS to systemd-resolved. systemd-networkd supplies DNS learned
+# from DHCP; this avoids hard-coding a public resolver or bypassing local DNS.
+rm -f /etc/resolv.conf
+ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
 mark_built "$PKG_NAME"
