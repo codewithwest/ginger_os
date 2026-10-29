@@ -36,14 +36,39 @@ ACCEL_ARGS=(-accel tcg)
 if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
     ACCEL_ARGS=(-enable-kvm)
 fi
-# Use GTK in a desktop session, or curses from a terminal-only session.
+# QEMU_DISPLAY=terminal (or none) uses the host terminal as the guest serial
+# console. Graphical and curses modes retain the serial log and monitor socket.
 DISPLAY_BACKEND="${QEMU_DISPLAY:-}"
-if [ -z "$DISPLAY_BACKEND" ]; then
-    if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
-        DISPLAY_BACKEND="gtk,zoom-to-fit=on"
-    else
-        DISPLAY_BACKEND="curses"
-    fi
+SERIAL_ARGS=()
+MONITOR_ARGS=(-monitor "unix:$GINGER_ROOT/qemu-monitor.sock,server=on,wait=off")
+case "$DISPLAY_BACKEND" in
+    terminal|none)
+        DISPLAY_ARGS=(-display none)
+        SERIAL_ARGS=(-serial mon:stdio)
+        MONITOR_ARGS=()
+        ;;
+    gtk|gtk,*|sdl|sdl,*|curses)
+        DISPLAY_ARGS=(-display "$DISPLAY_BACKEND")
+        SERIAL_ARGS=(-serial "file:$GINGER_ROOT/installer-serial.log")
+        ;;
+    "")
+        if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
+            DISPLAY_ARGS=(-display gtk,zoom-to-fit=on)
+        else
+            DISPLAY_ARGS=(-display curses)
+        fi
+        SERIAL_ARGS=(-serial "file:$GINGER_ROOT/installer-serial.log")
+        ;;
+    *)
+        echo "[ERROR] Unsupported QEMU_DISPLAY='$DISPLAY_BACKEND'. Use terminal, none, curses, or gtk." >&2
+        exit 2
+        ;;
+esac
+
+SSH_FORWARD_PORT="${SSH_FORWARD_PORT:-2223}"
+if ! [[ "$SSH_FORWARD_PORT" =~ ^[0-9]+$ ]] || [ "$SSH_FORWARD_PORT" -lt 1 ] || [ "$SSH_FORWARD_PORT" -gt 65535 ]; then
+    echo "[ERROR] SSH_FORWARD_PORT must be a TCP port from 1 to 65535." >&2
+    exit 2
 fi
 
 qemu-system-x86_64 \
@@ -54,8 +79,8 @@ qemu-system-x86_64 \
     -hda "$DISK_PATH" \
     -boot d \
     -vga std \
-    -display "$DISPLAY_BACKEND" \
-    -serial file:"$GINGER_ROOT/installer-serial.log" \
-    -monitor unix:"$GINGER_ROOT/qemu-monitor.sock",server=on,wait=off \
-    -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+    "${DISPLAY_ARGS[@]}" \
+    "${SERIAL_ARGS[@]}" \
+    "${MONITOR_ARGS[@]}" \
+    -netdev "user,id=net0,hostfwd=tcp::${SSH_FORWARD_PORT}-:22" \
     -device e1000,netdev=net0
