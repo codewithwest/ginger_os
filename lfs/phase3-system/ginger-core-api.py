@@ -64,7 +64,7 @@ def handle_client(conn: socket.socket) -> None:
             payload = {"schema_version": 1, "status": "error", "error": "invalid_request"}
     encoded = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8") + b"\n"
     if len(encoded) > MAX_RESPONSE_BYTES:
-        encoded = b'{"schema_version":1,"status":"error","error":"response_too_large"}\\n'
+        encoded = b'{"schema_version":1,"status":"error","error":"response_too_large"}\n'
     conn.sendall(encoded)
 
 
