@@ -57,5 +57,7 @@ jobs:
         run: python3 tests/test_network_config.py
       - name: Run Telemetry Tests
         run: python3 tests/test_telemetry.py
+      - name: Run Core API Tests
+        run: python3 tests/test_core_api.py
       - name: Smoke-test telemetry JSON CLI
         run: python3 lfs/phase3-system/ginger-telemetry.py | python3 -m json.tool > /dev/null
