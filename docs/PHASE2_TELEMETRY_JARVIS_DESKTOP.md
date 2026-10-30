@@ -6,7 +6,7 @@ The initial architecture proposal and the first read-only telemetry CLI implemen
 
 ## Goal
 
-Make GingerOS terminal-first by default, with a rich graphical UI that can be started on demand and stopped without stopping telemetry or assistant services. Keep LFS 13.0 as the base, target systems with 2+ CPU cores and 16 GB RAM, and validate every boot-critical change in QEMU.
+Make GingerOS terminal-first by default, with a rich graphical UI that can be started on demand and stopped without stopping telemetry or assistant services. Keep LFS 13.0 as the base. The reference target is 2+ CPU cores and 16 GB RAM, but this is not a minimum requirement: GingerOS must remain useful on lower-end systems. Validate boot-critical changes in QEMU at both a lightweight profile and the target profile where practical.
 
 ## Non-goals for the first increment
 
@@ -104,11 +104,37 @@ The source changes have been committed to the feature branch, but host tests, th
 
 ## Resource policy
 
+- **Reference target, not minimum:** 2+ CPU cores and 16 GB RAM is the planning target for a fuller local AI workload, not a hard install or boot requirement.
+- **Low-end baseline:** keep the core OS, shell, networking, telemetry CLI, and recovery paths useful on smaller systems (including a 2 GB RAM VM). This is a compatibility goal to test, not yet a certified minimum specification.
 - No graphical session or AI model is loaded automatically at boot in the initial design.
+- Optional components must be independently startable/stoppable. The core must not require the UI or assistant to be present.
+- Assistant/model selection should account for available RAM and CPU, and should fail gracefully or offer a lighter mode instead of exhausting memory or blocking basic OS use.
 - Avoid unbounded polling, logging, and metric history.
 - Use existing system interfaces where possible instead of duplicate collectors.
-- Measure idle and active usage for each candidate.
+- Measure idle and active memory, CPU, startup latency, and disk use for each candidate.
+- Do not infer a machine's suitability from one telemetry snapshot; validate sustained workloads and memory pressure.
 - Keep the system useful when the graphical UI or AI service is absent.
+
+### Proposed hardware validation matrix
+
+These are test profiles to measure, not promised performance tiers:
+
+| VM profile | Validation focus |
+| --- | --- |
+| 2 vCPU / 2 GiB RAM | Boot, login, networking, telemetry, shell responsiveness, recovery |
+| 2 vCPU / 4 GiB RAM | Core plus lightweight optional services |
+| 4 vCPU / 8 GiB RAM | UI prototype and small-model feasibility measurements |
+| 4+ vCPU / 16 GiB RAM | Reference profile for broader local assistant evaluation |
+
+Do not download or load a large AI model as part of boot or the low-memory smoke test.
+
+## Next implementation sequence
+
+1. Complete fresh-ISO install/boot validation of the telemetry installer fix and record the QEMU memory/CPU profile used.
+2. Keep telemetry as a stable, versioned read-only contract; add or adjust fields only with tests and schema documentation.
+3. Design the local assistant/service boundary, lifecycle, permissions, and resource limits before adding a long-running daemon or network listener.
+4. Evaluate optional desktop candidates against the same resource matrix before selecting a display stack.
+5. Prototype the smallest useful local-first assistant capability separately from UI selection and model size.
 
 ## Git workflow
 
