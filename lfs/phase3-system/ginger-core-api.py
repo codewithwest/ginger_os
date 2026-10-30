@@ -63,7 +63,9 @@ def handle_client(conn: socket.socket) -> None:
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
             payload = {"schema_version": 1, "status": "error", "error": "invalid_request"}
     encoded = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8") + b"\n"
-    conn.sendall(encoded[:MAX_RESPONSE_BYTES])
+    if len(encoded) > MAX_RESPONSE_BYTES:
+        encoded = b'{"schema_version":1,"status":"error","error":"response_too_large"}\\n'
+    conn.sendall(encoded)
 
 
 def main() -> int:
