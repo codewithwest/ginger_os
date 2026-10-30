@@ -75,7 +75,7 @@ The collector CLI should remain dependency-free beyond the system's existing Pyt
 1. Fresh LFS/rootfs build installs the service and client without changing the base LFS version.
 2. `ginger-telemetry` continues to emit valid one-object JSON with no service running.
 3. Local client can request status and parse the documented versioned response.
-4. A non-authorized local user cannot access the socket; authorized users can read status only.
+4. The socket is not exposed over TCP/UDP; local users can read only the documented non-secret status snapshot.
 5. Service restart and shutdown leave no stale socket and do not hang.
 6. Missing system metrics return null/empty values rather than crashing the service.
 7. No network port is opened, and no UI or model starts at boot.
