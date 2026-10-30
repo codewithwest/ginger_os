@@ -55,3 +55,7 @@ jobs:
         run: python3 tests/test_rootfs_validation.py
       - name: Run Network Config Tests
         run: python3 tests/test_network_config.py
+      - name: Run Telemetry Tests
+        run: python3 tests/test_telemetry.py
+      - name: Smoke-test telemetry JSON CLI
+        run: python3 lfs/phase3-system/ginger-telemetry.py | python3 -m json.tool > /dev/null

@@ -26,6 +26,15 @@ echo "__GINGER_PKG_MARKER__: Preparation"
 cleanup
 mkdir -p "$ISO_DIR/boot/grub" "$ISO_DIR/installer"
 
+# Always package the branch's telemetry CLI separately from the cached rootfs.
+# This keeps ISO installs current even when the LFS image/rootfs cache predates it.
+TELEMETRY_SOURCE="$GINGER_ROOT/lfs/phase3-system/ginger-telemetry.py"
+if [ ! -f "$TELEMETRY_SOURCE" ]; then
+    echo "[ERROR] GingerOS telemetry source missing: $TELEMETRY_SOURCE"
+    exit 1
+fi
+install -m 0755 "$TELEMETRY_SOURCE" "$ISO_DIR/installer/ginger-telemetry.py"
+
 echo "__GINGER_PKG_MARKER__: Mount LFS Image"
 LFS_IMG="$GINGER_ROOT/ginger_os.img"
 LFS_ROOTFS="$GINGER_ROOT/gingeros-lfs-rootfs.tar.gz"

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -484,8 +485,16 @@ func (inst *installer) runInstall() {
 	rootPart := inst.targetDev + "1"
 	mnt := "/mnt/ginger"
 
+	firstRender := true
 	render := func(current int, status string) {
-		fmt.Print(clearScreen)
+		// Clear the previous interactive screen only once. Clearing the whole
+		// terminal on every spinner tick causes visible flicker in QEMU consoles.
+		if firstRender {
+			fmt.Print(clearScreen)
+			firstRender = false
+		} else {
+			fmt.Print("\033[H")
+		}
 		printfln(colorCyan+colorBold, "  ╔══════════════════════════════════════════════════╗")
 		printfln(colorCyan+colorBold, "  ║      GingerOS Installer v2.0 — Deploying          ║")
 		printfln(colorCyan+colorBold, "  ╚══════════════════════════════════════════════════╝")
@@ -504,7 +513,9 @@ func (inst *installer) runInstall() {
 		}
 		frame("Deployment Steps", lines)
 		fmt.Println()
-		fmt.Println("  " + status)
+		// Pad the status line so shorter updates erase leftovers from longer
+		// messages without clearing the whole screen.
+		fmt.Println("  " + padTo(status, 100))
 		fmt.Println()
 	}
 
@@ -663,6 +674,46 @@ func (inst *installer) runInstall() {
 					return err
 				}
 				dl.logf("tar completed successfully")
+
+				// The live ISO carries telemetry separately from the cached rootfs.
+				// Install it into the target after extraction so stale rootfs caches
+				// cannot silently omit the CLI from newly installed systems.
+				telemetrySource := "/mnt/iso/installer/ginger-telemetry.py"
+				telemetryTarget := filepath.Join(mnt, "usr/bin/ginger-telemetry")
+				if _, statErr := os.Stat(telemetrySource); statErr != nil {
+					return fmt.Errorf("telemetry payload missing from installer ISO: %w", statErr)
+				}
+				if err := os.MkdirAll(filepath.Dir(telemetryTarget), 0755); err != nil {
+					return fmt.Errorf("prepare telemetry install directory: %w", err)
+				}
+				sourceFile, err := os.Open(telemetrySource)
+				if err != nil {
+					return fmt.Errorf("open telemetry payload %s: %w", telemetrySource, err)
+				}
+				targetFile, err := os.OpenFile(telemetryTarget, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+				if err != nil {
+					sourceFile.Close()
+					return fmt.Errorf("create telemetry target %s: %w", telemetryTarget, err)
+				}
+				_, copyErr := io.Copy(targetFile, sourceFile)
+				sourceCloseErr := sourceFile.Close()
+				targetCloseErr := targetFile.Close()
+				if copyErr != nil {
+					return fmt.Errorf("copy telemetry payload: %w", copyErr)
+				}
+				if sourceCloseErr != nil {
+					return fmt.Errorf("close telemetry payload: %w", sourceCloseErr)
+				}
+				if targetCloseErr != nil {
+					return fmt.Errorf("close telemetry target: %w", targetCloseErr)
+				}
+				if err := os.Chmod(telemetryTarget, 0755); err != nil {
+					return fmt.Errorf("set telemetry permissions: %w", err)
+				}
+				if err := os.Chown(telemetryTarget, 0, 0); err != nil {
+					return fmt.Errorf("set telemetry ownership: %w", err)
+				}
+				dl.logf("installed telemetry CLI at %s", telemetryTarget)
 				return nil
 			case <-time.After(time.Second):
 				sz := dirSize(mnt)

@@ -54,6 +54,16 @@ tar -xpvf /mnt/iso/installer/gingeros-base-rootfs.tar.gz -C "$MNT" 2>&3 | \
     done
 log_and_show "[STEP 4/6] Extraction complete."
 
+# Install the current telemetry CLI shipped by make-iso.sh, regardless of
+# whether the base rootfs came from a stale cache or a freshly extracted image.
+TELEMETRY_PAYLOAD="/mnt/iso/installer/ginger-telemetry.py"
+if [ ! -f "$TELEMETRY_PAYLOAD" ]; then
+    log_and_show "[ERROR] Telemetry payload missing from installer media: $TELEMETRY_PAYLOAD"
+    exit 1
+fi
+install -D -o root -g root -m 0755 "$TELEMETRY_PAYLOAD" "$MNT/usr/bin/ginger-telemetry" >&3 2>&3
+log_and_show "[STEP 4/6] Installed GingerOS telemetry CLI."
+
 # -----------------------------------------------------------------
 # 5️⃣  Create the required absolute merged‑/usr symlinks inside the new root
 # -----------------------------------------------------------------
