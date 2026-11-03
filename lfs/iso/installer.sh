@@ -64,6 +64,23 @@ fi
 install -D -o root -g root -m 0755 "$TELEMETRY_PAYLOAD" "$MNT/usr/bin/ginger-telemetry" >&3 2>&3
 log_and_show "[STEP 4/6] Installed GingerOS telemetry CLI."
 
+# Overlay Ginger Core onto both fresh and cached rootfs images.
+CORE_SERVER_PAYLOAD="/mnt/iso/installer/ginger-core-api.py"
+CORE_CLIENT_PAYLOAD="/mnt/iso/installer/ginger-core.py"
+CORE_SERVICE_PAYLOAD="/mnt/iso/installer/ginger-core-api.service"
+for payload in "$CORE_SERVER_PAYLOAD" "$CORE_CLIENT_PAYLOAD" "$CORE_SERVICE_PAYLOAD"; do
+    if [ ! -f "$payload" ]; then
+        log_and_show "[ERROR] Ginger Core payload missing from installer media: $payload"
+        exit 1
+    fi
+done
+install -D -o root -g root -m 0755 "$CORE_SERVER_PAYLOAD" "$MNT/usr/bin/ginger-core-api-server" >&3 2>&3
+install -D -o root -g root -m 0755 "$CORE_CLIENT_PAYLOAD" "$MNT/usr/bin/ginger-core" >&3 2>&3
+install -D -o root -g root -m 0644 "$CORE_SERVICE_PAYLOAD" "$MNT/usr/lib/systemd/system/ginger-core-api.service" >&3 2>&3
+mkdir -p "$MNT/etc/systemd/system/multi-user.target.wants"
+ln -sfn /usr/lib/systemd/system/ginger-core-api.service "$MNT/etc/systemd/system/multi-user.target.wants/ginger-core-api.service"
+log_and_show "[STEP 4/6] Installed and enabled GingerOS Core API."
+
 # -----------------------------------------------------------------
 # 5️⃣  Create the required absolute merged‑/usr symlinks inside the new root
 # -----------------------------------------------------------------
