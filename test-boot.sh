@@ -4,6 +4,8 @@
 
 GINGER_ROOT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 DISK_PATH="$GINGER_ROOT/test-target.qcow2"
+# Override with VM_MEMORY=4G ./test-boot.sh if a different allocation is needed.
+VM_MEMORY="${VM_MEMORY:-6G}"
 
 if [ ! -f "$DISK_PATH" ]; then
     echo "Error: Test disk not found at $DISK_PATH. Run the installer first."
@@ -26,6 +28,7 @@ for arg in "$@"; do
 done
 
 echo "--- Booting GingerOS from Hard Disk ---"
+echo "Memory: $VM_MEMORY"
 echo "TIP: Select 'Standard Boot (sda1)' from the GRUB menu."
 # Prefer KVM when available; fall back to TCG for nested/ordinary VMs.
 ACCEL_ARGS=(-accel tcg)
@@ -65,7 +68,7 @@ fi
 
 qemu-system-x86_64 \
     "${ACCEL_ARGS[@]}" \
-    -m 2G \
+    -m "$VM_MEMORY" \
     -smp 4 \
     -hda "$DISK_PATH" \
     -boot c \
