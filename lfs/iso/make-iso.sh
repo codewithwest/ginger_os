@@ -51,6 +51,14 @@ LFS_IMG="$GINGER_ROOT/ginger_os.img"
 LFS_ROOTFS="$GINGER_ROOT/gingeros-lfs-rootfs.tar.gz"
 CACHED_KERNEL="$GINGER_ROOT/vmlinuz-ginger-cached"
 
+# Validate the gzip stream before treating a cached rootfs as usable.
+# A truncated archive must never reach purge/normalization or be shipped.
+if [ -f "$LFS_ROOTFS" ] && ! gzip -t "$LFS_ROOTFS" 2>/dev/null; then
+    echo "[WARN] Cached LFS rootfs is truncated or corrupt: $LFS_ROOTFS"
+    echo "[WARN] Removing the invalid rootfs cache; the builder will regenerate it from ginger_os.img."
+    rm -f "$LFS_ROOTFS"
+fi
+
 # ── Cache check ────────────────────────────────────────────────────────────
 # If the tarball and kernel are already on disk, skip the slow mount+tar step.
 # Set FORCE_REBUILD=1 to bypass this cache.
