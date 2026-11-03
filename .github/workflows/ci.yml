@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ master, main, phase-2-telemetry-jarvis-desktop ]
+    branches: [ master, main, phase-2-telemetry-jarvis-desktop, phase-3-local-core-api ]
   pull_request:
     branches: [ master, main, phase-2-telemetry-jarvis-desktop ]
 
