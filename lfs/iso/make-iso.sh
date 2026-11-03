@@ -35,10 +35,29 @@ if [ ! -f "$TELEMETRY_SOURCE" ]; then
 fi
 install -m 0755 "$TELEMETRY_SOURCE" "$ISO_DIR/installer/ginger-telemetry.py"
 
+# Always stage Core API payloads alongside the rootfs. The rootfs may be cached
+# from before Phase 3, so relying on its contents silently omits ginger-core.
+for payload in ginger-core-api.py ginger-core.py ginger-core-api.service; do
+    source_file="$GINGER_ROOT/lfs/phase3-system/$payload"
+    if [ ! -f "$source_file" ]; then
+        echo "[ERROR] Ginger Core payload missing: $source_file"
+        exit 1
+    fi
+    install -m 0644 "$source_file" "$ISO_DIR/installer/$payload"
+done
+
 echo "__GINGER_PKG_MARKER__: Mount LFS Image"
 LFS_IMG="$GINGER_ROOT/ginger_os.img"
 LFS_ROOTFS="$GINGER_ROOT/gingeros-lfs-rootfs.tar.gz"
 CACHED_KERNEL="$GINGER_ROOT/vmlinuz-ginger-cached"
+
+# Validate the gzip stream before treating a cached rootfs as usable.
+# A truncated archive must never reach purge/normalization or be shipped.
+if [ -f "$LFS_ROOTFS" ] && ! gzip -t "$LFS_ROOTFS" 2>/dev/null; then
+    echo "[WARN] Cached LFS rootfs is truncated or corrupt: $LFS_ROOTFS"
+    echo "[WARN] Removing the invalid rootfs cache; the builder will regenerate it from ginger_os.img."
+    rm -f "$LFS_ROOTFS"
+fi
 
 # ── Cache check ────────────────────────────────────────────────────────────
 # If the tarball and kernel are already on disk, skip the slow mount+tar step.

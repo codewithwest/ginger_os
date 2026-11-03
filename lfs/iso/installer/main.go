@@ -470,12 +470,26 @@ func (inst *installer) confirm() {
 		"  " + colorBold + "Bootloader:   " + colorCyan + "GRUB (MBR)" + colorReset,
 	})
 	fmt.Println()
-	printf(colorYellow+colorBold, "  Type 'YES' to begin installation: ")
-
-	ans := strings.ToUpper(strings.TrimSpace(readLine()))
-	if ans != "YES" && ans != "Y" {
-		printfln(colorRed, "\n  Installation aborted.")
-		os.Exit(0)
+	frame("Continue with installation?", []string{
+		"  [1] Yes — erase the selected disk and install GingerOS",
+		"  [2] No  — cancel and return to the live system",
+		"",
+		"  Default: No (press ENTER to cancel)",
+	})
+	for {
+		printf(colorYellow+colorBold, "  Select [1/2]: ")
+		ans := strings.TrimSpace(readLine())
+		switch strings.ToLower(ans) {
+		case "1", "y", "yes":
+			printfln(colorGreen, "\\n  Confirmed. Starting installation...")
+			inst.step = 2
+			return
+		case "2", "n", "no", "":
+			printfln(colorRed, "\\n  Installation cancelled. No changes were made.")
+			os.Exit(0)
+		default:
+			printfln(colorYellow, "  Please choose 1 (Yes) or 2 (No).")
+		}
 	}
 	inst.step = 2
 }
@@ -714,6 +728,67 @@ func (inst *installer) runInstall() {
 					return fmt.Errorf("set telemetry ownership: %w", err)
 				}
 				dl.logf("installed telemetry CLI at %s", telemetryTarget)
+
+				// Core API payloads are staged separately on the ISO for the same
+				// reason as telemetry: cached rootfs archives may predate Phase 3.
+				corePayloads := []struct {
+					source string
+					target string
+					mode   os.FileMode
+				}{
+					{"/mnt/iso/installer/ginger-core-api.py", filepath.Join(mnt, "usr/bin/ginger-core-api-server"), 0755},
+					{"/mnt/iso/installer/ginger-core.py", filepath.Join(mnt, "usr/bin/ginger-core"), 0755},
+					{"/mnt/iso/installer/ginger-core-api.service", filepath.Join(mnt, "usr/lib/systemd/system/ginger-core-api.service"), 0644},
+				}
+				for _, payload := range corePayloads {
+					if _, err := os.Stat(payload.source); err != nil {
+						return fmt.Errorf("Ginger Core payload missing from installer ISO (%s): %w", payload.source, err)
+					}
+					if err := os.MkdirAll(filepath.Dir(payload.target), 0755); err != nil {
+						return fmt.Errorf("prepare Ginger Core install directory: %w", err)
+					}
+					src, err := os.Open(payload.source)
+					if err != nil {
+						return fmt.Errorf("open Ginger Core payload %s: %w", payload.source, err)
+					}
+					dst, err := os.OpenFile(payload.target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, payload.mode)
+					if err != nil {
+						src.Close()
+						return fmt.Errorf("create Ginger Core target %s: %w", payload.target, err)
+					}
+					_, copyErr := io.Copy(dst, src)
+					srcCloseErr := src.Close()
+					dstCloseErr := dst.Close()
+					if copyErr != nil {
+						return fmt.Errorf("copy Ginger Core payload to %s: %w", payload.target, copyErr)
+					}
+					if srcCloseErr != nil {
+						return fmt.Errorf("close Ginger Core source %s: %w", payload.source, srcCloseErr)
+					}
+					if dstCloseErr != nil {
+						return fmt.Errorf("close Ginger Core target %s: %w", payload.target, dstCloseErr)
+					}
+					if err := os.Chmod(payload.target, payload.mode); err != nil {
+						return fmt.Errorf("set Ginger Core permissions on %s: %w", payload.target, err)
+					}
+					if err := os.Chown(payload.target, 0, 0); err != nil {
+						return fmt.Errorf("set Ginger Core ownership on %s: %w", payload.target, err)
+					}
+					dl.logf("installed Ginger Core payload at %s", payload.target)
+				}
+
+				wantsDir := filepath.Join(mnt, "etc/systemd/system/multi-user.target.wants")
+				if err := os.MkdirAll(wantsDir, 0755); err != nil {
+					return fmt.Errorf("prepare systemd wants directory: %w", err)
+				}
+				serviceLink := filepath.Join(wantsDir, "ginger-core-api.service")
+				if err := os.Remove(serviceLink); err != nil && !os.IsNotExist(err) {
+					return fmt.Errorf("replace Ginger Core service enablement link: %w", err)
+				}
+				if err := os.Symlink("/usr/lib/systemd/system/ginger-core-api.service", serviceLink); err != nil {
+					return fmt.Errorf("enable Ginger Core API service: %w", err)
+				}
+				dl.logf("enabled ginger-core-api.service")
 				return nil
 			case <-time.After(time.Second):
 				sz := dirSize(mnt)
