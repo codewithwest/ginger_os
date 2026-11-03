@@ -35,6 +35,17 @@ if [ ! -f "$TELEMETRY_SOURCE" ]; then
 fi
 install -m 0755 "$TELEMETRY_SOURCE" "$ISO_DIR/installer/ginger-telemetry.py"
 
+# Always stage Core API payloads alongside the rootfs. The rootfs may be cached
+# from before Phase 3, so relying on its contents silently omits ginger-core.
+for payload in ginger-core-api.py ginger-core.py ginger-core-api.service; do
+    source_file="$GINGER_ROOT/lfs/phase3-system/$payload"
+    if [ ! -f "$source_file" ]; then
+        echo "[ERROR] Ginger Core payload missing: $source_file"
+        exit 1
+    fi
+    install -m 0644 "$source_file" "$ISO_DIR/installer/$payload"
+done
+
 echo "__GINGER_PKG_MARKER__: Mount LFS Image"
 LFS_IMG="$GINGER_ROOT/ginger_os.img"
 LFS_ROOTFS="$GINGER_ROOT/gingeros-lfs-rootfs.tar.gz"
