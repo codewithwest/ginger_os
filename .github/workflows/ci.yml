@@ -60,6 +60,6 @@ jobs:
       - name: Run Core API Tests
         run: python3 tests/test_core_api.py
       - name: Run Assistant Runtime Tests
-        run: python3 tests/test_assistant_runtime.py
+        run: python3 -m pytest -q tests/test_assistant_runtime.py
       - name: Smoke-test telemetry JSON CLI
         run: python3 lfs/phase3-system/ginger-telemetry.py | python3 -m json.tool > /dev/null
