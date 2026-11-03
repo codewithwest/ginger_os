@@ -470,12 +470,26 @@ func (inst *installer) confirm() {
 		"  " + colorBold + "Bootloader:   " + colorCyan + "GRUB (MBR)" + colorReset,
 	})
 	fmt.Println()
-	printf(colorYellow+colorBold, "  Type 'YES' to begin installation: ")
-
-	ans := strings.ToUpper(strings.TrimSpace(readLine()))
-	if ans != "YES" && ans != "Y" {
-		printfln(colorRed, "\n  Installation aborted.")
-		os.Exit(0)
+	frame("Continue with installation?", []string{
+		"  [1] Yes — erase the selected disk and install GingerOS",
+		"  [2] No  — cancel and return to the live system",
+		"",
+		"  Default: No (press ENTER to cancel)",
+	})
+	for {
+		printf(colorYellow+colorBold, "  Select [1/2]: ")
+		ans := strings.TrimSpace(readLine())
+		switch strings.ToLower(ans) {
+		case "1", "y", "yes":
+			printfln(colorGreen, "\\n  Confirmed. Starting installation...")
+			inst.step = 2
+			return
+		case "2", "n", "no", "":
+			printfln(colorRed, "\\n  Installation cancelled. No changes were made.")
+			os.Exit(0)
+		default:
+			printfln(colorYellow, "  Please choose 1 (Yes) or 2 (No).")
+		}
 	}
 	inst.step = 2
 }
