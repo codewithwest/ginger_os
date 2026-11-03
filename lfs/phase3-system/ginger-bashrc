@@ -1,0 +1,22 @@
+# GingerOS interactive Bash defaults.
+# This file is for interactive shells only; non-interactive scripts are untouched.
+case $- in
+  *i*) ;;
+  *) return ;;
+esac
+
+# Better Tab completion and completion matching.
+shopt -s progcomp
+shopt -s cdspell
+shopt -s dirspell
+shopt -s checkwinsize
+shopt -s histappend
+bind 'set completion-ignore-case on'
+bind 'set show-all-if-ambiguous on'
+bind 'set completion-map-case on' 2>/dev/null || true
+
+# Useful, bounded history. Avoid saving duplicate lines and commands prefixed by a space.
+HISTSIZE=10000
+HISTFILESIZE=20000
+HISTCONTROL=ignoreboth:erasedups
+shopt -s histappend
